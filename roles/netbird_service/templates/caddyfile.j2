@@ -1,0 +1,12 @@
+{{ netbird.domain }} {
+    # Native gRPC (needs HTTP/2 cleartext to backend)
+    @grpc header Content-Type application/grpc*
+    reverse_proxy @grpc h2c://127.0.0.1:80
+
+    # Combined server paths (relay, signal, management, OAuth2)
+    @backend path /relay* /ws-proxy/* /api/* /oauth2/*
+    reverse_proxy @backend 127.0.0.1:{{ netbird.management_port }}
+
+    # Dashboard (everything else)
+    reverse_proxy /* 127.0.0.1:{{ netbird.dashboard_port }}
+}
