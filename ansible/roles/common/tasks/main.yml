@@ -17,7 +17,6 @@
     name: qemu-guest-agent
     enabled: true
     state: started
-
   when: _common_guest_agent is changed
 
 - name: Configure SSH

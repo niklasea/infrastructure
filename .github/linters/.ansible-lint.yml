@@ -1,0 +1,15 @@
+---
+quiet: true
+
+skip_list:
+  - internal-error
+  - name[missing]
+  - no-handler
+  - no-changed-when
+
+warn_list:
+  - jinja[spacing]
+  - yaml[line-length]
+
+use_default_rules: true
+verbosity: 1

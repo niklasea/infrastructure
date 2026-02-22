@@ -1,7 +1,7 @@
 ---
 services:
   librespeed:
-    image: adolfintel/speedtest:{{ librespeed_version }}
+    image: adolfintel/speedtest:{{ speedtest_librespeed_version }}
     restart: unless-stopped
     deploy:
       resources:
@@ -20,7 +20,7 @@ services:
       MODE: standalone
 
   iperf3:
-    image: ghcr.io/niklasea/iperf3:{{ iperf3_version }}
+    image: ghcr.io/niklasea/iperf3:{{ speedtest_iperf3_version }}
     restart: unless-stopped
     deploy:
       resources:
@@ -31,7 +31,7 @@ services:
     security_opt:
       - no-new-privileges:true
     ports:
-      - {{ iperf3_port }}:5201
+      - {{ speedtest_iperf3_port }}:5201
 
 networks:
   reverse_proxy:

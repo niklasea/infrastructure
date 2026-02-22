@@ -3,14 +3,14 @@ auto lo
 iface lo inet loopback
 
 # Define slaves
-{% for interface in bonded_interfaces %}
+{% for interface in bonded_interfaces_names %}
 auto {{ interface }}
-iface {{ interface }} inet manual  
+iface {{ interface }} inet manual
     bond-master         bond0
     bond-mode           active-backup
     bond-fail_over_mac  active
 {% if (interface[0:4] | lower) == 'wlan' %}
-    wpa-conf            {{ bonded_interface_wpa_conf_path }}
+    wpa-conf            {{ bonded_interfaces_wpa_conf_path }}
 {% endif %}
 
 {% endfor %}
@@ -18,7 +18,7 @@ iface {{ interface }} inet manual
 auto bond0
 iface bond0 inet dhcp
     bond-slaves         none
-    bond-primary        {{ bonded_interface_primary }}
+    bond-primary        {{ bonded_interfaces_primary }}
     bond-miimon         100
     bond-updelay        200
     bond-downdelay      100

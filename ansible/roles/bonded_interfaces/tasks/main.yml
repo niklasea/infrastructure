@@ -17,29 +17,30 @@
 
 - name: Add WiFi credentials
   ansible.builtin.blockinfile:
-    path: "{{ bonded_interface_wpa_conf_path }}"
+    path: "{{ bonded_interfaces_wpa_conf_path }}"
     state: present
     create: true
     block: |
       ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
       update_config=1
-      country={{ bonded_interface_wpa_country }}
+      country={{ bonded_interfaces_wpa_country }}
 
       # RETROPIE CONFIG START
       network={
-              ssid="{{ bonded_interface_wpa_ssid }}"
-              bssid={{ bonded_interface_wpa_bssid }}
-              psk="{{ bonded_interface_wpa_pass }}"
+              ssid="{{ bonded_interfaces_wpa_ssid }}"
+              bssid={{ bonded_interfaces_wpa_bssid }}
+              psk="{{ bonded_interfaces_wpa_pass }}"
       }
       # RETROPIE CONFIG END
+    mode: '644'
   no_log: true
-  when: bonded_interface_wpa_ssid is defined
+  when: bonded_interfaces_wpa_ssid is defined
 
 - name: Disable DHCP for bonded interfaces
   ansible.builtin.lineinfile:
     path: /etc/dhcpcd.conf
     regexp: '^denyinterfaces'
     state: present
-    line: "denyinterfaces {{ bonded_interfaces | join(' ') }}"
+    line: "denyinterfaces {{ bonded_interfaces_names | join(' ') }}"
 
 # TODO: Restart network interfaces

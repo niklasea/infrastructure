@@ -31,13 +31,13 @@
 
     # Use the installed package rather than the certbot-auto script
     - name: Set certbot path
-      set_fact:
+      ansible.builtin.set_fact:
         certbot_path: certbot
   rescue:
       # TODO: certbot-auto is deprecated
     - name: Download certbot-auto
       become: true
-      get_url:
+      ansible.builtin.get_url:
         url: https://dl.eff.org/certbot-auto
         dest: "{{ certbot_path }}"
         owner: root
@@ -70,7 +70,6 @@
         name: certbot-dns-cloudflare
         state: present
         virtualenv: /opt/eff.org/certbot/venv/
-  # when: not certbot_auto_script.stat.exists
 
 # Newer Debian/Ubuntu versions configure auto-renewal automatically
 - name: (Non-Debian) Configure automatic renewal

@@ -6,11 +6,14 @@
     mode: '700'
   register: _vyos_configuration_script
 
-- block:
+- when: _vyos_configuration_script is changed
+  block:
     # Run commands and say yes to any prompts.
     - name: Run script
       ansible.builtin.shell:
-        cmd: yes | ./commands.sh
+        cmd: |
+          set -o pipefail
+          yes | ./commands.sh
         executable: /bin/vbash
       register: _vyos_commands_result
       failed_when: "'Commit failed' in _vyos_commands_result.stdout"
@@ -33,4 +36,3 @@
     - name: Fail the deployment
       ansible.builtin.fail:
         msg: VyOS configuration failed!
-  when: vyos_configuration_script is changed

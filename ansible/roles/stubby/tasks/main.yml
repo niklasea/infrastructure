@@ -22,18 +22,18 @@
     - src: stubby.yml.j2
       dest: "{{ stubby_config_path }}/stubby.yml"
     - src: docker-compose.yml.j2
-      dest: "{{ dns_compose_dir }}/docker-compose.yml"
-  register: _configuration_files
+      dest: "{{ stubby_compose_dir }}/docker-compose.yml"
+  register: _stubby_configuration_files
 
 - name: Check if systemd-resolved is running
   become: true
   ansible.builtin.systemd_service:
     name: systemd-resolved
-  register: _dns_stub_listener_active
+  register: _stubby_stub_listener_active
 
 - name: Disable systemd-resolved stub resolver
   become: true
-  when: _dns_stub_listener_active.status.ActiveState == 'active'
+  when: _stubby_stub_listener_active.status.ActiveState == 'active'
   ansible.builtin.blockinfile:
     path: /etc/systemd/resolved.conf.d/disable-stub.conf
     state: present
@@ -41,20 +41,21 @@
     block: |
       [Resolve]
       DNSStubListener=no
-  register: _dns_stub_listener_config
+    mode: '644'
+  register: _stubby_stub_listener_config
 
 - name: Restart systemd-resolved
   become: true
   ansible.builtin.service:
     name: systemd-resolved
     state: restarted
-  when: _dns_stub_listener_config is changed
+  when: _stubby_stub_listener_config is changed
 
 - name: Start DNS server
   become: true
   community.docker.docker_compose_v2:
-    project_src: "{{ dns_compose_dir }}"
+    project_src: "{{ stubby_compose_dir }}"
     state: "present"
     pull: "always"
-    recreate: "{{ 'always' if _configuration_files is changed else 'auto' }}"
+    recreate: "{{ 'always' if _stubby_configuration_files is changed else 'auto' }}"
     remove_orphans: true

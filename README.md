@@ -14,7 +14,7 @@ Ansible is configured to automatically detect hosts using dynamic inventory. Thi
 
 I am using separate read-only API tokens for the dynamic inventory that are encrypted using `ansible-vault encrypt_string -n <variable_name> '<secret>'` because the dynamic inventory does not make use of the regular vault(s) under `group_vars`.
 
-To see the inventory, run `ansible-inventory --graph --ask-vault-pass`.
+To see the inventory, install the inventory plugins with `ansible-galaxy install -r requirements.yml` and run `ansible-inventory --graph --ask-vault-pass`.
 
 ### Bootstrapping the CI/CD environment
 

@@ -14,7 +14,7 @@
     src: wg.conf.j2
     dest: "{{ wireguard_compose_dir }}/{{ wireguard_interface_name }}.conf"
     mode: '600'
-  register: _configuration_files
+  register: _wireguard_configuration_files
 
 - name: Add Docker compose file
   become: true
@@ -29,5 +29,5 @@
     project_src: "{{ wireguard_compose_dir }}"
     state: "present"
     pull: "always"
-    recreate: "{{ 'always' if _configuration_files is changed else 'auto' }}"
+    recreate: "{{ 'always' if _wireguard_configuration_files is changed else 'auto' }}"
     remove_orphans: true

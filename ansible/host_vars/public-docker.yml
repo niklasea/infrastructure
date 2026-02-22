@@ -6,7 +6,7 @@ linuxgsm_servers:
       - 27015:27015/tcp
       - 27015:27015/udp
       - 27020:27020/udp
-    instance_config:  |
+    instance_config: |
       gametype="3"
       gamemode="0"
       tickrate="128"

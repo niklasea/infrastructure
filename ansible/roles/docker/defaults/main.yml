@@ -1,21 +1,21 @@
 ---
 docker_daemon_logging:
-    driver: json-file
-    level: info
-    options:
-      max-size: "50m"
-      max-file: "3"
+  driver: json-file
+  level: info
+  options:
+    max-size: "50m"
+    max-file: "3"
 docker_daemon_live_restore: "true"
 docker_daemon_icc: "false"
 docker_daemon_default_ulimits:
-    nproc:
-      Name: nproc
-      Soft: 2048
-      Hard: 131072
-    nofile:
-      Name: nofile
-      Soft: 2048
-      Hard: 131072
+  nproc:
+    Name: nproc
+    Soft: 2048
+    Hard: 131072
+  nofile:
+    Name: nofile
+    Soft: 2048
+    Hard: 131072
 docker_daemon_address_pools:
   - base: "10.0.0.0/8"
     size: 26

@@ -17,7 +17,7 @@
     owner: "{{ docker_remap_user }}"
     group: "{{ docker_remap_user }}"
     mode: '600'
-  register: _configuration_files
+  register: _inadyn_configuration_files
 
 - name: Add Docker compose file
   become: true
@@ -32,5 +32,5 @@
     project_src: "{{ inadyn_compose_dir }}"
     state: "present"
     pull: "always"
-    recreate: "{{ 'always' if _configuration_files is changed else 'auto' }}"
+    recreate: "{{ 'always' if _inadyn_configuration_files is changed else 'auto' }}"
     remove_orphans: true

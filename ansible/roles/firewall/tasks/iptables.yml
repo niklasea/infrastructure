@@ -2,7 +2,7 @@
 # - block:
 #     - name: Reset default policies
 #       become: true
-#       iptables:
+#       ansible.builtin.iptables:
 #         chain: "{{ item }}"
 #         policy: ACCEPT
 #       loop:
@@ -12,7 +12,7 @@
 
 #     - name: Flush iptables rules
 #       become: true
-#       iptables:
+#       ansible.builtin.iptables:
 #         table: "{{ item }}"
 #         flush: true
 #       loop:
@@ -20,7 +20,7 @@
 #         - nat
 
 #     - name: Prevent flushing again
-#       set_fact:
+#       ansible.builtin.set_fact:
 #         firewall_already_reset: true
 #   when: not firewall_already_reset
 #   tags:
@@ -29,7 +29,7 @@
 
 - name: Set iptables rules
   become: true
-  iptables:
+  ansible.builtin.iptables:
     table: "{{ item.table | default(omit) }}"
     chain: "{{ item.chain | default('INPUT') }}"
     jump: "{{ item.rule | default('ACCEPT') }}"
@@ -48,8 +48,41 @@
 
 - name: Set iptables default policies
   become: true
-  iptables:
+  ansible.builtin.iptables:
     chain: "{{ item.chain | default('INPUT') }}"
     policy: "{{ item.policy }}"
   when: firewall_policies is defined
   loop: "{{ firewall_policies }}"
+
+- tags: firewall_reset_all
+  block:
+    # TODO: Might save service-managed rules (e.g. WireGuard). Write direct to config file and load that instead?
+    - name: (Debian) Get iptables rules
+      become: true
+      ansible.builtin.command: iptables-save
+      register: firewall_iptables_save
+      changed_when: false
+
+    - name: (Debian) Create iptables conf dir
+      become: true
+      ansible.builtin.file:
+        path: /etc/iptables
+        state: directory
+        mode: '755'
+
+    - name: (Debian) Save iptables rules
+      become: true
+      ansible.builtin.copy:
+        content: "{{ firewall_iptables_save.stdout }}"
+        dest: /etc/iptables/rules.v4
+        mode: '644'
+      # iptables-save output includes a timestamp, not idempotent
+      changed_when: false
+
+- name: (Debian) Load iptables rules at boot
+  become: true
+  ansible.builtin.copy:
+    src: iptables-preup
+    dest: /etc/network/if-pre-up.d/iptables
+    mode: '755'
+    backup: true

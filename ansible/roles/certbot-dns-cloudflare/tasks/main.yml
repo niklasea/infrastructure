@@ -1,7 +1,8 @@
 ---
 - ansible.builtin.include_tasks: install_certbot.yml
 
-- block:
+- when: certbot_deploy_hook is not none
+  block:
     - name: Create deploy hook dir
       become: true
       ansible.builtin.file:
@@ -20,7 +21,6 @@
         owner: root
         group: root
         mode: '700'
-  when: certbot_deploy_hook is not none
 
 - name: Find existing certificates
   become: true

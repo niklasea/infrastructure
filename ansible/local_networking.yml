@@ -19,9 +19,13 @@
           net0: "virtio={{ infrastructure_hosts[proxmox_vm_name]['hardware_address'] }},bridge=vmbr0,tag=10"
         proxmox_vm_tags:
           - dns_server
+      register: _proxmox_vm_dns_servers
       loop:
         - dns01
         - dns02
+
+    - name: Refresh inventory to ensure new instances exist in inventory
+      ansible.builtin.meta: refresh_inventory
 
 - name: Configure internal DNS servers
   hosts: dns_server
@@ -29,4 +33,4 @@
     - ansible.builtin.include_role:
         name: common
     - ansible.builtin.include_role:
-        name: dns
+        name: stubby

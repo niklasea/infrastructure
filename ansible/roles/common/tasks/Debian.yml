@@ -20,6 +20,7 @@
     src: "sources-{{ ansible_distribution | lower }}.list.j2"
     dest: /etc/apt/sources.list
     backup: true
+    mode: '644'
   register: common_apt_repository
   when:
     - ansible_architecture == 'x86_64'

@@ -17,7 +17,7 @@
     {{ certbot_path | quote }} -n --agree-tos -m {{ certbot_email | quote }} certonly
     --dns-{{ certbot_dns_plugin | quote }} --dns-{{ certbot_dns_plugin | quote }}-propagation-seconds {{ certbot_dns_propagation | quote }}
     --dns-{{ certbot_dns_plugin | quote }}-credentials {{ certbot_credentials_path | quote }}
-    -d {{ ([certbot_domain] + certbot_subject_alt_names) | join (' -d ') }}
+    -d {{ ([certbot_domain] + certbot_subject_alt_names) | join(' -d ') }}
   args:
     creates: /etc/letsencrypt/live/{{ certbot_domain }}
   register: certbot_get_cert

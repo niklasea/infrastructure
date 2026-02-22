@@ -17,7 +17,7 @@
 
 - name: Create file with long Diffie-Hellman moduli for SSH
   become: true
-  shell: awk '$5 >= 4095' /etc/ssh/moduli > /etc/ssh/moduli.tmp
+  ansible.builtin.shell: awk '$5 >= 4095' /etc/ssh/moduli > /etc/ssh/moduli.tmp
   changed_when: false
 
 - name: Apply long moduli
@@ -26,6 +26,7 @@
     src: /etc/ssh/moduli.tmp
     dest: /etc/ssh/moduli
     remote_src: true
+    mode: '600'
   when: not ansible_check_mode
   notify:
     - Restart SSH

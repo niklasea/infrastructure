@@ -47,7 +47,7 @@
     - ansible.builtin.import_role:
         name: speedtest
     - ansible.builtin.import_role:
-        name: omada_controller
+        name: omada
   post_tasks:
     - name: Schedule backup to network drive
       become: true

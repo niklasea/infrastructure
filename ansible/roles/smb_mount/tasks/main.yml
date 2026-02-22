@@ -5,7 +5,8 @@
     name: cifs-utils
     state: present
 
-- block:
+- when: smb_mounts is defined
+  block:
     - name: Create directories
       become: true
       ansible.builtin.file:
@@ -15,13 +16,13 @@
         group: root
         mode: '600'
       loop:
-        - path: "{{ smb_credential_dir }}"
+        - path: "{{ smb_mount_credential_dir }}"
 
     - name: Add SMB credentials
       become: true
       ansible.builtin.template:
         src: credentials.j2
-        dest: "{{ smb_credential_dir }}/{{ item.0 }}"
+        dest: "{{ smb_mount_credential_dir }}/{{ item.0 }}"
         owner: root
         group: root
         mode: '600'
@@ -35,7 +36,6 @@
         src: "{{ item.1.network_path }}"
         state: mounted
         fstype: cifs
-        opts: "{{ item.1.options }},credentials={{ smb_credential_dir }}/{{ item.0 }}"
+        opts: "{{ item.1.options }},credentials={{ smb_mount_credential_dir }}/{{ item.0 }}"
       loop: "{{ smb_mounts.items() }}"
       no_log: true
-  when: smb_mounts is defined

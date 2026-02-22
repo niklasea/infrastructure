@@ -1,6 +1,6 @@
 ---
 - name: (RedHat) Install Docker dependencies
-  ansible.builtin.yum:
+  ansible.builtin.dnf:
     name:
       - ca-certificates
       - curl
@@ -8,7 +8,7 @@
     state: present
 
 - name: (RedHat) Add package repositories
-  yum_repository:
+  ansible.builtin.yum_repository:
     name: Docker
     description: Official Docker packages
     baseurl: "https://download.docker.com/linux/{{ ansible_distribution | lower }}/{{ ansible_distribution_version }}/{{ ansible_architecture }}/stable"
@@ -18,7 +18,7 @@
     enabled: true
 
 - name: (RedHat) Install Docker
-  ansible.builtin.yum:
+  ansible.builtin.dnf:
     name:
       - docker-ce
       - docker-ce-cli

@@ -19,14 +19,14 @@
     src: haproxy.cfg.j2
     dest: "{{ haproxy_compose_dir }}/haproxy.cfg"
     mode: '644'
-  register: _configuration_files
+  register: _haproxy_configuration_files
 
 - name: Stop docker services
   become: true
   ansible.builtin.command:
     cmd: docker compose down
     chdir: "{{ haproxy_compose_dir }}"
-  when: _configuration_files is changed
+  when: _haproxy_configuration_files is changed
 
 - name: Start haproxy
   become: true
