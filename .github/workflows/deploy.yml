@@ -4,9 +4,9 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'terraform/**'
-      - 'ansible/**'
+  pull_request:
+    branches:
+      - main
 
 permissions: {}
 
@@ -46,10 +46,12 @@ jobs:
 
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
+        if: ${{ github.ref_name == github.event.repository.default_branch }}
 
   ansible:
     name: Configure with Ansible
     runs-on: self-hosted
+    if: ${{ github.ref_name == github.event.repository.default_branch }}
     needs: terraform
     permissions:
       contents: read
