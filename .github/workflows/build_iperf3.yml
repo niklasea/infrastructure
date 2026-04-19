@@ -7,13 +7,11 @@ on:
       - main
     paths:
       - .github/workflows/build_iperf3.yml
-      - dockerfiles/iperf3/**
+      - ansible/dockerfiles/iperf3/**
   pull_request:
-    branches:
-      - main
     paths:
       - .github/workflows/build_iperf3.yml
-      - dockerfiles/iperf3/**
+      - ansible/dockerfiles/iperf3/**
 
 jobs:
   build:
@@ -23,6 +21,6 @@ jobs:
 
     uses: ./.github/workflows/push_docker_image.yml
     with:
-      context: dockerfiles/iperf3
-      file: dockerfiles/iperf3/dockerfile
+      context: ansible/dockerfiles/iperf3
+      file: ansible/dockerfiles/iperf3/dockerfile
       image_name: ghcr.io/niklasea/iperf3

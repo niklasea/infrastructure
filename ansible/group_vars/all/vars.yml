@@ -1,0 +1,101 @@
+---
+internal_network_ipv4: '172.21.1.0/24'
+public_network_ipv4: '172.21.2.0/24'
+guest_network_ipv4: '172.21.9.0/24'
+
+gateway_address: "{{ internal_network_ipv4 | ansible.utils.ipaddr('1') | ansible.utils.ipaddr('address') }}"
+
+home_domain: "{{ vault_home_domain }}"
+local_domain: "internal.{{ home_domain }}"
+dhcp_dns_addresses:
+  - "{{ infrastructure_hosts['dns01']['ipv4_address'] }}"
+  - "{{ infrastructure_hosts['dns02']['ipv4_address'] }}"
+
+haproxy_docker_internal_network: '10.0.0.0/16'
+
+ansible_ssh_user: "{{ vault_deployment_credentials.username }}"
+ansible_ssh_private_key: "{{ vault_deployment_credentials.ssh_key.private }}"
+ansible_ssh_public_key: "{{ vault_deployment_credentials.ssh_key.public }}"
+ansible_become_password: "{{ vault_deployment_credentials.password }}"
+
+cloud_init_credentials:
+  username: "{{ vault_deployment_credentials.username }}"
+  password: "{{ vault_deployment_credentials.password }}"
+  ssh_key: "{{ ansible_ssh_public_key }}"
+proxmox_vm_api_credentials:
+  api_host: "{{ vault_proxmox.host }}"
+  api_port: "{{ vault_proxmox.port }}"
+  api_user: "{{ vault_proxmox.user }}"
+  api_token_id: "{{ vault_proxmox.token_id }}"
+  api_token_secret: "{{ vault_proxmox.token_secret }}"
+proxmox_vm_searchdomains: "{{ local_domain }}"
+create_vm_hetzner_api_credentials:
+  api_token: "{{ vault_hetzner.api_token }}"
+
+docker_compose_dir: /etc/compose
+notification_email: "{{ vault_notification_email }}"
+haproxy_tls_certificate_path: "{{ haproxy_compose_dir }}/certificate.pem"
+certbot_domain: "{{ inventory_hostname_short }}.{{ local_domain }}"
+certbot_email: "{{ vault_notification_email }}"
+certbot_use_dns: true
+certbot_dns_plugin: cloudflare
+certbot_dns_credentials: |
+  # https://certbot-dns-cloudflare.readthedocs.io/en/stable/#credentials
+  dns_{{ certbot_dns_plugin }}_api_token = {{ vault_cloudflare.zone_key }}
+certbot_dns_propagation: 15
+certbot_deploy_hook: |
+  #!/usr/bin/env bash
+
+  cat "$RENEWED_LINEAGE/privkey.pem" "$RENEWED_LINEAGE/fullchain.pem" > "{{ haproxy_tls_certificate_path }}"
+  docker compose -f /etc/compose/haproxy/docker-compose.yml restart
+
+vpn_network_ipv4:
+  network: '172.21.0.0/24'
+  local_address: "{{ infrastructure_hosts['internal-docker']['ipv4_address'] }}"
+wireguard_client_dns_servers: "{{ dhcp_dns_addresses }}"
+
+wifi_pass: "{{ vault_wifi_pass }}"
+
+infrastructure_hosts:
+  # PRIVATE SUBNET
+  vyos:
+    ipv4_address: "{{ gateway_address }}"
+  atreides:
+    ipv4_address: "{{ internal_network_ipv4 | ansible.utils.ipaddr('2') | ansible.utils.ipaddr('address') }}"
+  arrakis: # Primary network switch.
+    hardware_address: '08:BD:43:75:B3:B9'
+    ipv4_address: "{{ internal_network_ipv4 | ansible.utils.ipaddr('3') | ansible.utils.ipaddr('address') }}"
+  arvon: # WiFi access point.
+    hardware_address: '98:DA:C4:63:68:D6'
+    ipv4_address: "{{ internal_network_ipv4 | ansible.utils.ipaddr('6') | ansible.utils.ipaddr('address') }}"
+  dns01:
+    hardware_address: 'BC:24:11:2D:9E:C5'
+    ipv4_address: "{{ internal_network_ipv4 | ansible.utils.ipaddr('20') | ansible.utils.ipaddr('address') }}"
+  dns02:
+    hardware_address: 'BC:24:11:C8:D2:96'
+    ipv4_address: "{{ internal_network_ipv4 | ansible.utils.ipaddr('21') | ansible.utils.ipaddr('address') }}"
+  internal-docker:
+    hardware_address: '56:A1:01:56:C6:BD'
+    ipv4_address: "{{ internal_network_ipv4 | ansible.utils.ipaddr('30') | ansible.utils.ipaddr('address') }}"
+    alternate_hostnames:
+      - bitwarden
+      - gitea
+      - jellyfin
+      - omada
+      - speedtest
+  # PUBLIC SUBNET
+  public-docker:
+    hardware_address: 'CE:CC:FD:16:0E:BC'
+    ipv4_address: "{{ public_network_ipv4 | ansible.utils.ipaddr('2') | ansible.utils.ipaddr('address') }}"
+
+stubby_upstream: |
+  - address_data: 8.8.8.8
+    tls_auth_name: "dns.google"
+  - address_data: 8.8.4.4
+    tls_auth_name: "dns.google"
+  - address_data: 1.1.1.1
+    tls_auth_name: "cloudflare-dns.com"
+  - address_data: 1.0.0.1
+    tls_auth_name: "cloudflare-dns.com"
+stubby_options:
+  idle_timeout: 9000

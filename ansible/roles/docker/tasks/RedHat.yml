@@ -1,0 +1,28 @@
+---
+- name: (RedHat) Install Docker dependencies
+  ansible.builtin.dnf:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+    state: present
+
+- name: (RedHat) Add package repositories
+  ansible.builtin.yum_repository:
+    name: Docker
+    description: Official Docker packages
+    baseurl: "https://download.docker.com/linux/{{ ansible_facts['distribution'] | lower }}/{{ ansible_facts['distribution_version'] }}/{{ ansible_facts['architecture'] }}/stable"
+    gpgcheck: true
+    gpgkey: "https://download.docker.com/linux/{{ ansible_facts['distribution'] | lower }}/gpg"
+    repo_gpgcheck: true
+    enabled: true
+
+- name: (RedHat) Install Docker
+  ansible.builtin.dnf:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present

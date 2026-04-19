@@ -1,0 +1,8 @@
+---
+- name: Configure chosen firewall
+  ansible.builtin.include_tasks: iptables.yml
+  tags: firewall_reset_all
+
+# - name: OS-specific configuration
+#   ansible.builtin.include_tasks: "{{ ansible_facts['os_family'] }}.yml"
+#   tags: firewall_reset_all

@@ -1,0 +1,38 @@
+---
+services:
+  librespeed:
+    image: adolfintel/speedtest:{{ speedtest_librespeed_version }}
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      reverse_proxy:
+        ipv4_address: {{ haproxy_docker_internal_network | ansible.utils.ipaddr('8') | ansible.utils.ipaddr('address') }}
+    environment:
+      MODE: standalone
+
+  iperf3:
+    image: ghcr.io/niklasea/iperf3:{{ speedtest_iperf3_version }}
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - {{ speedtest_iperf3_port }}:5201
+
+networks:
+  reverse_proxy:
+    external: true

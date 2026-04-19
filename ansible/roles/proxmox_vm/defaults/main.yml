@@ -1,0 +1,16 @@
+---
+proxmox_vm_image_url: https://cdimage.debian.org/cdimage/cloud/trixie/latest/debian-13-genericcloud-amd64.qcow2
+proxmox_vm_image_storage: local
+proxmox_vm_storage: local-lvm
+proxmox_vm_sockets: 1
+proxmox_vm_cores: 2
+proxmox_vm_memory_mb: 1024
+proxmox_vm_disk_size: 10G
+proxmox_vm_nameservers:
+  - '1.1.1.1'
+  - '1.0.0.1'
+  - '8.8.8.8'
+  - '8.8.4.4'
+proxmox_vm_ipconfig:
+  ipconfig0: 'ip=dhcp,ip6=dhcp'
+proxmox_vm_tags: []

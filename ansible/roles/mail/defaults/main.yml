@@ -1,0 +1,3 @@
+---
+mail_root: '/var/spool/mailboxes'
+mail_db_path: "{{ mail_root }}/users.sqlite"

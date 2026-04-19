@@ -1,0 +1,23 @@
+---
+- name: OS-specific configuration
+  ansible.builtin.include_tasks: "{{ ansible_facts['os_family'] }}.yml"
+
+- name: Install virtualisation guest agent
+  become: true
+  ansible.builtin.package:
+    name:
+      - qemu-guest-agent
+    state: present
+  when: ansible_facts['virtualization_role'] == 'guest' and ansible_facts['virtualization_type'] == 'kvm'
+  register: _common_guest_agent
+
+- name: Start virtualisation guest agent
+  become: true
+  ansible.builtin.service:
+    name: qemu-guest-agent
+    enabled: true
+    state: started
+  when: _common_guest_agent is changed
+
+- name: Configure SSH
+  ansible.builtin.import_tasks: ssh_hardening.yml

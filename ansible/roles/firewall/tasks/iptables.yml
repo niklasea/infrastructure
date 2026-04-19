@@ -1,0 +1,88 @@
+---
+# - block:
+#     - name: Reset default policies
+#       become: true
+#       ansible.builtin.iptables:
+#         chain: "{{ item }}"
+#         policy: ACCEPT
+#       loop:
+#         - INPUT
+#         - FORWARD
+#         - OUTPUT
+
+#     - name: Flush iptables rules
+#       become: true
+#       ansible.builtin.iptables:
+#         table: "{{ item }}"
+#         flush: true
+#       loop:
+#         - filter
+#         - nat
+
+#     - name: Prevent flushing again
+#       ansible.builtin.set_fact:
+#         firewall_already_reset: true
+#   when: not firewall_already_reset
+#   tags:
+#     - firewall_reset_all
+#     - never
+
+- name: Set iptables rules
+  become: true
+  ansible.builtin.iptables:
+    table: "{{ item.table | default(omit) }}"
+    chain: "{{ item.chain | default('INPUT') }}"
+    jump: "{{ item.rule | default('ACCEPT') }}"
+    ctstate: "{{ item.ctstate | default(omit) }}"
+    source: "{{ item.src | default(omit) }}"
+    in_interface: "{{ item.in_interface | default(omit) }}"
+    destination: "{{ item.dest | default(omit) }}"
+    destination_port: "{{ item.port | default(omit) }}"
+    icmp_type: "{{ item.icmp_type | default(omit) }}"
+    protocol: "{{ item.proto | default(omit) }}"
+    ip_version: "{{ item.ip_version | default(omit) }}"
+    limit: "{{ item.limit | default(omit) }}"
+    comment: "{{ item.comment | default(omit) }}"
+  when: firewall_rules is defined
+  loop: "{{ firewall_rules }}"
+
+- name: Set iptables default policies
+  become: true
+  ansible.builtin.iptables:
+    chain: "{{ item.chain | default('INPUT') }}"
+    policy: "{{ item.policy }}"
+  when: firewall_policies is defined
+  loop: "{{ firewall_policies }}"
+
+- tags: firewall_reset_all
+  block:
+    # TODO: Might save service-managed rules (e.g. WireGuard). Write direct to config file and load that instead?
+    - name: (Debian) Get iptables rules
+      become: true
+      ansible.builtin.command: iptables-save
+      register: firewall_iptables_save
+      changed_when: false
+
+    - name: (Debian) Create iptables conf dir
+      become: true
+      ansible.builtin.file:
+        path: /etc/iptables
+        state: directory
+        mode: '755'
+
+    - name: (Debian) Save iptables rules
+      become: true
+      ansible.builtin.copy:
+        content: "{{ firewall_iptables_save.stdout }}"
+        dest: /etc/iptables/rules.v4
+        mode: '644'
+      # iptables-save output includes a timestamp, not idempotent
+      changed_when: false
+
+- name: (Debian) Load iptables rules at boot
+  become: true
+  ansible.builtin.copy:
+    src: iptables-preup
+    dest: /etc/network/if-pre-up.d/iptables
+    mode: '755'
+    backup: true

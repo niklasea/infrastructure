@@ -1,0 +1,11 @@
+{# ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+update_config=1
+country={{ bonded_interfaces_wpa_country }}
+
+# RETROPIE CONFIG START
+network={
+        ssid="{{ bonded_interfaces_wpa_ssid }}"
+        bssid="{{ bonded_interfaces_wpa_bssid }}"
+        psk="{{ bonded_interfaces_wpa_pass }}"
+}
+# RETROPIE CONFIG END #}

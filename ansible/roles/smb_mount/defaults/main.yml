@@ -1,0 +1,9 @@
+---
+smb_mount_credential_dir: /root/smbcredentials
+# smb_mounts:
+#   name:
+#     network_path:
+#     local_path:
+#     options:
+#     username:
+#     password:

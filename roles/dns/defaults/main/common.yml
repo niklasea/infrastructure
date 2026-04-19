@@ -1,3 +1,0 @@
----
-dns_compose_dir: /etc/compose/dns
-stubby_config_path: "{{ dns_compose_dir }}/stubby.d"

@@ -1,0 +1,28 @@
+---
+plugin: community.proxmox.proxmox
+url: 'https://172.21.1.2:8006'
+# Create the user under Datacenter > Permissions > Users
+# Go to Datacenter > Permissions and assign the PVEAuditor role for path /vms
+# Create an API token without privilege separation
+user: ansible_inventory@pam
+token_id: Ansible
+token_secret: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          61356431316165613964383339333566656261313862333231306361366534636431373630323938
+          3761326535633935383936393539646661306431396134630a343465306464663062396231666563
+          32396466366639356363663738323034393965333839653237323838323465323161643564363465
+          6238646163386363310a316132616565623532646232636366393834326232306330613133663265
+          35346136616531666538366437643436326531393037626533613031343237643036313933333039
+          6336613135373861373665623365333464353664336338613634
+validate_certs: false
+want_facts: true
+exclude_nodes: true
+want_proxmox_nodes_ansible_host: false
+compose:
+  ansible_host: proxmox_name + '.' + proxmox_searchdomain
+
+# Group VMs based on Proxmox tags
+keyed_groups:
+  - key: proxmox_tags_parsed
+    separator: ''
+    prefix: ''

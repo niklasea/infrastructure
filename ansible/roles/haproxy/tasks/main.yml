@@ -1,0 +1,38 @@
+---
+- name: Create directories
+  become: true
+  ansible.builtin.file:
+    path: "{{ haproxy_compose_dir }}"
+    state: directory
+    mode: '755'
+
+- name: Add Docker compose file
+  become: true
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ haproxy_compose_dir }}/docker-compose.yml"
+    mode: '644'
+
+- name: Add configuration file
+  become: true
+  ansible.builtin.template:
+    src: haproxy.cfg.j2
+    dest: "{{ haproxy_compose_dir }}/haproxy.cfg"
+    mode: '644'
+  register: _haproxy_configuration_files
+
+- name: Stop docker services
+  become: true
+  ansible.builtin.command:
+    cmd: docker compose down
+    chdir: "{{ haproxy_compose_dir }}"
+  when: _haproxy_configuration_files is changed
+
+- name: Start haproxy
+  become: true
+  community.docker.docker_compose_v2:
+    project_src: "{{ haproxy_compose_dir }}"
+    state: "present"
+    pull: "always"
+    recreate: "auto"
+    remove_orphans: true

@@ -1,0 +1,36 @@
+---
+- name: Create directories
+  become: true
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    mode: '755'
+  loop:
+    - path: "{{ inadyn_compose_dir }}"
+
+- name: Apply In-A-Dyn config
+  become: true
+  ansible.builtin.template:
+    src: inadyn.conf.j2
+    dest: "{{ inadyn_config_path }}"
+    # Contains secrets, must not be world-readable
+    owner: "{{ docker_remap_user }}"
+    group: "{{ docker_remap_user }}"
+    mode: '600'
+  register: _inadyn_configuration_files
+
+- name: Add Docker compose file
+  become: true
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ inadyn_compose_dir }}/docker-compose.yml"
+    mode: '640'
+
+- name: Start In-A-Dyn
+  become: true
+  community.docker.docker_compose_v2:
+    project_src: "{{ inadyn_compose_dir }}"
+    state: "present"
+    pull: "always"
+    recreate: "{{ 'always' if _inadyn_configuration_files is changed else 'auto' }}"
+    remove_orphans: true

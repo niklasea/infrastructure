@@ -1,0 +1,33 @@
+---
+- when: vaultwarden_web_vault_latest_release
+  block:
+    # https://developer.github.com/v3/repos/releases/#get-the-latest-release
+    - name: Get the latest non-prerelease tag on GitHub
+      # The GitHub API is rate limited
+      run_once: true
+      ansible.builtin.uri:
+        url: 'https://api.github.com/repos/dani-garcia/bw_web_builds/releases/latest'
+      register: vaultwarden_web_vault_release_latest
+
+    - name: Select latest vaultwarden release
+      ansible.builtin.set_fact:
+        vaultwarden_web_vault_version: "{{ vaultwarden_web_vault_release_latest.json.tag_name }}"
+
+# This depends on the git module creating the destination folder during the build step (build.yml)
+- name: Download web-vault files
+  ansible.builtin.get_url:
+    url: "https://github.com/dani-garcia/bw_web_builds/releases/download/\
+          {{ vaultwarden_web_vault_version }}/bw_web_{{ vaultwarden_web_vault_version }}.tar.gz"
+    dest: /tmp/bw_web_vault.tar.gz
+    mode: '640'
+
+- name: Extract web-vault files into place
+  when: not ansible_check_mode
+  become: true
+  ansible.builtin.unarchive:
+    src: /tmp/bw_web_vault.tar.gz
+    dest: "{{ vaultwarden_compose_dir }}"
+    remote_src: true
+    owner: "{{ docker_remap_user }}"
+    group: "{{ docker_remap_user }}"
+    mode: '750'

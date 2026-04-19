@@ -1,0 +1,170 @@
+#!/usr/bin/env ansible-playbook
+---
+- name: VyOS router config
+  hosts: vyos
+  tasks:
+    - ansible.builtin.include_role:
+        name: vyos
+
+- name: Configure local networking
+  ansible.builtin.import_playbook: local_networking.yml
+
+- name: Bootstrap local agents for deployments
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Create VMs
+      ansible.builtin.include_role:
+        name: proxmox_vm
+      vars:
+        proxmox_vm_node: atreides
+        proxmox_vm_name: "{{ item }}"
+        proxmox_vm_net:
+          net0: "virtio,bridge=vmbr0,tag=10"
+        proxmox_vm_tags:
+          - infrastructure_bootstrap
+        proxmox_vm_nameservers:
+          - "{{ gateway_address }}"
+      register: _proxmox_vm_infrastructure_bootstrap
+      loop:
+        - terraform-agent
+        - github-actions-agent
+
+    - name: Refresh inventory to ensure new instances exist in inventory
+      ansible.builtin.meta: refresh_inventory
+
+- name: Common settings
+  hosts: infrastructure_bootstrap
+  tasks:
+    - ansible.builtin.include_role:
+        name: common
+    - ansible.builtin.include_role:
+        name: firewall
+      vars:
+        firewall_policies:
+          - { chain: INPUT, policy: DROP }
+          - { chain: FORWARD, policy: DROP }
+        firewall_rules:
+          - { chain: INPUT, rule: ACCEPT, ctstate: [ ESTABLISHED, RELATED ] }
+          - { chain: INPUT, rule: ACCEPT, in_interface: lo, comment: Localhost connections }
+          - { chain: INPUT, rule: ACCEPT, proto: icmp, comment: Ping requests }
+          - { chain: INPUT, rule: ACCEPT, port: 22, proto: tcp, comment: SSH }
+
+- name: Deploy Terraform agent
+  hosts: terraform-agent
+  tasks:
+    - ansible.builtin.include_role:
+        name: docker
+
+    - name: Start agent
+      become: true
+      community.docker.docker_container:
+        name: terraform-agent
+        image: hashicorp/tfc-agent:latest
+        state: started
+        platform: linux/amd64
+        env:
+          TFC_AGENT_NAME: proxmox-terraform-agent
+          TFC_AGENT_TOKEN: "{{ vault_terraform_agent_token }}"
+
+- name: Deploy GitHub Actions runner
+  hosts: github-actions-agent
+  tasks:
+    - name: Download installer
+      ansible.builtin.get_url:
+        url: 'https://github.com/actions/runner/releases/download/v2.331.0/actions-runner-linux-x64-2.331.0.tar.gz'
+        dest: /tmp/
+      register: _github_actions_installer
+
+    - name: Calculate the checksum
+      ansible.builtin.stat:
+        path: "{{ _github_actions_installer.dest }}"
+        checksum_algorithm: sha256
+        get_checksum: true
+      register: _github_actions_installer_checksum
+      failed_when: _github_actions_installer_checksum.stat.checksum != '5fcc01bd546ba5c3f1291c2803658ebd3cedb3836489eda3be357d41bfcf28a7'
+
+    - name: Create runner directory
+      become: true
+      ansible.builtin.file:
+        path: '/opt/github_actions_runner/'
+        state: directory
+        mode: '755'
+      register: _github_actions_runner_dir
+
+    - name: Extract installer
+      become: true
+      ansible.builtin.unarchive:
+        src: "{{ _github_actions_installer.dest }}"
+        dest: "{{ _github_actions_runner_dir.path }}"
+        remote_src: true
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Install GitHub Actions dependencies
+      become: true
+      ansible.builtin.command:
+        cmd: './bin/installdependencies.sh'
+        chdir: "{{ _github_actions_runner_dir.path }}"
+      register: _github_actions_runner_dependency_install
+      changed_when: "'0 newly installed' not in _github_actions_runner_dependency_install.stdout"
+
+    - name: Get runner registration token
+      ansible.builtin.uri:
+        url: "https://api.github.com/repos/{{ vault_github_actions_runner.username }}/{{ vault_github_actions_runner.repository }}/actions/runners/registration-token"
+        headers:
+          Authorization: "Bearer {{ vault_github_actions_runner.pat }}"
+          Accept: 'application/vnd.github+json'
+          X-GitHub-Api-Version: '2022-11-28'
+        method: POST
+        status_code: 201
+        force_basic_auth: true
+      register: _github_actions_runner_token
+      run_once: true
+
+    - name: Configure runner
+      ansible.builtin.command:
+        cmd: >
+          ./config.sh
+          --url https://github.com/{{ vault_github_actions_runner.username }}/{{ vault_github_actions_runner.repository }}
+          --token {{ _github_actions_runner_token.json.token }}
+          --name home
+          --labels {{ github_actions_runner_labels | join(",") }}
+          --replace
+          --unattended
+        chdir: "{{ _github_actions_runner_dir.path }}"
+      register: _github_actions_runner_configuration
+      changed_when: "'already configured' is not in _github_actions_runner_configuration.stderr"
+      failed_when:
+        - _github_actions_runner_configuration.rc != 0
+        - "'already configured' is not in _github_actions_runner_configuration.stderr"
+      vars:
+        github_actions_runner_labels:
+          - "{{ ansible_facts['distribution'] }}"
+          - "{{ ansible_facts['distribution'] }}{{ ansible_facts['distribution_major_version'] }}"
+
+    - name: Start runner at boot
+      become: true
+      ansible.builtin.command:
+        cmd: './svc.sh install'
+        chdir: "{{ _github_actions_runner_dir.path }}"
+      register: _github_actions_runner_service_install
+      changed_when: "'error: exists' not in _github_actions_runner_service_install.stderr"
+      failed_when:
+        - _github_actions_runner_service_install.rc != 0
+        - "'error: exists' not in _github_actions_runner_service_install.stderr"
+
+    - name: Start runner
+      become: true
+      ansible.builtin.command:
+        cmd: "./svc.sh start"
+        chdir: "{{ _github_actions_runner_dir.path }}"
+      changed_when: false
+
+    - name: Install dependencies for Ansible deployments
+      become: true
+      ansible.builtin.package:
+        name:
+          - python3
+          - pipx # Allow workflows to install Python packages
+        state: present

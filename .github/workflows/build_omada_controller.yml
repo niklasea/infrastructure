@@ -7,13 +7,11 @@ on:
       - main
     paths:
       - .github/workflows/build_omada_controller.yml
-      - dockerfiles/omada_controller/**
+      - ansible/dockerfiles/omada_controller/**
   pull_request:
-    branches:
-      - main
     paths:
       - .github/workflows/build_omada_controller.yml
-      - dockerfiles/omada_controller/**
+      - ansible/dockerfiles/omada_controller/**
   workflow_dispatch:
     inputs:
       omada_tar_url:
@@ -35,7 +33,7 @@ jobs:
     with:
       image_name: ghcr.io/niklasea/omada_controller
       custom_tag: ${{ inputs.docker_tag }}
-      context: dockerfiles/omada_controller
-      file: dockerfiles/omada_controller/dockerfile
+      context: ansible/dockerfiles/omada_controller
+      file: ansible/dockerfiles/omada_controller/dockerfile
       build-args: |
         OMADA_TAR_URL=${{ inputs.omada_tar_url || 'https://static.tp-link.com/upload/software/2026/202601/20260121/Omada_Network_Application_v6.1.0.19_linux_x64_20260117100056.tar.gz' }}

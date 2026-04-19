@@ -1,0 +1,82 @@
+---
+# Official install methods (https://certbot.eff.org/docs/install.html):
+#   1. Install (epel-release,) certbot, python(3)-certbot-dns-cloudflare via package manager
+#   2. Download and run https://dl.eff.org/certbot-auto
+
+# - name: Check existence of certbot-auto script
+#   stat:
+#     path: "{{ certbot_path }}"
+#     get_attributes: false
+#     get_checksum: false
+#     get_mime: false
+#   register: certbot_auto_script
+
+- block:
+    - name: (CentOS) Enable EPEL
+      become: true
+      ansible.builtin.package:
+        name: epel-release
+        state: present
+      when:
+        - ansible_facts['distribution'] == 'CentOS'
+        - ansible_facts['distribution_major_version'] is version('7', '<=')
+
+    - name: Install Certbot packages
+      become: true
+      ansible.builtin.package:
+        name:
+          - certbot
+          - "{{ 'python*-certbot-dns-' ~ certbot_dns_plugin }}"
+        state: present
+
+    # Use the installed package rather than the certbot-auto script
+    - name: Set certbot path
+      ansible.builtin.set_fact:
+        certbot_path: certbot
+  rescue:
+      # TODO: certbot-auto is deprecated
+    - name: Download certbot-auto
+      become: true
+      ansible.builtin.get_url:
+        url: https://dl.eff.org/certbot-auto
+        dest: "{{ certbot_path }}"
+        owner: root
+        group: root
+        mode: '755'
+
+    - name: Download PGP signature
+      ansible.builtin.get_url:
+        url: https://dl.eff.org/certbot-auto.asc
+        dest: "{{ certbot_auto_signature_path }}"
+        mode: '755'
+
+    - name: Import public key
+      ansible.builtin.command: gpg --keyserver pool.sks-keyservers.net --recv-key A2CFB51FA275A7286234E7B24D17C995CD9775F2
+      register: certbot_auto_import_key
+      changed_when: "'public key \"Let''s Encrypt Client Team <letsencrypt-client@eff.org>\" imported' in certbot_auto_import_key.stdout"
+
+    - name: Verify script integrity
+      ansible.builtin.command: "gpg --trusted-key 4D17C995CD9775F2 --verify {{ certbot_auto_signature_path | quote }} {{ certbot_path | quote }}"
+      changed_when: false
+
+    # TODO: creates
+    - name: Install certbot
+      become: true
+      ansible.builtin.command: "{{ certbot_path | quote }} -n --install-only"
+
+    - name: Install Cloudflare DNS plugin
+      become: true
+      ansible.builtin.pip:
+        name: certbot-dns-cloudflare
+        state: present
+        virtualenv: /opt/eff.org/certbot/venv/
+
+# Newer Debian/Ubuntu versions configure auto-renewal automatically
+- name: (Non-Debian) Configure automatic renewal
+  become: true
+  ansible.builtin.cron:
+    name: 'Renew LetsEncrypt TLS certiticates'
+    job: "{{ certbot_renew_cronjob }}"
+    special_time: daily
+    state: present
+  when: ansible_facts['os_family'] != "Debian"

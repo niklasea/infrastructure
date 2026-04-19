@@ -1,0 +1,129 @@
+---
+vyos_wan_interface: eth0
+vyos_wan_upload_bandwidth: 200mbit
+vyos_guest_network_address: "{{ guest_network_ipv4 | ansible.utils.ipaddr('1') }}"
+vyos_users:
+  - username: "{{ vault_deployment_credentials.username }}"
+    password: "{{ vault_deployment_credentials.password }}"
+    ssh_public_key: "{{ (ansible_ssh_public_key | ansible.builtin.split(' '))[1] }}"
+    ssh_public_key_type: "{{ (ansible_ssh_public_key | ansible.builtin.split(' '))[0] }}"
+vyos_dhcp_dns_addresses: "{{ dhcp_dns_addresses }}"
+vyos_local_domain: "{{ local_domain }}"
+vyos_local_interfaces:
+  - device: eth1
+    name: NINO
+    vlan: 10
+    subnet: "{{ internal_network_ipv4 }}"
+    static_leases: "{{ infrastructure_hosts | ansible.builtin.dict2items | selectattr('value.ipv4_address', 'defined') | selectattr('value.ipv4_address', 'ansible.utils.in_network', internal_network_ipv4) | ansible.builtin.items2dict }}"
+  - device: eth1
+    name: PUBLIC
+    vlan: 20
+    subnet: "{{ public_network_ipv4 }}"
+    static_leases: "{{ infrastructure_hosts | ansible.builtin.dict2items | selectattr('value.ipv4_address', 'defined') | selectattr('value.ipv4_address', 'ansible.utils.in_network', public_network_ipv4) | ansible.builtin.items2dict }}"
+    firewall_rules_ipv4:
+      in: |
+        set firewall name PUBLIC-IN-v4 default-action 'reject'
+        set firewall name PUBLIC-IN-v4 enable-default-log
+        set firewall name PUBLIC-IN-v4 rule 10 action 'accept'
+        set firewall name PUBLIC-IN-v4 rule 10 state established 'enable'
+        set firewall name PUBLIC-IN-v4 rule 10 state related 'enable'
+        set firewall name PUBLIC-IN-v4 rule 11 action 'accept'
+        set firewall name PUBLIC-IN-v4 rule 11 description 'Allow public servers to use the internet'
+        set firewall name PUBLIC-IN-v4 rule 11 destination group network-group '!LOCAL-NETWORKS'
+        set firewall name PUBLIC-IN-v4 rule 11 protocol 'tcp_udp'
+        set firewall name PUBLIC-IN-v4 rule 11 state new 'enable'
+        set firewall name PUBLIC-IN-v4 rule 20 action 'accept'
+        set firewall name PUBLIC-IN-v4 rule 20 description 'Allow ICMP for diagnostic purposes'
+        set firewall name PUBLIC-IN-v4 rule 20 destination group network-group '!LOCAL-NETWORKS'
+        set firewall name PUBLIC-IN-v4 rule 20 protocol 'icmp'
+        set firewall name PUBLIC-IN-v4 rule 20 state new 'enable'
+        set firewall name PUBLIC-IN-v4 rule 100 action 'accept'
+        set firewall name PUBLIC-IN-v4 rule 100 description 'Allow public servers to use local DNS servers'
+        set firewall name PUBLIC-IN-v4 rule 100 destination group address-group 'LOCAL-DNS'
+        set firewall name PUBLIC-IN-v4 rule 100 protocol 'tcp_udp'
+        set firewall name PUBLIC-IN-v4 rule 100 state new 'enable'
+      local: |
+        set firewall name PUBLIC-LOCAL-v4 default-action 'reject'
+        set firewall name PUBLIC-LOCAL-v4 enable-default-log
+        set firewall name PUBLIC-LOCAL-v4 rule 10 action 'accept'
+        set firewall name PUBLIC-LOCAL-v4 rule 10 state established 'enable'
+        set firewall name PUBLIC-LOCAL-v4 rule 10 state related 'enable'
+        set firewall name PUBLIC-LOCAL-v4 rule 20 action 'accept'
+        set firewall name PUBLIC-LOCAL-v4 rule 20 icmp type-name 'echo-request'
+        set firewall name PUBLIC-LOCAL-v4 rule 20 protocol 'icmp'
+        set firewall name PUBLIC-LOCAL-v4 rule 100 action 'accept'
+        set firewall name PUBLIC-LOCAL-v4 rule 100 description 'Allow public servers to use local DNS service'
+        set firewall name PUBLIC-LOCAL-v4 rule 100 destination port '53'
+        set firewall name PUBLIC-LOCAL-v4 rule 100 protocol 'tcp_udp'
+        set firewall name PUBLIC-LOCAL-v4 rule 100 state new 'enable'
+        set firewall name PUBLIC-LOCAL-v4 rule 110 action 'accept'
+        set firewall name PUBLIC-LOCAL-v4 rule 110 description 'Allow public servers to use local NTP service'
+        set firewall name PUBLIC-LOCAL-v4 rule 110 destination port '123'
+        set firewall name PUBLIC-LOCAL-v4 rule 110 protocol 'udp'
+        set firewall name PUBLIC-LOCAL-v4 rule 110 state new 'enable'
+  - device: eth1
+    name: GUEST
+    vlan: 90
+    subnet: "{{ guest_network_ipv4 }}"
+    firewall_rules_ipv4:
+      in: |
+        set firewall name GUEST-IN-v4 default-action 'reject'
+        set firewall name GUEST-IN-v4 enable-default-log
+        set firewall name GUEST-IN-v4 rule 10 action 'accept'
+        set firewall name GUEST-IN-v4 rule 10 state established 'enable'
+        set firewall name GUEST-IN-v4 rule 10 state related 'enable'
+        set firewall name GUEST-IN-v4 rule 11 action 'accept'
+        set firewall name GUEST-IN-v4 rule 11 description 'Allow guests to use the internet'
+        set firewall name GUEST-IN-v4 rule 11 destination group network-group '!LOCAL-NETWORKS'
+        set firewall name GUEST-IN-v4 rule 11 protocol 'tcp_udp'
+        set firewall name GUEST-IN-v4 rule 11 state new 'enable'
+        set firewall name GUEST-IN-v4 rule 20 action 'accept'
+        set firewall name GUEST-IN-v4 rule 20 description 'Allow ICMP for diagnostic purposes'
+        set firewall name GUEST-IN-v4 rule 20 destination group network-group '!LOCAL-NETWORKS'
+        set firewall name GUEST-IN-v4 rule 20 protocol 'icmp'
+        set firewall name GUEST-IN-v4 rule 20 state new 'enable'
+        set firewall name GUEST-IN-v4 rule 100 action 'accept'
+        set firewall name GUEST-IN-v4 rule 100 description 'Allow guests to use local DNS servers'
+        set firewall name GUEST-IN-v4 rule 100 destination group address-group 'LOCAL-DNS'
+        set firewall name GUEST-IN-v4 rule 100 protocol 'tcp_udp'
+        set firewall name GUEST-IN-v4 rule 100 state new 'enable'
+      local: |
+        set firewall name GUEST-LOCAL-v4 default-action 'reject'
+        set firewall name GUEST-LOCAL-v4 enable-default-log
+        set firewall name GUEST-LOCAL-v4 rule 10 action 'accept'
+        set firewall name GUEST-LOCAL-v4 rule 10 state established 'enable'
+        set firewall name GUEST-LOCAL-v4 rule 10 state related 'enable'
+        set firewall name GUEST-LOCAL-v4 rule 20 action 'accept'
+        set firewall name GUEST-LOCAL-v4 rule 20 icmp type-name 'echo-request'
+        set firewall name GUEST-LOCAL-v4 rule 20 protocol 'icmp'
+        set firewall name GUEST-LOCAL-v4 rule 100 action 'accept'
+        set firewall name GUEST-LOCAL-v4 rule 100 description 'Allow guests to use local DNS service'
+        set firewall name GUEST-LOCAL-v4 rule 100 destination port '53'
+        set firewall name GUEST-LOCAL-v4 rule 100 protocol 'tcp_udp'
+        set firewall name GUEST-LOCAL-v4 rule 100 state new 'enable'
+        set firewall name GUEST-LOCAL-v4 rule 110 action 'accept'
+        set firewall name GUEST-LOCAL-v4 rule 110 description 'Allow guests to use local NTP service'
+        set firewall name GUEST-LOCAL-v4 rule 110 destination port '123'
+        set firewall name GUEST-LOCAL-v4 rule 110 protocol 'udp'
+        set firewall name GUEST-LOCAL-v4 rule 110 state new 'enable'
+vyos_nat_destination_rules:
+  - description: 'Port forward HTTP'
+    destination port: '80'
+    inbound-interface: "{{ vyos_wan_interface }}"
+    protocol: 'tcp_udp'
+    translation address: "{{ infrastructure_hosts['public-docker']['ipv4_address'] }}"
+  - description: 'Port forward HTTPS'
+    destination port: '443'
+    inbound-interface: "{{ vyos_wan_interface }}"
+    protocol: 'tcp_udp'
+    translation address: "{{ infrastructure_hosts['public-docker']['ipv4_address'] }}"
+
+  - description: 'Port forward WireGuard'
+    destination port: '51820'
+    inbound-interface: "{{ vyos_wan_interface }}"
+    protocol: 'udp'
+    translation address: "{{ vpn_network_ipv4['local_address'] }}"
+vyos_static_host_mappings: "{{ infrastructure_hosts | ansible.builtin.dict2items | selectattr('value.ipv4_address', 'defined') | selectattr('value.alternate_hostnames', 'defined') | ansible.builtin.items2dict }}"
+vyos_static_routes:
+  - network: "{{ vpn_network_ipv4['network'] }}"
+    gateway: "{{ vpn_network_ipv4['local_address'] }}"

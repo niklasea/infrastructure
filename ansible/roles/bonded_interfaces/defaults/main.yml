@@ -1,0 +1,8 @@
+---
+bonded_interfaces_names: "{{ ansible_interfaces | difference(['lo', 'bond0']) | sort }}"
+bonded_interfaces_primary: "{{ bonded_interfaces[0] }}"
+bonded_interfaces_wpa_conf_path: '/etc/wpa_supplicant/wpa_supplicant.conf'
+
+# bonded_interfaces_wpa_ssid:
+# bonded_interfaces_wpa_bssid:
+# bonded_interfaces_wpa_pass:

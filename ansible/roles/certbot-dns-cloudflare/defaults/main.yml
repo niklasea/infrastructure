@@ -1,0 +1,13 @@
+---
+certbot_domain: "{{ ansible_facts['fqdn'] }}"
+certbot_subject_alt_names: []
+certbot_email:
+certbot_deploy_hook:
+certbot_renew_hooks:
+  pre: ''
+  post: ''
+certbot_use_dns: false
+# Does not support route53
+certbot_dns_plugin:
+certbot_dns_credentials:
+certbot_dns_propagation: 10

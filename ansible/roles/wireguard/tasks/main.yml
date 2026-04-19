@@ -1,0 +1,33 @@
+---
+- name: Create directories
+  become: true
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    mode: '755'
+  loop:
+    - path: "{{ wireguard_compose_dir }}"
+
+- name: Generate server config
+  become: true
+  ansible.builtin.template:
+    src: wg.conf.j2
+    dest: "{{ wireguard_compose_dir }}/{{ wireguard_interface_name }}.conf"
+    mode: '600'
+  register: _wireguard_configuration_files
+
+- name: Add Docker compose file
+  become: true
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ wireguard_compose_dir }}/docker-compose.yml"
+    mode: '640'
+
+- name: Start WireGuard
+  become: true
+  community.docker.docker_compose_v2:
+    project_src: "{{ wireguard_compose_dir }}"
+    state: "present"
+    pull: "always"
+    recreate: "{{ 'always' if _wireguard_configuration_files is changed else 'auto' }}"
+    remove_orphans: true

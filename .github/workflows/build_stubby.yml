@@ -7,13 +7,11 @@ on:
       - main
     paths:
       - .github/workflows/build_stubby.yml
-      - dockerfiles/stubby/**
+      - ansible/dockerfiles/stubby/**
   pull_request:
-    branches:
-      - main
     paths:
       - .github/workflows/build_stubby.yml
-      - dockerfiles/stubby/**
+      - ansible/dockerfiles/stubby/**
   workflow_dispatch:
     inputs:
       branch:
@@ -32,7 +30,7 @@ jobs:
     with:
       image_name: ghcr.io/niklasea/stubby
       custom_tag: ${{ inputs.branch || 'master' }}
-      context: dockerfiles/stubby
-      file: dockerfiles/stubby/dockerfile
+      context: ansible/dockerfiles/stubby
+      file: ansible/dockerfiles/stubby/dockerfile
       build-args: |
         GETDNS_RELEASE=${{ inputs.branch || 'master' }}

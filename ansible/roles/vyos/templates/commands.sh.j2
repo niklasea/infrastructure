@@ -1,0 +1,298 @@
+#!/bin/vbash
+source /opt/vyatta/etc/functions/script-template
+configure
+
+# Load defaults to clear existing configuration
+
+load /opt/vyatta/etc/config.boot.default
+
+# Configure the local system
+
+set system time-zone 'Europe/Copenhagen'
+set system ntp server 0.pool.ntp.org
+set system ntp server 1.pool.ntp.org
+set system ntp server 2.pool.ntp.org
+{% for address in vyos_system_dns_addresses %}
+set system name-server '{{ address | ansible.utils.ipaddr('address') }}'
+{% endfor %}
+set system domain-name '{{ vyos_local_domain }}'
+set system domain-search domain '{{ vyos_local_domain }}'
+{% for user in vyos_users %}
+set system login user {{ user.username }} authentication plaintext-password '{{ user.password }}'
+set system login user {{ user.username }} authentication public-keys {{ user.username }} key '{{ user.ssh_public_key }}'
+set system login user {{ user.username }} authentication public-keys {{ user.username }} type '{{ user.ssh_public_key_type }}'
+{% endfor %}
+delete system login user vyos
+{% for client_name, values in vyos_static_host_mappings.items() %}
+set system static-host-mapping host-name '{{ client_name }}.{{ vyos_local_domain }}' inet '{{ values.ipv4_address }}'
+{% for alias in values.alternate_hostnames %}
+set system static-host-mapping host-name '{{ client_name }}.{{ vyos_local_domain }}' alias '{{ alias }}.{{ vyos_local_domain }}'
+{% endfor %}
+{% endfor %}
+
+# Configure SSH
+
+set service ssh port '22'
+set service ssh disable-password-authentication
+set service ssh key-exchange 'curve25519-sha256@libssh.org'
+set service ssh key-exchange 'ecdh-sha2-nistp521'
+set service ssh key-exchange 'ecdh-sha2-nistp384'
+set service ssh key-exchange 'ecdh-sha2-nistp256'
+set service ssh key-exchange 'diffie-hellman-group-exchange-sha256'
+comment service ssh key-exchange 'Uses Mozilla OpenSSH modern recommendations (Feb-2020)'
+set service ssh ciphers 'chacha20-poly1305@openssh.com'
+set service ssh ciphers 'aes256-gcm@openssh.com'
+set service ssh ciphers 'aes128-gcm@openssh.com'
+set service ssh ciphers 'aes256-ctr'
+set service ssh ciphers 'aes192-ctr'
+set service ssh ciphers 'aes128-ctr'
+comment service ssh ciphers 'Uses Mozilla OpenSSH modern recommendations (Feb-2020)'
+set service ssh mac 'hmac-sha2-512-etm@openssh.com'
+set service ssh mac 'hmac-sha2-256-etm@openssh.com'
+set service ssh mac 'umac-128-etm@openssh.com'
+set service ssh mac 'hmac-sha2-512'
+set service ssh mac 'hmac-sha2-256'
+set service ssh mac 'umac-128@openssh.com'
+comment service ssh mac 'Uses Mozilla OpenSSH modern recommendations (Feb-2020)'
+set service ssh disable-host-validation
+comment service ssh disable-host-validation 'Host validation causes unnecessary DNS traffic for no clear benefit'
+
+# Configure DHCP and DNS server
+
+set service dhcp-server hostfile-update
+set service dhcp-server host-decl-name
+{% for interface in vyos_local_interfaces %}
+{% set current_interface_gateway = interface.gateway | default(interface.subnet | ansible.utils.ipaddr('1')) | ansible.utils.ipaddr('address') %}
+set service dhcp-server shared-network-name {{ interface.name }} authoritative
+set service dhcp-server shared-network-name {{ interface.name }} subnet '{{ interface.subnet }}' range CLIENTS start '{{ interface.dhcp_range.start | default(interface.subnet | ansible.utils.ipaddr('50')) | ansible.utils.ipaddr('address') }}'
+set service dhcp-server shared-network-name {{ interface.name }} subnet '{{ interface.subnet }}' range CLIENTS stop '{{ interface.dhcp_range.stop | default(interface.subnet | ansible.utils.ipaddr('-2')) | ansible.utils.ipaddr('address') }}'
+set service dhcp-server shared-network-name {{ interface.name }} subnet '{{ interface.subnet }}' default-router '{{ current_interface_gateway }}'
+set service dhcp-server shared-network-name {{ interface.name }} domain-name '{{ vyos_local_domain }}'
+set service dhcp-server shared-network-name {{ interface.name }} domain-search '{{ vyos_local_domain }}'
+set service dhcp-server shared-network-name {{ interface.name }} ntp-server '{{ current_interface_gateway }}'
+{% for address in vyos_dhcp_dns_addresses %}
+set service dhcp-server shared-network-name {{ interface.name }} name-server '{{ address }}'
+{% endfor %}
+{% if interface.static_leases is defined %}
+{% for client_name, values in interface.static_leases.items() %}
+{% if values.hardware_address is defined %}
+set service dhcp-server shared-network-name {{ interface.name }} subnet '{{ interface.subnet }}' static-mapping '{{ client_name }}' ip-address '{{ values.ipv4_address }}'
+set service dhcp-server shared-network-name {{ interface.name }} subnet '{{ interface.subnet }}' static-mapping '{{ client_name }}' mac-address '{{ values.hardware_address }}'
+{% endif %}
+{% if values.ipv4_address is in vyos_dhcp_dns_addresses %}
+set service dhcp-server shared-network-name {{ interface.name }} subnet '{{ interface.subnet }}' static-mapping '{{ client_name }}' static-mapping-parameters "option domain-name-servers {{ current_interface_gateway }};"
+{% endif %}
+{% endfor %}
+{% endif %}
+set service dns forwarding listen-address '{{ current_interface_gateway }}'
+set service dns forwarding allow-from '{{ interface.subnet }}'
+{% endfor %}
+set service dns forwarding system
+set service dns forwarding dnssec process
+
+# Configure NTP server
+
+{% for interface in vyos_local_interfaces %}
+set system ntp listen-address '{{ interface.gateway | default(interface.subnet | ansible.utils.ipaddr('1')) | ansible.utils.ipaddr('address') }}'
+{% endfor %}
+comment system ntp listen-address 'Listen for NTP requests'
+
+# Configure firewall
+
+set firewall all-ping 'enable'
+comment firewall all-ping 'Process IPv4 ICMP echo requests - must be enabled in order for the router to respond when pinged'
+set firewall broadcast-ping 'disable'
+set firewall config-trap 'disable'
+{% for address in vyos_dhcp_dns_addresses %}
+set firewall group address-group LOCAL-DNS address '{{ address }}'
+{% endfor %}
+set firewall group network-group LOCAL-NETWORKS network '10.0.0.0/8'
+set firewall group network-group LOCAL-NETWORKS network '172.16.0.0/12'
+set firewall group network-group LOCAL-NETWORKS network '192.168.0.0/16'
+set firewall group network-group LOCAL-NETWORKS network '169.254.0.0/16'
+set firewall group network-group LOCAL-NETWORKS network '100.64.0.0/10'
+set firewall ipv6-receive-redirects 'disable'
+set firewall ipv6-src-route 'disable'
+set firewall ip-src-route 'disable'
+comment firewall ip-src-route '[RFC7126] This option lets the originating system specify a number of intermediate systems a packet must pass through to get to the destination host. It has well-known security implications [RFC6274].'
+set firewall log-martians 'enable'
+comment firewall log-martians 'Log IPv4 packets with invalid addresses'
+set firewall name WAN-IN-v4 default-action 'drop'
+set firewall name WAN-IN-v4 description 'Forwarding from WAN to local networks'
+set firewall name WAN-IN-v4 enable-default-log
+set firewall name WAN-IN-v4 rule 10 action 'accept'
+set firewall name WAN-IN-v4 rule 10 state established 'enable'
+set firewall name WAN-IN-v4 rule 10 state related 'enable'
+set firewall name WAN-IN-v4 rule 11 action 'drop'
+set firewall name WAN-IN-v4 rule 11 description 'Traffic from WAN does not usually come from a private network'
+set firewall name WAN-IN-v4 rule 11 source group network-group 'LOCAL-NETWORKS'
+set firewall name WAN-IN-v4 rule 11 log 'enable'
+set firewall name WAN-IN-v4 rule 90 action 'drop'
+set firewall name WAN-IN-v4 rule 90 description 'Rate limit new connections per source'
+set firewall name WAN-IN-v4 rule 90 recent count '30'
+set firewall name WAN-IN-v4 rule 90 recent time '60'
+comment firewall name WAN-IN-v4 rule 90 recent 'Connection count in past n seconds'
+set firewall name WAN-IN-v4 rule 90 log 'enable'
+set firewall name WAN-IN-v4 rule 90 state new 'enable'
+{% for rule in vyos_nat_destination_rules %}
+set firewall name WAN-IN-v4 rule {{ 100 + loop.index }} action 'accept'
+set firewall name WAN-IN-v4 rule {{ 100 + loop.index }} description '{{ rule.description }}'
+set firewall name WAN-IN-v4 rule {{ 100 + loop.index }} destination port '{{ rule['destination port'] }}'
+set firewall name WAN-IN-v4 rule {{ 100 + loop.index }} protocol '{{ rule.protocol }}'
+set firewall name WAN-IN-v4 rule {{ 100 + loop.index }} state new 'enable'
+{% endfor %}
+set firewall name WAN-LOCAL-v4 default-action 'drop'
+set firewall name WAN-LOCAL-v4 description 'From WAN to the router'
+set firewall name WAN-LOCAL-v4 rule 10 action 'accept'
+set firewall name WAN-LOCAL-v4 rule 10 state established 'enable'
+set firewall name WAN-LOCAL-v4 rule 10 state related 'enable'
+set firewall name WAN-LOCAL-v4 rule 20 action 'accept'
+set firewall name WAN-LOCAL-v4 rule 20 icmp type-name 'echo-request'
+set firewall name WAN-LOCAL-v4 rule 20 protocol 'icmp'
+set firewall name WAN-LOCAL-v4 rule 30 action 'accept'
+set firewall name WAN-LOCAL-v4 rule 30 destination port '22'
+set firewall name WAN-LOCAL-v4 rule 30 protocol 'tcp_udp'
+set firewall name WAN-LOCAL-v4 rule 30 limit rate '10/minute'
+set firewall name WAN-LOCAL-v4 rule 30 limit burst '30'
+set firewall name WAN-OUT-v4 default-action 'accept'
+set firewall name WAN-OUT-v4 description 'Forwarding from anywhere to WAN'
+set firewall name WAN-OUT-v4 rule 10 action 'drop'
+set firewall name WAN-OUT-v4 rule 10 state invalid 'enable'
+set firewall name WAN-OUT-v4 rule 10 log 'enable'
+comment firewall name WAN-OUT-v4 rule 10 'VyOS does not drop invalid traffic by default and Linux netfilter does not NAT invalid traffic leading to apparent leaky NAT'
+set firewall name WAN-OUT-v4 rule 11 action 'reject'
+set firewall name WAN-OUT-v4 rule 11 description 'The WAN interface does not usually lead to any private networks'
+set firewall name WAN-OUT-v4 rule 11 destination group network-group 'LOCAL-NETWORKS'
+set firewall name WAN-OUT-v4 rule 11 log 'enable'
+set firewall name WAN-OUT-v4 rule 20 action 'reject'
+set firewall name WAN-OUT-v4 rule 20 description 'Block outgoing email (SMTP)'
+set firewall name WAN-OUT-v4 rule 20 destination port '25'
+set firewall name WAN-OUT-v4 rule 20 protocol 'tcp'
+set firewall name WAN-OUT-v4 rule 20 log 'enable'
+set firewall name WAN-OUT-v4 rule 21 action 'reject'
+set firewall name WAN-OUT-v4 rule 21 description 'Block outgoing plaintext DNS except from DNS servers'
+set firewall name WAN-OUT-v4 rule 21 destination port '53'
+set firewall name WAN-OUT-v4 rule 21 protocol 'tcp_udp'
+set firewall name WAN-OUT-v4 rule 21 source group address-group '!LOCAL-DNS'
+set firewall name WAN-OUT-v4 rule 21 log 'enable'
+set firewall ipv6-name WAN-IN-v6 default-action 'drop'
+set firewall ipv6-name WAN-IN-v6 rule 10 action 'accept'
+set firewall ipv6-name WAN-IN-v6 rule 10 state established 'enable'
+set firewall ipv6-name WAN-IN-v6 rule 10 state related 'enable'
+set firewall ipv6-name WAN-IN-v6 rule 90 action 'drop'
+set firewall ipv6-name WAN-IN-v6 rule 90 description 'Rate limit new connections per source'
+set firewall ipv6-name WAN-IN-v6 rule 90 recent count '30'
+set firewall ipv6-name WAN-IN-v6 rule 90 recent time '60'
+comment firewall ipv6-name WAN-IN-v6 rule 90 recent 'Connection count in past n seconds'
+set firewall ipv6-name WAN-IN-v6 rule 90 log 'enable'
+set firewall ipv6-name WAN-IN-v6 rule 90 state new 'enable'
+set firewall ipv6-name WAN-LOCAL-v6 default-action 'drop'
+set firewall ipv6-name WAN-LOCAL-v6 rule 10 action 'accept'
+set firewall ipv6-name WAN-LOCAL-v6 rule 10 state established 'enable'
+set firewall ipv6-name WAN-LOCAL-v6 rule 10 state related 'enable'
+set firewall ipv6-name WAN-LOCAL-v6 rule 20 action 'accept'
+set firewall ipv6-name WAN-LOCAL-v6 rule 20 protocol 'icmpv6'
+set firewall ipv6-name WAN-LOCAL-v6 rule 30 action 'accept'
+set firewall ipv6-name WAN-LOCAL-v6 rule 30 destination port '22'
+set firewall ipv6-name WAN-LOCAL-v6 rule 30 protocol 'tcp_udp'
+set firewall ipv6-name WAN-LOCAL-v6 rule 30 limit rate '10/minute'
+set firewall ipv6-name WAN-LOCAL-v6 rule 30 limit burst '30'
+set firewall ipv6-name WAN-OUT-v6 default-action 'accept'
+set firewall ipv6-name WAN-OUT-v6 description 'Forwarding from anywhere to WAN'
+set firewall ipv6-name WAN-OUT-v6 rule 10 action 'drop'
+set firewall ipv6-name WAN-OUT-v6 rule 10 state invalid 'enable'
+set firewall ipv6-name WAN-OUT-v6 rule 10 log 'enable'
+comment firewall ipv6-name WAN-OUT-v6 rule 10 'VyOS does not drop invalid traffic by default and Linux netfilter does not NAT invalid traffic leading to apparent leaky NAT'
+set firewall ipv6-name WAN-OUT-v6 rule 20 action 'reject'
+set firewall ipv6-name WAN-OUT-v6 rule 20 description 'Block outgoing email (SMTP)'
+set firewall ipv6-name WAN-OUT-v6 rule 20 destination port '25'
+set firewall ipv6-name WAN-OUT-v6 rule 20 protocol 'tcp'
+set firewall ipv6-name WAN-OUT-v6 rule 20 log 'enable'
+set firewall receive-redirects 'disable'
+set firewall send-redirects 'enable'
+set firewall source-validation 'strict'
+comment firewall source-validation '[RFC 3704] The source address is looked up in the Forwarding Information Base and if the packet is received on the interface which would be used to forward the traffic to the source of the packet, it passes the check.'
+set firewall syn-cookies 'enable'
+comment firewall syn-cookies 'SYN cookie is a technique used to resist IP Spoofing attacks. SYN cookies allows a server to avoid dropping connections when the SYN queue fills up.'
+set firewall twa-hazards-protection 'enable'
+comment firewall twa-hazards-protection 'RFC1337 TCP TIME-WAIT assasination hazards protection'
+{% for interface in vyos_local_interfaces %}
+{% if interface.firewall_rules_ipv4.local is defined -%}
+{{ interface.firewall_rules_ipv4.local }}
+{%- else %}
+set firewall name {{ interface.name }}-LOCAL-v4 default-action 'accept'
+{% endif %}
+{% if interface.firewall_rules_ipv4.in is defined -%}
+{{ interface.firewall_rules_ipv4.in }}
+{%- else %}
+set firewall name {{ interface.name }}-IN-v4 default-action 'accept'
+{% endif %}
+{% endfor %}
+
+# Configure NAT
+
+{% for rule in vyos_nat_destination_rules %}
+{% set outer_loop = loop %}
+{% for key, value in rule.items() %}
+set nat destination rule {{ 100 + outer_loop.index }} {{ key }} '{{ value }}'
+{% endfor %}
+{% endfor %}
+set nat source rule 100 outbound-interface '{{ vyos_wan_interface }}'
+set nat source rule 100 translation address 'masquerade'
+
+# Configure static routes
+
+{% for route in vyos_static_routes %}
+set protocols static route {{ route.network }} next-hop {{ route.gateway }} distance '1'
+{% endfor %}
+
+# Configure traffic shaping
+
+set traffic-policy shaper WAN-UPLOAD bandwidth '{{ vyos_wan_upload_bandwidth }}'
+set traffic-policy shaper WAN-UPLOAD class 10 bandwidth '10%'
+set traffic-policy shaper WAN-UPLOAD class 10 burst '15k'
+set traffic-policy shaper WAN-UPLOAD class 10 ceiling '100%'
+set traffic-policy shaper WAN-UPLOAD class 10 description 'Match any TCP traffic so non-TCP traffic can be reserved in default class'
+set traffic-policy shaper WAN-UPLOAD class 10 match IPv4-TCP ip protocol 'tcp'
+set traffic-policy shaper WAN-UPLOAD class 10 match IPv6-TCP ipv6 protocol 'tcp'
+set traffic-policy shaper WAN-UPLOAD class 10 priority '6'
+set traffic-policy shaper WAN-UPLOAD class 10 queue-limit '896'
+set traffic-policy shaper WAN-UPLOAD class 10 queue-type 'fq-codel'
+set traffic-policy shaper WAN-UPLOAD class 20 bandwidth '10%'
+set traffic-policy shaper WAN-UPLOAD class 20 burst '15k'
+set traffic-policy shaper WAN-UPLOAD class 20 ceiling '100%'
+set traffic-policy shaper WAN-UPLOAD class 20 description 'Match UDP traffic to reserve bandwidth for it'
+set traffic-policy shaper WAN-UPLOAD class 20 match IPv4-UDP ip protocol 'udp'
+set traffic-policy shaper WAN-UPLOAD class 20 match IPv6-UDP ipv6 protocol 'udp'
+set traffic-policy shaper WAN-UPLOAD class 20 priority '1'
+set traffic-policy shaper WAN-UPLOAD class 20 queue-limit '896'
+set traffic-policy shaper WAN-UPLOAD class 20 queue-type 'fq-codel'
+set traffic-policy shaper WAN-UPLOAD default bandwidth '10%'
+set traffic-policy shaper WAN-UPLOAD default burst '15k'
+set traffic-policy shaper WAN-UPLOAD default ceiling '100%'
+set traffic-policy shaper WAN-UPLOAD default priority '5'
+set traffic-policy shaper WAN-UPLOAD default queue-limit '896'
+set traffic-policy shaper WAN-UPLOAD default queue-type 'fq-codel'
+set traffic-policy shaper WAN-UPLOAD description 'Shaper to divide bandwidth fairly between clients'
+
+# Configure interfaces
+
+set interfaces ethernet {{ vyos_wan_interface }} description 'WAN'
+set interfaces ethernet {{ vyos_wan_interface }} address 'dhcp'
+set interfaces ethernet {{ vyos_wan_interface }} address 'dhcpv6'
+set interfaces ethernet {{ vyos_wan_interface }} firewall in name 'WAN-IN-v4'
+set interfaces ethernet {{ vyos_wan_interface }} firewall local name 'WAN-LOCAL-v4'
+set interfaces ethernet {{ vyos_wan_interface }} firewall out name 'WAN-OUT-v4'
+set interfaces ethernet {{ vyos_wan_interface }} firewall in ipv6-name 'WAN-IN-v6'
+set interfaces ethernet {{ vyos_wan_interface }} firewall local ipv6-name 'WAN-LOCAL-v6'
+set interfaces ethernet {{ vyos_wan_interface }} firewall out ipv6-name 'WAN-OUT-v6'
+set interfaces ethernet {{ vyos_wan_interface }} traffic-policy out 'WAN-UPLOAD'
+{% for interface in vyos_local_interfaces %}
+set interfaces ethernet {{ interface.device }} vif {{ interface.vlan }} address '{{ interface.gateway | default(interface.subnet | ansible.utils.ipaddr('1')) }}'
+set interfaces ethernet {{ interface.device }} vif {{ interface.vlan }} firewall in name '{{ interface.name }}-IN-v4'
+set interfaces ethernet {{ interface.device }} vif {{ interface.vlan }} firewall local name '{{ interface.name }}-LOCAL-v4'
+{% endfor %}
+
+# Commit changes and wait for confirmation
+
+commit-confirm 2

@@ -1,0 +1,10 @@
+---
+- name: Get certificate
+  become: true
+  # throttle: 1
+  ansible.builtin.command: >
+    {{ certbot_path | quote }} -n --agree-tos -m {{ certbot_email | quote }} certonly
+    --standalone
+    -d {{ ([certbot_domain] + certbot_subject_alt_names) | join(' -d ') }}
+  args:
+    creates: /etc/letsencrypt/live/{{ certbot_domain }}

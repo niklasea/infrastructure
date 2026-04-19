@@ -1,0 +1,96 @@
+---
+# Enable 'import' content type under Datacenter > Storage
+- name: Pull disk image template
+  community.proxmox.proxmox_template:
+    node: "{{ proxmox_vm_node }}"
+    api_host: "{{ proxmox_vm_api_credentials.api_host }}"
+    api_port: "{{ proxmox_vm_api_credentials.api_port }}"
+    api_user: "{{ proxmox_vm_api_credentials.api_user }}"
+    api_token_id: "{{ proxmox_vm_api_credentials.api_token_id }}"
+    api_token_secret: "{{ proxmox_vm_api_credentials.api_token_secret }}"
+    content_type: import
+    url: "{{ proxmox_vm_image_url }}"
+
+- name: Create VM using cloud-init
+  community.proxmox.proxmox_kvm:
+    node: "{{ proxmox_vm_node }}"
+    api_host: "{{ proxmox_vm_api_credentials.api_host }}"
+    api_port: "{{ proxmox_vm_api_credentials.api_port }}"
+    api_user: "{{ proxmox_vm_api_credentials.api_user }}"
+    api_token_id: "{{ proxmox_vm_api_credentials.api_token_id }}"
+    api_token_secret: "{{ proxmox_vm_api_credentials.api_token_secret }}"
+
+    name: "{{ proxmox_vm_name }}"
+    cpu: 'host'
+    sockets: "{{ proxmox_vm_sockets }}"
+    cores: "{{ proxmox_vm_cores }}"
+    memory: "{{ proxmox_vm_memory_mb }}"
+    ostype: 'l26'
+    ide:
+      ide2: "{{ proxmox_vm_storage }}:cloudinit,format=raw"
+    scsihw: 'virtio-scsi-single'
+    boot: order=scsi0;ide2
+    searchdomains: "{{ proxmox_vm_searchdomains | default(omit) }}"
+    nameservers: "{{ proxmox_vm_nameservers }}"
+    net: "{{ proxmox_vm_net }}"
+    ipconfig: "{{ proxmox_vm_ipconfig }}"
+
+    ciuser: "{{ cloud_init_credentials.username | default(omit) }}"
+    cipassword: "{{ cloud_init_credentials.password | default(omit) }}"
+    sshkeys: "{{ cloud_init_credentials.ssh_key | default(omit) }}"
+
+    tags: "{{ proxmox_vm_tags }}"
+    tablet: false
+    onboot: true
+    agent: true
+    state: present
+  register: _proxmox_vm_creation
+
+- name: Wait for VM creation
+  ansible.builtin.pause:
+    seconds: 5
+  when: _proxmox_vm_creation is changed
+
+- name: Import boot disk from image
+  community.proxmox.proxmox_disk:
+    api_host: "{{ proxmox_vm_api_credentials.api_host }}"
+    api_port: "{{ proxmox_vm_api_credentials.api_port }}"
+    api_user: "{{ proxmox_vm_api_credentials.api_user }}"
+    api_token_id: "{{ proxmox_vm_api_credentials.api_token_id }}"
+    api_token_secret: "{{ proxmox_vm_api_credentials.api_token_secret }}"
+
+    name: "{{ proxmox_vm_name }}"
+    disk: scsi0
+    backup: true
+    ssd: true
+    discard: 'on'
+    iothread: true
+    storage: "{{ proxmox_vm_storage }}"
+    import_from: "{{ proxmox_vm_image_storage }}:import/{{ proxmox_vm_image_url | ansible.builtin.basename }}"
+    state: present
+
+- name: Resize boot disk to target size
+  community.proxmox.proxmox_disk:
+    api_host: "{{ proxmox_vm_api_credentials.api_host }}"
+    api_port: "{{ proxmox_vm_api_credentials.api_port }}"
+    api_user: "{{ proxmox_vm_api_credentials.api_user }}"
+    api_token_id: "{{ proxmox_vm_api_credentials.api_token_id }}"
+    api_token_secret: "{{ proxmox_vm_api_credentials.api_token_secret }}"
+
+    name: "{{ proxmox_vm_name }}"
+    disk: scsi0
+    storage: "{{ proxmox_vm_storage }}"
+    size: "{{ proxmox_vm_disk_size }}"
+    state: resized
+
+- name: Start new VM
+  community.proxmox.proxmox_kvm:
+    node: "{{ proxmox_vm_node }}"
+    api_host: "{{ proxmox_vm_api_credentials.api_host }}"
+    api_port: "{{ proxmox_vm_api_credentials.api_port }}"
+    api_user: "{{ proxmox_vm_api_credentials.api_user }}"
+    api_token_id: "{{ proxmox_vm_api_credentials.api_token_id }}"
+    api_token_secret: "{{ proxmox_vm_api_credentials.api_token_secret }}"
+
+    name: "{{ proxmox_vm_name }}"
+    state: started

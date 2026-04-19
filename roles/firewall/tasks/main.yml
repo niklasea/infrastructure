@@ -1,9 +1,0 @@
----
-# TODO: IPv6 support
-- name: Configure chosen firewall
-  ansible.builtin.include_tasks: iptables.yml
-  tags: firewall_reset_all
-
-- name: OS-specific configuration
-  ansible.builtin.include_tasks: "{{ ansible_os_family }}.yml"
-  tags: firewall_reset_all

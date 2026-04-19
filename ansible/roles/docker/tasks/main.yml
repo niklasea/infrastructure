@@ -1,0 +1,36 @@
+---
+- name: OS-specific configuration
+  ansible.builtin.include_tasks:
+    file: "{{ ansible_facts['os_family'] }}.yml"
+    apply:
+      become: true
+
+- name: Create directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ docker_compose_dir }}"
+    state: directory
+    mode: '755'
+
+- name: Configure Docker daemon
+  become: true
+  ansible.builtin.template:
+    src: daemon.json.j2
+    dest: /etc/docker/daemon.json
+    mode: '644'
+  register: docker_daemon_configuration
+
+- name: Restart Docker daemon
+  become: true
+  ansible.builtin.systemd:
+    name: docker
+    state: restarted
+  when: docker_daemon_configuration is changed
+
+- name: Schedule docker system prune
+  become: true
+  ansible.builtin.cron:
+    name: Prune unused docker resources
+    state: present
+    special_time: daily
+    job: docker system prune -f

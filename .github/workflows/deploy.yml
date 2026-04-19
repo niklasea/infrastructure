@@ -1,0 +1,97 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions: {}
+
+jobs:
+  terraform:
+    name: Provision with Terraform
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: ./terraform
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          cli_config_credentials_token: ${{ secrets.TERRAFORM_API_TOKEN }}
+
+      - name: Terraform fmt
+        run: terraform fmt -check
+        continue-on-error: true
+
+      - name: Terraform Init
+        run: terraform init -input=false
+
+      - name: Terraform Validate
+        run: terraform validate -no-color
+
+      - name: Terraform Plan
+        run: terraform plan -no-color -input=false -out=tfplan
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
+        if: ${{ github.ref_name == github.event.repository.default_branch }}
+
+  ansible:
+    name: Configure with Ansible
+    runs-on: self-hosted
+    needs: terraform
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: ./ansible
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Install Ansible dependencies
+        run: |
+          pipx install ansible-core
+          pipx inject ansible-core requests python-dateutil netaddr
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install Ansible collections
+        run: |
+          LC_ALL="C.UTF-8" ansible-galaxy install -r requirements.yml
+
+      - name: Create a script for the vault password
+        run: |
+          # Create a tiny script that echos the vault password
+          echo '#!/usr/bin/env bash' > vault_pass.sh
+          # shellcheck disable=SC2016
+          echo 'echo "$VAULT_PASS"' >> vault_pass.sh
+          chmod +x vault_pass.sh
+
+      - name: Dry-run to check validity
+        run: |
+          LC_ALL="C.UTF-8" ansible-playbook main.yml --check --vault-password-file ./vault_pass.sh
+        env:
+          VAULT_PASS: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+        if: ${{ github.ref_name != github.event.repository.default_branch }}
+
+      - name: Run playbook
+        run: |
+          LC_ALL="C.UTF-8" ansible-playbook main.yml --vault-password-file ./vault_pass.sh
+        env:
+          VAULT_PASS: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+        if: ${{ github.ref_name == github.event.repository.default_branch }}

@@ -1,0 +1,103 @@
+#!/usr/bin/env ansible-playbook
+---
+# TODO: Set up remote backups
+# TODO: Set up Syncthing
+# TODO: Set up CI/CD (DroneCI?)
+# TODO: Monitoring and alerts on everything
+# TODO: nftables module
+# TODO: Email server with SMTP relay (Mailgun/SendGrid)
+
+- name: Configure local networking
+  ansible.builtin.import_playbook: local_networking.yml
+
+- name: Common settings
+  hosts: all,!vyos,!localhost
+  tasks:
+    - ansible.builtin.import_role:
+        name: common
+    - ansible.builtin.import_role:
+        name: firewall
+      vars:
+        firewall_policies:
+          - { chain: INPUT, policy: DROP }
+          - { chain: FORWARD, policy: DROP }
+        firewall_rules:
+          - { chain: INPUT, rule: ACCEPT, ctstate: [ ESTABLISHED, RELATED ] }
+          - { chain: INPUT, rule: ACCEPT, in_interface: lo, comment: Localhost connections }
+          - { chain: INPUT, rule: ACCEPT, proto: icmp, comment: Ping requests }
+          - { chain: INPUT, rule: ACCEPT, port: 22, proto: tcp, comment: SSH }
+    - ansible.builtin.import_role:
+        name: smb_mount
+
+- name: Internal docker server
+  hosts: internal-docker
+  tasks:
+    - ansible.builtin.import_role:
+        name: certbot-dns-cloudflare
+    - ansible.builtin.import_role:
+        name: wireguard
+    - ansible.builtin.import_role:
+        name: inadyn
+    - ansible.builtin.import_role:
+        name: jellyfin
+    - ansible.builtin.import_role:
+        name: gitea
+    - ansible.builtin.import_role:
+        name: vaultwarden
+    - ansible.builtin.import_role:
+        name: speedtest
+    - ansible.builtin.import_role:
+        name: omada
+  post_tasks:
+    - name: Schedule backup to network drive
+      become: true
+      ansible.builtin.cron:
+        name: "{{ item.name}}"
+        job: "{{ item.job }}"
+        hour: 4
+        minute: 0
+        state: present
+      loop:
+        - name: Back up Jellyfin to network drive
+          job: >
+            /usr/bin/tar -zcf
+            {{ smb_mounts.backup_jellyfin.local_path }}/jellyfin.tar.gz
+            {{ jellyfin_config_dir }}
+        - name: "Back up Gitea to network drive"
+          job: >
+            /usr/bin/tar -czf
+            {{ smb_mounts.backup_gitea.local_path }}/gitea-dump.zip
+            {{ gitea_data_dir }}
+        - name: "Back up vaultwarden to network drive"
+          job: >
+            /usr/bin/tar -zcf
+            {{ smb_mounts.backup_vaultwarden.local_path }}/data.tar.gz
+            {{ vaultwarden_data_dir }}
+
+    - name: Install sqlite for vaultwarden backup
+      become: true
+      ansible.builtin.package:
+        name: sqlite3
+        state: present
+    - name: Schedule vaultwarden database backup
+      become: true
+      ansible.builtin.cron:
+        name: "Dump vaultwarden sqlite3 database to backup file"
+        job: >
+          /usr/bin/sqlite3
+          {{ vaultwarden_data_dir }}/db.sqlite3
+          ".backup ' {{ vaultwarden_data_dir }}/backup.sqlite3'"
+        hour: 3
+        minute: 0
+        state: present
+
+- name: Configure RetroPie
+  hosts: retropie
+  tasks:
+    - ansible.builtin.import_role:
+        name: firewall
+      vars:
+        firewall_rules:
+          - { port: '8080', proto: 'tcp', comment: 'Remote control' }
+    - ansible.builtin.import_role:
+        name: wireguard

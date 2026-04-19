@@ -1,0 +1,30 @@
+#!/usr/bin/env ansible-playbook
+---
+- name: Create DNS servers if they don't exist
+  hosts: localhost
+  connection: local
+  tasks:
+    - ansible.builtin.include_role:
+        name: proxmox_vm
+      vars:
+        proxmox_vm_node: atreides
+        proxmox_vm_name: "{{ item }}"
+        proxmox_vm_net:
+          net0: "virtio={{ infrastructure_hosts[proxmox_vm_name]['hardware_address'] }},bridge=vmbr0,tag=10"
+        proxmox_vm_tags:
+          - dns_server
+      register: _proxmox_vm_dns_servers
+      loop:
+        - dns01
+        - dns02
+
+    - name: Refresh inventory to ensure new instances exist in inventory
+      ansible.builtin.meta: refresh_inventory
+
+- name: Configure internal DNS servers
+  hosts: dns_server
+  tasks:
+    - ansible.builtin.include_role:
+        name: common
+    - ansible.builtin.include_role:
+        name: stubby

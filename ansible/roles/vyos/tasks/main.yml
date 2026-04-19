@@ -1,0 +1,38 @@
+---
+- name: Upload configuration script
+  ansible.builtin.template:
+    src: commands.sh.j2
+    dest: ./commands.sh
+    mode: '700'
+  register: _vyos_configuration_script
+
+- when: _vyos_configuration_script is changed
+  block:
+    # Run commands and say yes to any prompts.
+    - name: Run script
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+          yes | ./commands.sh
+        executable: /bin/vbash
+      register: _vyos_commands_result
+      failed_when: "'Commit failed' in _vyos_commands_result.stdout"
+
+    - name: Save changes
+      ansible.builtin.shell:
+        cmd: |
+          source /opt/vyatta/etc/functions/script-template
+          configure
+          confirm
+          save
+        executable: /bin/vbash
+      failed_when: "'No confirm pending' in _vyos_commands_result.stdout"
+  rescue:
+    - name: Delete configuration script to force a retry next time
+      ansible.builtin.file:
+        path: _vyos_configuration_script.dest
+        state: absent
+
+    - name: Fail the deployment
+      ansible.builtin.fail:
+        msg: VyOS configuration failed!

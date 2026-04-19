@@ -1,5 +1,0 @@
----
-speedtest_compose_dir: /etc/compose/speedtest
-librespeed_version: latest
-iperf3_version: latest
-iperf3_port: 5201
