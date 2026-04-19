@@ -1,8 +1,8 @@
 # Use CDN on Debian 9+, see https://deb.debian.org/
 
-deb http://deb.debian.org/debian/ {{ ansible_distribution_release|lower }} main contrib non-free
-deb-src http://deb.debian.org/debian/ {{ ansible_distribution_release|lower }} main contrib non-free
-deb http://deb.debian.org/debian/ {{ ansible_distribution_release|lower }}-updates main contrib non-free
-deb-src http://deb.debian.org/debian/ {{ ansible_distribution_release|lower }}-updates main contrib non-free
-deb http://security.debian.org/debian-security {{ ansible_distribution_release|lower }}-security main contrib non-free
-deb-src http://security.debian.org/debian-security {{ ansible_distribution_release|lower }}-security main contrib non-free
+deb http://deb.debian.org/debian/ {{ ansible_facts['distribution_release']|lower }} main contrib non-free
+deb-src http://deb.debian.org/debian/ {{ ansible_facts['distribution_release']|lower }} main contrib non-free
+deb http://deb.debian.org/debian/ {{ ansible_facts['distribution_release']|lower }}-updates main contrib non-free
+deb-src http://deb.debian.org/debian/ {{ ansible_facts['distribution_release']|lower }}-updates main contrib non-free
+deb http://security.debian.org/debian-security {{ ansible_facts['distribution_release']|lower }}-security main contrib non-free
+deb-src http://security.debian.org/debian-security {{ ansible_facts['distribution_release']|lower }}-security main contrib non-free

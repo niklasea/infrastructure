@@ -1,7 +1,7 @@
 ---
 - name: OS-specific configuration
   ansible.builtin.include_tasks:
-    file: "{{ ansible_os_family }}.yml"
+    file: "{{ ansible_facts['os_family'] }}.yml"
     apply:
       become: true
 

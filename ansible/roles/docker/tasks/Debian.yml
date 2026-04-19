@@ -11,11 +11,11 @@
   ansible.builtin.deb822_repository:
     name: docker
     types: deb
-    uris: "https://download.docker.com/linux/{{ ansible_distribution | lower }}"
-    suites: "{{ ansible_distribution_release }}"
+    uris: "https://download.docker.com/linux/{{ ansible_facts['distribution'] | lower }}"
+    suites: "{{ ansible_facts['distribution_release'] }}"
     components: stable
     architectures: amd64
-    signed_by: "https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg"
+    signed_by: "https://download.docker.com/linux/{{ ansible_facts['distribution'] | lower }}/gpg"
   register: docker_repository
 
 - name: (Debian) Install Docker

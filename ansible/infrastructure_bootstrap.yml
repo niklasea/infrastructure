@@ -98,8 +98,8 @@
         src: "{{ _github_actions_installer.dest }}"
         dest: "{{ _github_actions_runner_dir.path }}"
         remote_src: true
-        owner: "{{ ansible_facts['user'] }}"
-        group: "{{ ansible_facts['user'] }}"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
 
     - name: Install GitHub Actions dependencies
       become: true
@@ -141,7 +141,7 @@
       vars:
         github_actions_runner_labels:
           - "{{ ansible_facts['distribution'] }}"
-          - "{{ ansible_facts['distribution'] }}{{ ansible_facts['distribution']_major_version }}"
+          - "{{ ansible_facts['distribution'] }}{{ ansible_facts['distribution_major_version'] }}"
 
     - name: Start runner at boot
       become: true
