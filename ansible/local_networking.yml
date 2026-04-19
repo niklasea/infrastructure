@@ -1,11 +1,5 @@
 #!/usr/bin/env ansible-playbook
 ---
-- name: VyOS router config
-  hosts: vyos
-  tasks:
-    - ansible.builtin.include_role:
-        name: vyos
-
 - name: Create DNS servers if they don't exist
   hosts: localhost
   connection: local

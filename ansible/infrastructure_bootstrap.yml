@@ -1,5 +1,11 @@
 #!/usr/bin/env ansible-playbook
 ---
+- name: VyOS router config
+  hosts: vyos
+  tasks:
+    - ansible.builtin.include_role:
+        name: vyos
+
 - name: Configure local networking
   ansible.builtin.import_playbook: local_networking.yml
 
