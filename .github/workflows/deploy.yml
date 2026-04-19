@@ -67,7 +67,7 @@ jobs:
       - name: Install Ansible dependencies
         run: |
           pipx install ansible-core
-          pipx inject ansible-core requests python-dateutil
+          pipx inject ansible-core requests python-dateutil netaddr
           echo "$HOME"/.local/bin >> $GITHUB_PATH
 
       - name: Install Ansible collections
