@@ -8,7 +8,7 @@
     name:
       - qemu-guest-agent
     state: present
-  when: ansible_facts['virtualization_role'] == 'guest' and ansible_virtualization_type == 'kvm'
+  when: ansible_facts['virtualization_role'] == 'guest' and ansible_facts['virtualization_type'] == 'kvm'
   register: _common_guest_agent
 
 - name: Start virtualisation guest agent
