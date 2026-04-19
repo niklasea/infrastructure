@@ -19,6 +19,7 @@
   register: docker_repository
 
 - name: (Debian) Install Docker
+  when: not ansible_check_mode
   ansible.builtin.apt:
     name:
       - docker-ce

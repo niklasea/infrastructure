@@ -117,7 +117,6 @@ vyos_nat_destination_rules:
     inbound-interface: "{{ vyos_wan_interface }}"
     protocol: 'tcp_udp'
     translation address: "{{ infrastructure_hosts['public-docker']['ipv4_address'] }}"
-
   - description: 'Port forward WireGuard'
     destination port: '51820'
     inbound-interface: "{{ vyos_wan_interface }}"

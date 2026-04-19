@@ -49,6 +49,14 @@ certbot_deploy_hook: |
   cat "$RENEWED_LINEAGE/privkey.pem" "$RENEWED_LINEAGE/fullchain.pem" > "{{ haproxy_tls_certificate_path }}"
   docker compose -f /etc/compose/haproxy/docker-compose.yml restart
 
+netbird:
+  domain: "netbird.{{ home_domain }}"
+  management_port: 8080
+  dashboard_port: 8081
+  stun_port: 3478
+  relay_auth_secret: "{{ vault_netbird.relay_auth_secret }}"
+  oidc_client_secret: "{{ vault_netbird.oidc_client_secret }}"
+  database_encryption_key: "{{ vault_netbird.database_encryption_key }}"
 vpn_network_ipv4:
   network: '172.21.0.0/24'
   local_address: "{{ infrastructure_hosts['internal-docker']['ipv4_address'] }}"

@@ -1,0 +1,39 @@
+services:
+  # UI dashboard
+  netbird-dashboard:
+    image: netbirdio/dashboard:{{ netbird_service_version }}
+    restart: unless-stopped
+    networks: [netbird]
+    ports:
+      - '127.0.0.1:{{ netbird.dashboard_port }}:80'
+    env_file:
+      - {{ netbird_service_compose_dir }}/dashboard.env
+
+  # Combined server (Management + Signal + Relay + STUN)
+  netbird-server:
+    image: netbirdio/netbird-server:{{ netbird_service_version }}
+    restart: unless-stopped
+    networks: [netbird]
+    ports:
+      - '127.0.0.1:{{ netbird.management_port }}:80'
+      - '{{ netbird.stun_port }}:3478/udp'
+    volumes:
+      - netbird_data:/var/lib/netbird
+      - {{ netbird_service_compose_dir }}/config.yml:/etc/netbird/config.yml
+    command: ["--config", "/etc/netbird/config.yml"]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "500m"
+        max-file: "2"
+
+volumes:
+  netbird_data:
+
+networks:
+  netbird:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+          gateway: 172.30.0.1
