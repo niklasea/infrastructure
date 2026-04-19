@@ -93,7 +93,7 @@
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
 
-    - name: Install dependencies
+    - name: Install GitHub Actions dependencies
       become: true
       ansible.builtin.command:
         cmd: './bin/installdependencies.sh'
@@ -152,3 +152,11 @@
         cmd: "./svc.sh start"
         chdir: "{{ _github_actions_runner_dir.path }}"
       changed_when: false
+
+    - name: Install dependencies for Ansible deployments
+      become: true
+      ansible.builtin.package:
+        name:
+          - python3
+          - pipx # Allow workflows to install Python packages
+        state: present
