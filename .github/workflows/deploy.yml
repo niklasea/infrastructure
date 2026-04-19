@@ -68,6 +68,7 @@ jobs:
         run: |
           pipx install ansible
           pipx ensurepath
+          source ~/.bashrc
           ansible-galaxy install -r requirements.yml
 
       - name: Create a script for the vault password
