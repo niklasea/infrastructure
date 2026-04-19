@@ -29,6 +29,12 @@
     - ansible.builtin.import_role:
         name: smb_mount
 
+- name: Set up Netbird management server
+  hosts: netbird
+  tasks:
+    - ansible.builtin.import_role:
+        name: netbird_service
+
 - name: Internal docker server
   hosts: internal-docker
   tasks:
