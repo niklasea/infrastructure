@@ -66,7 +66,7 @@ jobs:
 
       - name: Install Ansible dependencies
         run: |
-          pipx install ansible
+          pipx install ansible ansible-galaxy
           ansible-galaxy install -r requirements.yml
 
       - name: Create a script for the vault password
