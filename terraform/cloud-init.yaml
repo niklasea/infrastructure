@@ -17,7 +17,7 @@ apt:
     APT::Periodic::Update-Package-Lists "1";
     APT::Periodic::Unattended-Upgrade "1";
     Unattended-Upgrade::Allowed-Origins {
-      "${distro_id}:${distro_codename}-security";
+      "$${distro_id}:$${distro_codename}-security";
     };
     Unattended-Upgrade::Automatic-Reboot "true";
     Unattended-Upgrade::Automatic-Reboot-Time "04:00";

@@ -27,7 +27,7 @@ resource "hcloud_server" "nodes" {
 
   firewall_ids = [hcloud_firewall.ssh-only-firewall.id]
   user_data = templatefile("${path.module}/cloud-init.yaml", {
-    ssh_keys = values(var.ssh_public_keys)
+    ssh_keys = var.ssh_public_keys
   })
 }
 
