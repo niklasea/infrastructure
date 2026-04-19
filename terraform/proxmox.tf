@@ -37,7 +37,6 @@ resource "proxmox_virtual_environment_vm" "virtual_machines" {
   memory {
     dedicated = each.value.memory_mb
   }
-
   disk {
     datastore_id = "local-lvm"
     import_from  = proxmox_download_file.cloud_image.id
@@ -46,7 +45,6 @@ resource "proxmox_virtual_environment_vm" "virtual_machines" {
     iothread     = true
     discard      = "on"
   }
-
   network_device {
     bridge  = "vmbr0"
     model   = "virtio"
@@ -54,6 +52,9 @@ resource "proxmox_virtual_environment_vm" "virtual_machines" {
     vlan_id = each.value.vlan_id
   }
 
+  agent {
+    enabled = true
+  }
   initialization {
     dns {
       servers = ["1.1.1.1", "1.0.0.1", "8.8.8.8", "8.8.4.4"]
@@ -77,6 +78,6 @@ output "proxmox_ips" {
     # Since Proxmox VMs can have multiple interfaces/IPs,
     # we grab the first IP of the first interface.
     for name, vm in proxmox_virtual_environment_vm.virtual_machines :
-    name => vm.ipv4_addresses[1][0]
+    name => try(flatten(vm.ipv4_addresses)[0], "pending")
   }
 }
