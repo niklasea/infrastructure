@@ -1,16 +1,18 @@
 resource "proxmox_virtual_environment_file" "cloud_config" {
+  for_each     = var.proxmox_vms
   content_type = "snippets"
   datastore_id = "local"
   node_name    = var.proxmox_node_name
 
   source_raw {
-    data = templatefile("${path.module}/cloud-init.tftpl",
-      {
-        ssh_keys       = values(var.ssh_public_keys)
-        extra_packages = ["qemu-guest-agent"]
-        run_commands   = ["systemctl enable qemu-guest-agent", "systemctl start qemu-guest-agent"]
+    data = templatefile("${path.module}/cloud-init.tftpl", {
+      hostname       = each.key
+      ssh_keys       = values(var.ssh_public_keys)
+      extra_packages = ["qemu-guest-agent"]
+      run_commands   = ["systemctl enable qemu-guest-agent", "systemctl start qemu-guest-agent"]
     })
-    file_name = "cloud-init.yaml"
+
+    file_name = "cloud-init-${each.key}.yaml"
   }
 }
 
@@ -68,7 +70,7 @@ resource "proxmox_virtual_environment_vm" "virtual_machines" {
       }
     }
     datastore_id      = "local-lvm"
-    user_data_file_id = proxmox_virtual_environment_file.cloud_config.id
+    user_data_file_id = proxmox_virtual_environment_file.cloud_config[each.key].id
   }
 }
 

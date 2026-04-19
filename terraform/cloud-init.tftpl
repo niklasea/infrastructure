@@ -1,4 +1,6 @@
 #cloud-config
+hostname: ${hostname}
+prefer_fqdn_over_hostname: true
 users:
   - name: deployment
     groups:
