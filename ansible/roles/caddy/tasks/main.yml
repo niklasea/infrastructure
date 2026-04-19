@@ -15,7 +15,7 @@
   loop:
     - docker-compose.yml.j2
     - conf/Caddyfile.j2
-  register: _configuration_files
+  register: _caddy_configuration_files
 
 - name: Start container
   become: true
@@ -23,5 +23,5 @@
     project_src: "{{ caddy_compose_dir }}"
     state: "present"
     pull: "always"
-    recreate: "{{ 'always' if _configuration_files is changed else 'auto' }}"
+    recreate: "{{ 'always' if _caddy_configuration_files is changed else 'auto' }}"
     remove_orphans: true
