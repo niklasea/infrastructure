@@ -34,7 +34,7 @@ resource "proxmox_virtual_environment_vm" "virtual_machines" {
     type  = "host"
   }
   memory {
-    dedicated = each.value.memory
+    dedicated = each.value.memory_mb
   }
 
   disk {
