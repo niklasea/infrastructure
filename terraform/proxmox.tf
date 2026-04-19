@@ -15,10 +15,11 @@ resource "proxmox_virtual_environment_file" "cloud_config" {
 }
 
 resource "proxmox_download_file" "cloud_image" {
-  content_type = "import"
-  datastore_id = "local"
-  node_name    = var.proxmox_node_name
-  url          = var.pve_image
+  content_type        = "import"
+  datastore_id        = "local"
+  node_name           = var.proxmox_node_name
+  url                 = var.pve_image
+  overwrite_unmanaged = true
 }
 
 resource "proxmox_virtual_environment_vm" "virtual_machines" {
