@@ -15,6 +15,24 @@ resource "hcloud_firewall" "ssh-only-firewall" {
   }
 }
 
+resource "hcloud_firewall" "webserver-firewall" {
+  name = "webserver"
+  rule {
+    description = "Allow HTTP"
+    direction   = "in"
+    protocol    = "tcp"
+    port        = "80"
+    source_ips  = ["0.0.0.0/0", "::/0"]
+  }
+  rule {
+    description = "Allow HTTPS"
+    direction   = "in"
+    protocol    = "tcp"
+    port        = "443"
+    source_ips  = ["0.0.0.0/0", "::/0"]
+  }
+}
+
 # A single resource block provisions every server in the map
 resource "hcloud_server" "nodes" {
   for_each = var.hcloud_servers
@@ -25,7 +43,10 @@ resource "hcloud_server" "nodes" {
   location    = each.value.location
   labels      = each.value.labels
 
-  firewall_ids = [hcloud_firewall.ssh-only-firewall.id]
+  firewall_ids = [
+    hcloud_firewall.ssh-only-firewall.id,
+    hcloud_firewall.webserver-firewall.id
+  ]
   user_data = templatefile("${path.module}/cloud-init.tftpl",
     {
       hostname       = each.key
