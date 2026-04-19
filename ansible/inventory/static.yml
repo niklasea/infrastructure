@@ -1,9 +1,13 @@
 ---
 ungrouped:
   hosts:
+    atreides:
+      ansible_host: "{{ infrastructure_hosts['atreides']['ipv4_address'] }}"
     vyos:
       ansible_host: "{{ infrastructure_hosts['vyos']['ipv4_address'] }}"
     dns01:
       ansible_host: "{{ infrastructure_hosts['dns01']['ipv4_address'] }}"
     dns02:
       ansible_host: "{{ infrastructure_hosts['dns02']['ipv4_address'] }}"
+    internal-docker:
+      ansible_host: "{{ infrastructure_hosts['internal-docker']['ipv4_address'] }}"
