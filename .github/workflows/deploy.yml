@@ -51,7 +51,6 @@ jobs:
   ansible:
     name: Configure with Ansible
     runs-on: self-hosted
-    if: ${{ github.ref_name == github.event.repository.default_branch }}
     needs: terraform
     permissions:
       contents: read
@@ -70,13 +69,23 @@ jobs:
           pip install ansible
           ansible-galaxy install -r requirements.yml
 
-      - name: Run playbook
+      - name: Create a script for the vault password
         run: |
           # Create a tiny script that echos the vault password
           # shellcheck disable=SC2016
           echo 'echo "$VAULT_PASS"' > vault_pass.sh
           chmod +x vault_pass.sh
 
+      - name: Dry-run to check validity
+        run: |
+          ansible-playbook main.yml --check --vault-password-file ./vault_pass.sh
+        env:
+          VAULT_PASS: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+        if: ${{ github.ref_name != github.event.repository.default_branch }}
+
+      - name: Run playbook
+        run: |
           ansible-playbook main.yml --vault-password-file ./vault_pass.sh
         env:
           VAULT_PASS: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+        if: ${{ github.ref_name == github.event.repository.default_branch }}
