@@ -19,6 +19,7 @@
   register: _netbird_service_configuration_files
 
 - name: Start container
+  when: not ansible_check_mode
   become: true
   community.docker.docker_compose_v2:
     project_src: "{{ netbird_service_compose_dir }}"
