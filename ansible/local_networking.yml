@@ -2,7 +2,6 @@
 ---
 - name: VyOS router config
   hosts: vyos
-  gather_facts: false
   tasks:
     - ansible.builtin.include_role:
         name: vyos
