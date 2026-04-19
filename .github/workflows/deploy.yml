@@ -66,8 +66,9 @@ jobs:
 
       - name: Install Ansible dependencies
         run: |
-          pipx install ansible-core requests
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          pipx install ansible-core
+          pipx inject ansible-core requests
+          echo "$("$HOME")/.local/bin" >> $GITHUB_PATH
 
       - name: Install Ansible collections
         run: |
@@ -76,8 +77,8 @@ jobs:
       - name: Create a script for the vault password
         run: |
           # Create a tiny script that echos the vault password
-          # shellcheck disable=SC2016
           echo '#!/usr/bin/env bash' > vault_pass.sh
+          # shellcheck disable=SC2016
           echo 'echo "$VAULT_PASS"' >> vault_pass.sh
           chmod +x vault_pass.sh
 
