@@ -33,6 +33,10 @@ resource "hcloud_server" "nodes" {
       extra_packages = []
       run_commands   = []
   })
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 output "hetzner_ips" {

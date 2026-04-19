@@ -72,6 +72,10 @@ resource "proxmox_virtual_environment_vm" "virtual_machines" {
     datastore_id      = "local-lvm"
     user_data_file_id = proxmox_virtual_environment_file.cloud_config[each.key].id
   }
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 output "proxmox_ips" {
