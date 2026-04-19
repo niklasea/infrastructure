@@ -2,7 +2,7 @@
 - name: Create directories
   become: true
   ansible.builtin.file:
-    path: "{{ caddy_compose_dir }}"
+    path: "{{ caddy_compose_dir }}/conf"
     state: directory
     mode: '755'
 
