@@ -64,12 +64,12 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install Ansible
+      - name: Install Ansible dependencies
         run: |
-          pipx install ansible-core
+          pipx install ansible-core requests
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Install Ansible dependencies
+      - name: Install Ansible collections
         run: |
           LC_ALL="C.UTF-8" ansible-galaxy install -r requirements.yml
 
