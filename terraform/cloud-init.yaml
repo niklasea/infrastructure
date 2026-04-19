@@ -1,0 +1,33 @@
+#cloud-config
+users:
+  - name: deployment
+    groups:
+      - sudo
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    ssh_authorized_keys:
+%{ for key in ssh_keys ~}
+      - ${key}
+%{ endfor ~}
+
+# Enable automatic security updates
+package_update: true
+apt:
+  conf: |
+    APT::Periodic::Update-Package-Lists "1";
+    APT::Periodic::Unattended-Upgrade "1";
+    Unattended-Upgrade::Allowed-Origins {
+      "${distro_id}:${distro_codename}-security";
+    };
+    Unattended-Upgrade::Automatic-Reboot "true";
+    Unattended-Upgrade::Automatic-Reboot-Time "04:00";
+
+packages:
+  - unattended-upgrades
+%{ for package in extra_packages ~}
+  - ${package}
+%{ endfor ~}
+runcmd:
+%{ for cmd in run_commands ~}
+  - ${cmd}
+%{ endfor ~}
