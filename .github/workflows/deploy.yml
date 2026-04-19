@@ -64,9 +64,13 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install Ansible dependencies
+      - name: Install Ansible
         run: |
           pipx install ansible-core
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install Ansible dependencies
+        run: |
           LC_ALL="C.UTF-8" ansible-galaxy install -r requirements.yml
 
       - name: Create a script for the vault password
