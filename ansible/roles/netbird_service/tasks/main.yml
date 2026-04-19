@@ -1,0 +1,28 @@
+---
+- name: Create directories
+  become: true
+  ansible.builtin.file:
+    path: "{{ netbird_service_compose_dir }}"
+    state: directory
+    mode: '755'
+
+- name: Add configuration files
+  become: true
+  ansible.builtin.template:
+    src: "{{ item }}"
+    dest: "{{ netbird_service_compose_dir }}/{{ item | splitext | first }}"
+    mode: '644'
+  loop:
+    - docker-compose.yml.j2
+    - config.yml.j2
+    - dashboard.env.j2
+  register: _configuration_files
+
+- name: Start container
+  become: true
+  community.docker.docker_compose_v2:
+    project_src: "{{ netbird_service_compose_dir }}"
+    state: "present"
+    pull: "always"
+    recreate: "{{ 'always' if _configuration_files is changed else 'auto' }}"
+    remove_orphans: true

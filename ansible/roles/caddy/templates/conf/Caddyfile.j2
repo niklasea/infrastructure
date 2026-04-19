@@ -1,0 +1,7 @@
+{
+	email {{ notification_email }}
+}
+
+{% for block in caddy_blocks %}
+{{ block }}
+{% endfor %}
