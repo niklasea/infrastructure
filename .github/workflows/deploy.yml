@@ -78,7 +78,7 @@ jobs:
           # Create a tiny script that echos the vault password
           # shellcheck disable=SC2016
           echo '#!/usr/bin/env bash' > vault_pass.sh
-          echo 'echo "$VAULT_PASS"' > vault_pass.sh
+          echo 'echo "$VAULT_PASS"' >> vault_pass.sh
           chmod +x vault_pass.sh
 
       - name: Dry-run to check validity
