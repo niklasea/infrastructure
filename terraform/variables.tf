@@ -23,10 +23,10 @@ variable "pve_image" {
   default = "https://cdimage.debian.org/cdimage/cloud/trixie/latest/debian-13-genericcloud-amd64.qcow2"
 }
 variable "ssh_public_keys" {
-  type = list(string)
-  default = [
-    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID8r7hgtHyKnvstg62wRJbyML+A4twqGFpH+O+RUixgV deployment"
-  ]
+  type = map(string)
+  default = {
+    "deployment" = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID8r7hgtHyKnvstg62wRJbyML+A4twqGFpH+O+RUixgV deployment"
+  }
 }
 
 variable "hcloud_servers" {

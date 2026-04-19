@@ -4,8 +4,9 @@ resource "proxmox_virtual_environment_file" "cloud_config" {
   node_name    = var.proxmox_node_name
 
   source_raw {
-    data = templatefile("${path.module}/cloud-init.yaml", {
-      ssh_keys       = var.ssh_public_keys
+    data = templatefile("${path.module}/cloud-init.tftpl",
+    {
+      ssh_keys       = values(var.ssh_public_keys)
       extra_packages = ["qemu-guest-agent"]
       run_commands   = ["systemctl enable qemu-guest-agent", "systemctl start qemu-guest-agent"]
     })
@@ -38,7 +39,7 @@ resource "proxmox_virtual_environment_vm" "virtual_machines" {
 
   disk {
     datastore_id = "local-lvm"
-    import_from  = proxmox_virtual_environment_download_file.cloud_image.id
+    import_from  = proxmox_download_file.cloud_image.id
     interface    = "virtio0"
     size         = each.value.storage_gb
     iothread     = true

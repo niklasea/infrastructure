@@ -7,7 +7,7 @@ users:
     sudo: ALL=(ALL) NOPASSWD:ALL
     ssh_authorized_keys:
 %{ for key in ssh_keys ~}
-      - ${key}
+      - "${key}"
 %{ endfor ~}
 
 # Enable automatic security updates
