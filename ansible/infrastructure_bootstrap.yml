@@ -23,6 +23,8 @@
           net0: "virtio,bridge=vmbr0,tag=10"
         proxmox_vm_tags:
           - infrastructure_bootstrap
+        proxmox_vm_nameservers:
+          - "{{ gateway_address }}"
       register: _proxmox_vm_infrastructure_bootstrap
       loop:
         - terraform-agent
@@ -96,8 +98,8 @@
         src: "{{ _github_actions_installer.dest }}"
         dest: "{{ _github_actions_runner_dir.path }}"
         remote_src: true
-        owner: "{{ ansible_user }}"
-        group: "{{ ansible_user }}"
+        owner: "{{ ansible_facts['user'] }}"
+        group: "{{ ansible_facts['user'] }}"
 
     - name: Install GitHub Actions dependencies
       become: true
@@ -138,8 +140,8 @@
         - "'already configured' is not in _github_actions_runner_configuration.stderr"
       vars:
         github_actions_runner_labels:
-          - "{{ ansible_distribution }}"
-          - "{{ ansible_distribution }}{{ ansible_distribution_major_version }}"
+          - "{{ ansible_facts['distribution'] }}"
+          - "{{ ansible_facts['distribution'] }}{{ ansible_facts['distribution']_major_version }}"
 
     - name: Start runner at boot
       become: true
