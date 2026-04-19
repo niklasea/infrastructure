@@ -22,6 +22,7 @@
     mode: '640'
 
 - name: Extract web-vault files into place
+  when: not ansible_check_mode
   become: true
   ansible.builtin.unarchive:
     src: /tmp/bw_web_vault.tar.gz
