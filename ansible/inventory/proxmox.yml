@@ -25,4 +25,4 @@ compose:
 keyed_groups:
   - key: proxmox_tags_parsed
     separator: ''
-    prefix: ''
+    prefix: 'role_'

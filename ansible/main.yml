@@ -30,8 +30,10 @@
         name: smb_mount
 
 - name: Set up Netbird management server
-  hosts: netbird
+  hosts: netbird # Only one primary server
   tasks:
+    - ansible.builtin.import_role:
+        name: inadyn
     - ansible.builtin.import_role:
         name: netbird_service
 
