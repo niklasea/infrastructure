@@ -5,10 +5,10 @@ resource "proxmox_virtual_environment_file" "cloud_config" {
 
   source_raw {
     data = templatefile("${path.module}/cloud-init.tftpl",
-    {
-      ssh_keys       = values(var.ssh_public_keys)
-      extra_packages = ["qemu-guest-agent"]
-      run_commands   = ["systemctl enable qemu-guest-agent", "systemctl start qemu-guest-agent"]
+      {
+        ssh_keys       = values(var.ssh_public_keys)
+        extra_packages = ["qemu-guest-agent"]
+        run_commands   = ["systemctl enable qemu-guest-agent", "systemctl start qemu-guest-agent"]
     })
     file_name = "cloud-init.yaml"
   }

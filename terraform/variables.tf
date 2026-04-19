@@ -39,10 +39,10 @@ variable "hcloud_servers" {
 
 variable "proxmox_vms" {
   type = map(object({
-    vcpu         = number
-    memory_mb    = number
-    storage_gb   = number
-    vlan_id      = number
-    tags         = list(string)
+    vcpu       = number
+    memory_mb  = number
+    storage_gb = number
+    vlan_id    = number
+    tags       = list(string)
   }))
 }
