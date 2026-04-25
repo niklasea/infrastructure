@@ -11,7 +11,7 @@
   ansible.builtin.import_playbook: local_networking.yml
 
 - name: Common settings
-  hosts: all,!vyos,!localhost
+  hosts: all,!vyos
   tasks:
     - ansible.builtin.import_role:
         name: common
@@ -42,6 +42,12 @@
         name: inadyn
     - ansible.builtin.import_role:
         name: netbird_service
+
+- name: Join all non-networking servers to overlay network
+  hosts: all,!vyos,!role_dns_server,!role_netbird
+  tasks:
+    - ansible.builtin.import_role:
+        name: netbird_peer
 
 - name: Internal docker server
   hosts: internal-docker
