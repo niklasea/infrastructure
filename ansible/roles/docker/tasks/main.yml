@@ -27,11 +27,21 @@
     state: restarted
   when: docker_daemon_configuration is changed
 
-- name: Set remapped user ID fact
-  when: docker_daemon_userns_remap is defined
-  become: true
-  ansible.builtin.set_fact:
-    docker_remap_user: "{{ (lookup('ansible.builtin.file', '/etc/subuid') | split(':'))[1] }}"
+- when: docker_daemon_userns_remap is defined
+  block:
+    - name: Read remapped user ID file
+      ansible.builtin.slurp:
+        src: /etc/subuid
+      register: docker_daemon_userns_remap_file
+
+    - name: Set remapped user ID fact
+      become: true
+      ansible.builtin.set_fact:
+        docker_remap_user: "{{
+          ((docker_daemon_userns_remap_file['content'] | b64decode).splitlines()
+            | select('search', 'dockremap')
+            | first
+            | split(':'))[1]}}"
 
 - name: Schedule docker system prune
   become: true
