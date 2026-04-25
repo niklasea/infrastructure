@@ -1,0 +1,14 @@
+---
+- name: OS-specific configuration
+  ansible.builtin.include_tasks:
+    file: "{{ ansible_facts['os_family'] }}.yml"
+    apply:
+      become: true
+
+- name: Start Netbird
+  become: true
+  ansible.builtin.command:
+    cmd: "netbird up --setup-key {{ netbird.peer_setup_key }} --management-url https://{{ netbird.domain }}/"
+  no_log: true
+  register: netbird_peer_start
+  changed_when: "'Already connected' not in netbird_peer_start.stdout"
