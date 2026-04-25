@@ -15,7 +15,7 @@ token: !vault |
 keyed_groups:
   - key: hcloud_location
     separator: ''
-    prefix: hcloud_location
-  - key: labels.role
+    prefix: hcloud_location_
+  - key: hcloud_labels.role
     separator: ''
-    prefix: ''
+    prefix: 'role_'
