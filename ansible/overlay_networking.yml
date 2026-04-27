@@ -12,6 +12,21 @@
         name: inadyn
     - ansible.builtin.import_role:
         name: netbird_service
+  post_tasks:
+    - name: Schedule backup to network drive
+      become: true
+      ansible.builtin.cron:
+        name: "{{ item.name}}"
+        job: "{{ item.job }}"
+        hour: 4
+        minute: 0
+        state: present
+      loop:
+        - name: "Back up netbird to network drive"
+          job: |
+            docker compose -f {{ netbird_service_compose_dir }} down
+            docker compose -f {{ netbird_service_compose_dir }} cp -a netbird-server:/var/lib/netbird/ {{ smb_mounts.backup_netbird.local_path }}
+            docker compose -f {{ netbird_service_compose_dir }} up -d
 
 - name: Join DK VMs to overlay network
   hosts: proxmox_all_qemu,!role_netbird,!role_infrastructure_bootstrap

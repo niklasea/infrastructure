@@ -30,3 +30,12 @@ inadyn_ddns_configurations:
         username: "{{ vault_home_domain }}"
         password: "{{ vault_cloudflare.zone_key }}"
         hostname: "netbird.{{ vault_home_domain }}"
+
+smb_backup_dir: /mnt/backup
+smb_mounts:
+  backup_netbird:
+    network_path: //harkonnen.{{ local_domain }}/ServerBackup/netbird
+    local_path: "{{ smb_backup_dir }}/netbird"
+    options: '_netdev,dir_mode=0555,file_mode=0444'
+    username: "{{ vault_smb_server_backup_credentials.username }}"
+    password: "{{ vault_smb_server_backup_credentials.password }}"
