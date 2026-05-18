@@ -94,5 +94,5 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Dry-run to check validity
+      - name: Ansible syntax check
         run: ansible-playbook --syntax-check main.yml
