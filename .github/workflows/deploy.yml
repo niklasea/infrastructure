@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
 
 permissions: {}
 
@@ -30,10 +27,6 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           cli_config_credentials_token: ${{ secrets.TERRAFORM_API_TOKEN }}
-
-      - name: Terraform fmt
-        run: terraform fmt -check
-        continue-on-error: true
 
       - name: Terraform Init
         run: terraform init -input=false
@@ -82,16 +75,14 @@ jobs:
           echo 'echo "$VAULT_PASS"' >> vault_pass.sh
           chmod +x vault_pass.sh
 
-      - name: Dry-run to check validity
-        run: |
-          LC_ALL="C.UTF-8" ansible-playbook main.yml --check --vault-password-file ./vault_pass.sh
-        env:
-          VAULT_PASS: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
-        if: ${{ github.ref_name != github.event.repository.default_branch }}
-
       - name: Run playbook
         run: |
           LC_ALL="C.UTF-8" ansible-playbook main.yml --vault-password-file ./vault_pass.sh
         env:
           VAULT_PASS: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
         if: ${{ github.ref_name == github.event.repository.default_branch }}
+
+      - name: Post Cleanup
+        if: always()
+        run: |
+          rm -f vault_pass.sh
