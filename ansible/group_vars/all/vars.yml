@@ -11,6 +11,11 @@ dhcp_dns_addresses:
   - "{{ infrastructure_hosts['dns01']['ipv4_address'] }}"
   - "{{ infrastructure_hosts['dns02']['ipv4_address'] }}"
 
+dns_server_conditional_forwarding:
+  - domain: "{{ local_domain }}"
+    address: "{{ gateway_address }}"
+dns_server_client_lookup_address: "{{ gateway_address }}"
+
 haproxy_docker_internal_network: '10.0.0.0/16'
 
 ansible_ssh_user: "{{ vault_deployment_credentials.username }}"
@@ -95,15 +100,3 @@ infrastructure_hosts:
   public-docker:
     hardware_address: 'CE:CC:FD:16:0E:BC'
     ipv4_address: "{{ public_network_ipv4 | ansible.utils.ipaddr('2') | ansible.utils.ipaddr('address') }}"
-
-stubby_upstream: |
-  - address_data: 8.8.8.8
-    tls_auth_name: "dns.google"
-  - address_data: 8.8.4.4
-    tls_auth_name: "dns.google"
-  - address_data: 1.1.1.1
-    tls_auth_name: "cloudflare-dns.com"
-  - address_data: 1.0.0.1
-    tls_auth_name: "cloudflare-dns.com"
-stubby_options:
-  idle_timeout: 9000

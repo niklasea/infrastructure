@@ -1,0 +1,23 @@
+---
+dns_server_compose_dir: /etc/compose/dns_server
+dns_server_listen_addresses: >-
+  {{
+    ansible_facts['all_ipv4_addresses']
+    | ansible.utils.ipaddr('private')
+    | union(['127.0.0.1', '[::1]'])
+    | ansible.utils.ipwrap
+    | list
+  }}
+dns_server_upstream_servers:
+  - domain: one.one.one.one
+    ips:
+      - 1.1.1.1
+      - 1.0.0.1
+  - domain: dns.google
+    ips:
+      - 8.8.8.8
+      - 8.8.4.4
+dns_server_conditional_forwarding: []
+dns_server_client_lookup_address: ""
+
+dns_server_blocky_version: main

@@ -1,0 +1,23 @@
+services:
+  blocky:
+    image: spx01/blocky:{{ dns_server_blocky_version }}
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    ports:
+{% for address in dns_server_listen_addresses %}
+      - '{{ address }}:53:53/tcp'
+      - '{{ address }}:53:53/udp'
+{% endfor %}
+    environment:
+      BLOCKY_CONFIG_FILE: /app/config.yml
+    volumes:
+      - {{ dns_server_compose_dir }}/blocky.yml:/app/config.yml:ro

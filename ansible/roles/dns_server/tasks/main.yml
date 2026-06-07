@@ -8,7 +8,7 @@
     owner: "{{ item.owner | default('root') }}"
     group: "{{ item.group | default('root') }}"
   loop:
-    - path: "{{ stubby_config_path }}"
+    - path: "{{ dns_server_compose_dir }}"
 
 - name: Apply configuration
   become: true
@@ -19,21 +19,21 @@
     group: root
     mode: '644'
   loop:
-    - src: stubby.yml.j2
-      dest: "{{ stubby_config_path }}/stubby.yml"
+    - src: blocky.yml.j2
+      dest: "{{ dns_server_compose_dir }}/blocky.yml"
     - src: docker-compose.yml.j2
-      dest: "{{ stubby_compose_dir }}/docker-compose.yml"
-  register: _stubby_configuration_files
+      dest: "{{ dns_server_compose_dir }}/docker-compose.yml"
+  register: _dns_server_configuration_files
 
 - name: Check if systemd-resolved is running
   become: true
   ansible.builtin.systemd_service:
     name: systemd-resolved
-  register: _stubby_stub_listener_active
+  register: _dns_server_stub_listener_active
 
 - name: Disable systemd-resolved stub resolver
   become: true
-  when: _stubby_stub_listener_active.status.ActiveState == 'active'
+  when: _dns_server_stub_listener_active.status.ActiveState == 'active'
   ansible.builtin.blockinfile:
     path: /etc/systemd/resolved.conf.d/disable-stub.conf
     state: present
@@ -42,20 +42,20 @@
       [Resolve]
       DNSStubListener=no
     mode: '644'
-  register: _stubby_stub_listener_config
+  register: _dns_server_stub_listener_config
 
 - name: Restart systemd-resolved
   become: true
   ansible.builtin.service:
     name: systemd-resolved
     state: restarted
-  when: _stubby_stub_listener_config is changed
+  when: _dns_server_stub_listener_config is changed
 
 - name: Start DNS server
   become: true
   community.docker.docker_compose_v2:
-    project_src: "{{ stubby_compose_dir }}"
+    project_src: "{{ dns_server_compose_dir }}"
     state: "present"
     pull: "always"
-    recreate: "{{ 'always' if _stubby_configuration_files is changed else 'auto' }}"
+    recreate: "{{ 'always' if _dns_server_configuration_files is changed else 'auto' }}"
     remove_orphans: true

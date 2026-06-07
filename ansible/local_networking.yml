@@ -27,4 +27,4 @@
     - ansible.builtin.include_role:
         name: common
     - ansible.builtin.include_role:
-        name: stubby
+        name: dns_server
