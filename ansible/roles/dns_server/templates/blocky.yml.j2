@@ -2,7 +2,6 @@
 ports:
   dns:
     - '53'
-    - ':53'
 minTlsServeVersion: 1.3
 
 upstreams:
@@ -62,11 +61,11 @@ blocking:
     refreshPeriod: 24h
     # optional: Applies only to lists that are downloaded (HTTP URLs).
     downloads:
-      timeout: 30s
+      timeout: 60s
       attempts: 3
       cooldown: 5m
     concurrency: 20
-    strategy: failOnError
+    strategy: fast
     maxErrorsPerSource: 10
   denylists:
     public_lists:
@@ -118,7 +117,7 @@ blocking:
       - https://raw.githubusercontent.com/parseword/nolovia/master/skel/hosts-nolovia.txt
       - https://raw.githubusercontent.com/soteria-nou/domain-list/master/enrichments.txt
       - https://raw.githubusercontent.com/soteria-nou/domain-list/master/widgets.txt
-      - https://raw.githubusercontent.com/DandelionSprout/adfilt/master/NorwegianExperimentalList%20alternate%20versions/NordicFiltersAdGuardHome.txt
+      - https://raw.githubusercontent.com/DandelionSprout/adfilt/refs/heads/master/NorwegianExperimentalList%20alternate%20versions/DandelionSproutsNorskeFiltreDomains.txt
       - https://raw.githubusercontent.com/matomo-org/referrer-spam-blacklist/master/spammers.txt
       - https://cdn.jsdelivr.net/gh/neoFelhz/neohosts@gh-pages/basic/hosts
       - https://v.firebog.net/hosts/neohostsbasic.txt
@@ -132,7 +131,7 @@ blocking:
       - https://phishing.army/download/phishing_army_blocklist_extended.txt
       - https://gitlab.com/quidsup/notrack-blocklists/raw/master/notrack-malware.txt
       - https://gitlab.com/curben/urlhaus-filter/raw/master/urlhaus-filter-hosts.txt
-      - https://raw.githubusercontent.com/DandelionSprout/adfilt/refs/heads/master/Alternate%20versions%20Anti-Malware%20List/AntiMalwareAdGuardHome.txt
+      - https://raw.githubusercontent.com/DandelionSprout/adfilt/refs/heads/master/Alternate%20versions%20Anti-Malware%20List/AntiMalwareDomains.txt
       - https://raw.githubusercontent.com/PolishFiltersTeam/KADhosts/master/KADhosts.txt
       - https://raw.githubusercontent.com/Dawsey21/Lists/master/main-blacklist.txt
       - https://raw.githubusercontent.com/deathbybandaid/piholeparser/master/Subscribable-Lists/ParsedBlacklists/Malware-URLs-Domains.txt

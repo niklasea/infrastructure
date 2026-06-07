@@ -26,6 +26,8 @@
   tasks:
     - ansible.builtin.include_role:
         name: common
+    - ansible.builtin.include_role:
+        name: docker
     - ansible.builtin.import_role:
         name: firewall
       vars:
@@ -37,11 +39,9 @@
           - { chain: INPUT, rule: ACCEPT, in_interface: lo, comment: Localhost connections }
           - { chain: INPUT, rule: ACCEPT, proto: icmp, comment: Ping requests }
           - { chain: INPUT, rule: ACCEPT, port: 22, proto: tcp, comment: SSH }
-          - { chain: INPUT, rule: ACCEPT, src: '10.0.0.0/8', port: 53, proto: tcp, comment: DNS }
-          - { chain: INPUT, rule: ACCEPT, src: '10.0.0.0/8', port: 53, proto: udp, comment: DNS }
-          - { chain: INPUT, rule: ACCEPT, src: '172.16.0.0/12', port: 53, proto: tcp, comment: DNS }
-          - { chain: INPUT, rule: ACCEPT, src: '172.16.0.0/12', port: 53, proto: udp, comment: DNS }
-          - { chain: INPUT, rule: ACCEPT, src: '192.168.0.0/16', port: 53, proto: tcp, comment: DNS }
-          - { chain: INPUT, rule: ACCEPT, src: '192.168.0.0/16', port: 53, proto: udp, comment: DNS }
+          - { chain: DOCKER-USER, rule: ACCEPT, src: '169.254.0.0/16,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10', port: 53, proto: tcp, comment: Allow internal DNS requests }
+          - { chain: DOCKER-USER, rule: ACCEPT, src: '169.254.0.0/16,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10', port: 53, proto: udp, comment: Allow internal DNS requests }
+          - { chain: DOCKER-USER, rule: DROP, port: 53, proto: tcp, comment: Drop external DNS requests }
+          - { chain: DOCKER-USER, rule: DROP, port: 53, proto: udp, comment: Drop external DNS requests }
     - ansible.builtin.include_role:
         name: dns_server

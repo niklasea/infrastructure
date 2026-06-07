@@ -13,10 +13,8 @@ services:
     security_opt:
       - no-new-privileges:true
     ports:
-{% for address in dns_server_listen_addresses %}
-      - '{{ address }}:53:53/tcp'
-      - '{{ address }}:53:53/udp'
-{% endfor %}
+      - '53:53/tcp'
+      - '53:53/udp'
     environment:
       BLOCKY_CONFIG_FILE: /app/config.yml
     volumes:
