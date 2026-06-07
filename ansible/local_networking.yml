@@ -26,5 +26,22 @@
   tasks:
     - ansible.builtin.include_role:
         name: common
+    - ansible.builtin.import_role:
+        name: firewall
+      vars:
+        firewall_policies:
+          - { chain: INPUT, policy: DROP }
+          - { chain: FORWARD, policy: DROP }
+        firewall_rules:
+          - { chain: INPUT, rule: ACCEPT, ctstate: [ ESTABLISHED, RELATED ] }
+          - { chain: INPUT, rule: ACCEPT, in_interface: lo, comment: Localhost connections }
+          - { chain: INPUT, rule: ACCEPT, proto: icmp, comment: Ping requests }
+          - { chain: INPUT, rule: ACCEPT, port: 22, proto: tcp, comment: SSH }
+          - { chain: INPUT, rule: ACCEPT, src: '10.0.0.0/8', port: 53, proto: tcp, comment: DNS }
+          - { chain: INPUT, rule: ACCEPT, src: '10.0.0.0/8', port: 53, proto: udp, comment: DNS }
+          - { chain: INPUT, rule: ACCEPT, src: '172.16.0.0/12', port: 53, proto: tcp, comment: DNS }
+          - { chain: INPUT, rule: ACCEPT, src: '172.16.0.0/12', port: 53, proto: udp, comment: DNS }
+          - { chain: INPUT, rule: ACCEPT, src: '192.168.0.0/16', port: 53, proto: tcp, comment: DNS }
+          - { chain: INPUT, rule: ACCEPT, src: '192.168.0.0/16', port: 53, proto: udp, comment: DNS }
     - ansible.builtin.include_role:
         name: dns_server
