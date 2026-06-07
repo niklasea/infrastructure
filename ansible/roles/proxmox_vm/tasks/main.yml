@@ -37,6 +37,7 @@
 
     ciuser: "{{ cloud_init_credentials.username | default(omit) }}"
     cipassword: "{{ cloud_init_credentials.password | default(omit) }}"
+    ciupgrade: false # This can block later tasks using apt-get
     sshkeys: "{{ cloud_init_credentials.ssh_key | default(omit) }}"
 
     tags: "{{ proxmox_vm_tags }}"

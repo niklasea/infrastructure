@@ -1,0 +1,1087 @@
+---
+ports:
+  dns:
+    - '53'
+minTlsServeVersion: 1.3
+
+upstreams:
+  init:
+    strategy: failOnError
+  strategy: parallel_best
+  groups:
+    default:
+{% for upstream in dns_server_upstream_servers %}
+      - tcp-tls:{{ upstream.domain }}
+{% endfor %}
+bootstrapDns:
+{% for upstream in dns_server_upstream_servers %}
+  - upstream: tcp-tls:{{ upstream.domain }}
+    ips:
+{% for ip in upstream.ips %}
+      - {{ ip }}
+{% endfor %}
+{% endfor %}
+connectIPVersion: dual # accepted: dual, v4, v6
+
+{% if dns_server_conditional_forwarding is defined and dns_server_conditional_forwarding %}
+conditional:
+  fallbackUpstream: false
+  mapping:
+{% for upstream in dns_server_conditional_forwarding %}
+    {{ upstream.domain }}: {{ upstream.address }}
+{% endfor %}
+{% endif %}
+
+{% if dns_server_client_lookup_address is defined and dns_server_client_lookup_address %}
+clientLookup:
+  upstream: {{ dns_server_client_lookup_address }}
+{% endif %}
+
+caching:
+  minTime: 10s
+
+dnssec:
+  validate: true
+ede:
+  enable: true
+ecs:
+  useAsClient: true
+  forward: true
+
+filtering:
+  queryTypes:
+    - ANY
+
+blocking:
+  # zeroIp: 0.0.0.0 will be returned (default)
+  blockType: zeroIp
+  # optional: Configure how lists, AKA sources, are loaded
+  loading:
+    # optional: list refresh period in duration format.
+    refreshPeriod: 24h
+    # optional: Applies only to lists that are downloaded (HTTP URLs).
+    downloads:
+      timeout: 60s
+      attempts: 3
+      cooldown: 5m
+    concurrency: 20
+    strategy: fast
+    maxErrorsPerSource: 10
+  denylists:
+    public_lists:
+      - https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts
+      - https://adaway.org/hosts.txt
+      - https://v.firebog.net/hosts/AdguardDNS.txt
+      - https://v.firebog.net/hosts/Admiral.txt
+      - https://v.firebog.net/hosts/Easylist.txt
+      - https://v.firebog.net/hosts/Easyprivacy.txt
+      - https://v.firebog.net/hosts/Prigent-Ads.txt
+      - https://s3.amazonaws.com/lists.disconnect.me/simple_tracking.txt
+      - https://s3.amazonaws.com/lists.disconnect.me/simple_ad.txt
+      - https://gitlab.com/quidsup/notrack-blocklists/raw/master/notrack-blocklist.txt
+      - https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&mimetype=plaintext&useip=0.0.0.0
+      - https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt
+      - https://someonewhocares.org/hosts/zero/hosts
+      - https://winhelp2002.mvps.org/hosts.txt
+      - https://raw.githubusercontent.com/FadeMind/hosts.extras/master/add.2o7Net/hosts
+      - https://raw.githubusercontent.com/FadeMind/hosts.extras/master/add.Dead/hosts
+      - https://raw.githubusercontent.com/FadeMind/hosts.extras/master/add.Risk/hosts
+      - https://raw.githubusercontent.com/FadeMind/hosts.extras/master/add.Spam/hosts
+      - https://raw.githubusercontent.com/FadeMind/hosts.extras/master/UncheckyAds/hosts
+      - https://raw.githubusercontent.com/anudeepND/blacklist/master/adservers.txt
+      - https://raw.githubusercontent.com/bigdargon/hostsVN/master/hosts
+      - https://www.github.developerdan.com/hosts/lists/ads-and-tracking-extended.txt
+      - https://raw.githubusercontent.com/kowith337/PersonalFilterListCollection/master/hosts/hosts_google_adservice_id.txt
+      - https://raw.githubusercontent.com/deathbybandaid/piholeparser/master/Subscribable-Lists/ParsedBlacklists/EasyList.txt
+      - https://raw.githubusercontent.com/deathbybandaid/piholeparser/master/Subscribable-Lists/ParsedBlacklists/Adware-Filters.txt
+      - https://raw.githubusercontent.com/deathbybandaid/piholeparser/master/Subscribable-Lists/ParsedBlacklists/GandJ-Hosts.txt
+      - https://raw.githubusercontent.com/deathbybandaid/piholeparser/master/Subscribable-Lists/ParsedBlacklists/Schacks-Adblock-Plus-Liste.txt
+      - https://raw.githubusercontent.com/deathbybandaid/piholeparser/master/Subscribable-Lists/ParsedBlacklists/Yhonay-AntiPopAds.txt
+      - https://raw.githubusercontent.com/XionKzn/PiHole-Lists/master/PiHole/Archive/Yahoo_Ad_Servers.txt
+      - https://raw.githubusercontent.com/soteria-nou/domain-list/master/ads.txt
+      - https://raw.githubusercontent.com/soteria-nou/domain-list/master/affiliate.txt
+      - https://raw.githubusercontent.com/soteria-nou/domain-list/master/analytics.txt
+      - https://hostfiles.frogeye.fr/firstparty-trackers-hosts.txt
+      - https://v.firebog.net/hosts/Admiral.txt
+      - https://raw.githubusercontent.com/tiuxo/hosts/master/ads
+      - https://sysctl.org/cameleon/hosts
+      - https://reddestdream.github.io/Projects/MinimalHosts/etc/MinimalHostsBlocker/minimalhosts
+      - https://v.firebog.net/hosts/static/w3kbl.txt
+      - https://www.joewein.net/dl/bl/dom-bl-base.txt
+      - https://raw.githubusercontent.com/matomo-org/referrer-spam-blacklist/master/spammers.txt
+      - https://raw.githubusercontent.com/VeleSila/yhosts/master/hosts
+      - https://raw.githubusercontent.com/deathbybandaid/piholeparser/master/Subscribable-Lists/ParsedBlacklists/Blockzilla.txt
+      - https://raw.githubusercontent.com/deathbybandaid/piholeparser/master/Subscribable-Lists/ParsedBlacklists/Hant05080-Filters.txt
+      - https://raw.githubusercontent.com/deathbybandaid/piholeparser/master/Subscribable-Lists/ParsedBlacklists/Fanboy-Annoyances-List.txt
+      - https://raw.githubusercontent.com/Spam404/lists/master/main-blacklist.txt
+      - https://raw.githubusercontent.com/parseword/nolovia/master/skel/hosts-nolovia.txt
+      - https://raw.githubusercontent.com/soteria-nou/domain-list/master/enrichments.txt
+      - https://raw.githubusercontent.com/soteria-nou/domain-list/master/widgets.txt
+      - https://raw.githubusercontent.com/DandelionSprout/adfilt/refs/heads/master/NorwegianExperimentalList%20alternate%20versions/DandelionSproutsNorskeFiltreDomains.txt
+      - https://raw.githubusercontent.com/matomo-org/referrer-spam-blacklist/master/spammers.txt
+      - https://cdn.jsdelivr.net/gh/neoFelhz/neohosts@gh-pages/basic/hosts
+      - https://v.firebog.net/hosts/neohostsbasic.txt
+      - https://raw.githubusercontent.com/RooneyMcNibNug/pihole-stuff/master/SNAFU.txt
+      - https://paulgb.github.io/BarbBlock/blacklists/hosts-file.txt
+      # - https://in0de.synology.me/own.txt
+      - https://raw.githubusercontent.com/StevenBlack/hosts/master/data/StevenBlack/hosts
+      - https://s3.amazonaws.com/lists.disconnect.me/simple_malvertising.txt
+      - https://bitbucket.org/ethanr/dns-blacklists/raw/8575c9f96e5b4a1308f2f12394abd86d0927a4a0/bad_lists/Mandiant_APT1_Report_Appendix_D.txt
+      - https://v.firebog.net/hosts/Prigent-Malware.txt
+      - https://phishing.army/download/phishing_army_blocklist_extended.txt
+      - https://gitlab.com/quidsup/notrack-blocklists/raw/master/notrack-malware.txt
+      - https://gitlab.com/curben/urlhaus-filter/raw/master/urlhaus-filter-hosts.txt
+      - https://raw.githubusercontent.com/DandelionSprout/adfilt/refs/heads/master/Alternate%20versions%20Anti-Malware%20List/AntiMalwareDomains.txt
+      - https://raw.githubusercontent.com/PolishFiltersTeam/KADhosts/master/KADhosts.txt
+      - https://raw.githubusercontent.com/Dawsey21/Lists/master/main-blacklist.txt
+      - https://raw.githubusercontent.com/deathbybandaid/piholeparser/master/Subscribable-Lists/ParsedBlacklists/Malware-URLs-Domains.txt
+      - https://raw.githubusercontent.com/parseword/nolovia/master/skel/hosts-government-malware.txt
+      - https://raw.githubusercontent.com/soteria-nou/domain-list/master/fake.txt
+      - https://raw.githubusercontent.com/PoorPocketsMcNewHold/SteamScamSite/master/steamscamsitesashes
+      - https://gist.githubusercontent.com/BBcan177/4a8bf37c131be4803cb2/raw/d832637f7502385627c49cbdd2d8e4004ac3817b/MS-2
+      - https://urlhaus.abuse.ch/downloads/hostfile/
+    blacklist:
+      - |
+        # GeForce Experience tracking (does not prevent driver updates)
+        events.gfe.nvidia.com
+
+        # Yatse (Kodi remote) analytics
+        goose.yatse.tv
+
+        # Snapchat ads
+        ase.adserver.snapads.com
+        euw.adserver.snapads.com
+        usc.adserver.snapads.com
+        use.adserver.snapads.com
+
+        # Recordere.dk ads
+        ads.recordere.dk
+
+        # Google ads DK
+        adservice.google.dk
+
+        # Politiken.dk ads
+        macro.adnami.io
+        macro.adnami2.io
+
+        # Cointelegraph.com ads / tracking
+        gp.cointelegraph.com
+        zoa.cointelegraph.com
+
+        # Vev.io overlay ads
+        cdn.run-syndicate.com
+
+        # Vev.io malvertising
+        yh5ynji49w.com
+
+        # gfycat ad bidding script
+        assets.gfycat.com
+
+        # Banner ads
+        fst.securefastoffers.com
+        a.bestcontentpc.top
+        b.bestcontentpc.top
+        a.bestcontentjob.top
+        b.bestcontentjob.top
+        a.bestcontenttrade.top
+        b.bestcontenttrade.top
+        a.bestcontentfood.top
+        b.bestcontentfood.top
+        a.bestcontentplan.top
+        b.bestcontentplan.top
+        cyneburg-yam.com
+        cs996.wac.sigmacdn.net
+
+        # Ad redirect
+        fadsabs.com
+        fadsanz.com
+        fadsats.com
+        fadsecs.com
+        fadsecz.com
+        fadsips.com
+        fadskis.com
+        fadslims.com
+        fadspms.com
+        gadspms.com
+        usd.veremund-hon.com
+        bycelebian.com
+        powhyptene.pro
+        ditookry.com
+        audriasite.pro
+        noamiagainst.pro
+        lindenlaugh.pro
+        gstatic-eu.pro
+        api.clickaine.com
+        trblocked.com
+        raenfh9tkuka.com
+        depictlicencegrandmother.com
+
+        # Scam
+        succesfulday.com
+        triumphantplace.com
+        packwithwealth.com
+
+        # https://www.reddit.com/r/technology/comments/gp976i/roughly_half_the_twitter_accounts_pushing_to/frotrp3/?context=3
+        analcreampietube.com
+        analfingeringtube.com
+        anorexictube.com
+        assspankingtube.com
+        baristatube.com
+        bigclittube.com
+        bracestube.com
+        buttplugtube.com
+        clasroomtube.com
+        climaxtube.com
+        closuptube.com
+        clothedtube.com
+        cmnftube.com
+        coveredincumtube.com
+        cumeatingtube.com
+        disgracetube.com
+        doggystyletube.com
+        fartingtube.com
+        fishnetstube.com
+        fuckdolltube.com
+        fuckmachinetube.com
+        fullnelsontube.com
+        gaggingtube.com
+        glassestube.com
+        hairlesstube.com
+        highdefinitiontube.com
+        hogtiedtube.com
+        hookertube.com
+        lactatingtube.com
+        longhairtube.com
+        musculartube.com
+        nippleclampstube.com
+        oiledtube.com
+        oldwomantube.com
+        pigtailstube.com
+        pukingtube.com
+        rimjobtube.com
+        schoolgirlstube.com
+        scissoringtube.com
+        speculumtube.com
+        sybiantube.com
+        tattooedtube.com
+        tinyasiantube.com
+        toestube.com
+
+        # Fake troubleshooting
+        fileerrors.com
+        www.fileerrors.com
+  # Note: if the same group has both allow/denylists, allowlists take precedence. Meaning if a domain is both blocked and allowed, it will be allowed.
+  # If a group has only allowlist entries, only domains from this list are allowed, and all others be blocked.
+  allowlists:
+    public_lists:
+      - |
+        ################# URL Shorteners ##################
+
+        # Microsoft projects
+        aka.ms
+        go.microsoft.com
+
+        # Amazon products
+        amzn.to
+
+        # Google Docs Forms
+        forms.gle
+
+        # Google projects
+        goo.gl
+
+        # PlayStation projects
+        play.st
+
+        # Twitter outbound links
+        t.co
+
+        # YouTube videos
+        youtu.be
+
+        # Generic
+        bit.ly
+        www.bit.ly
+        bitly.com
+        geni.us
+        j.mp
+        kutt.it
+        ow.ly
+        www.ow.ly
+        smarturl.it
+        t.ly
+
+        #################### Facebook ####################
+
+        # Facebook web chat (2020 redesign)
+        star.c10r.facebook.com
+
+        # User file hosting/Messenger attachments
+        cdn.fbsbx.com
+
+        # Android app
+        graph.facebook.com
+
+        # Android search history editing
+        lookaside.facebook.com
+
+        # Android Messenger app
+        b-graph.facebook.com
+
+        # Android Messenger voice clips
+        api.facebook.com
+
+        # Android Messenger extensions (e.g. gfycat)
+        connect.facebook.net
+
+        # Third-party Facebook-powered comments/sign-up
+        staticxx.facebook.com
+
+        # Embedded Instagram posts
+        platform.instagram.com
+
+        ###################### Google #####################
+
+        # Captive portal check
+        clients3.google.com
+        connectivitycheck.android.com
+        connectivitycheck.gstatic.com
+
+        # Charts and QR codes
+        chart.googleapis.com
+
+        # User file hosting
+        firebasestorage.googleapis.com
+        storage.googleapis.com
+
+        # Chrome updates
+        dl.google.com
+        redirector.gvt1.com
+
+        # Custom search engine (embedded Google search)
+        cse.google.com
+
+        # Fonts
+        fonts.googleapis.com
+        fonts.gstatic.com
+
+        # Location history
+        history.google.com
+
+        # Play updates
+        android.clients.google.com
+
+        # YouTube viewing history
+        s.youtube.com
+
+        # Embedded YouTube without cookies
+        www.youtube-nocookie.com
+
+        #################### Microsoft ####################
+
+        # Azure login
+        main.iam.ad.ext.azure.com
+
+        # Azure logging insights
+        api.loganalytics.io
+
+        # Bing Maps
+        dev.virtualearth.net
+        ecn.dev.virtualearth.net
+        t0.ssl.ak.dynamic.tiles.virtualearth.net
+        t0.ssl.ak.tiles.virtualearth.net
+        maps.windows.com
+
+        # Captive portal check / network status
+        www.msftconnecttest.com
+        msftncsi.com
+        www.msftncsi.com
+        dns.msftncsi.com
+        ipv6.msftncsi.com
+
+        # Polls / surveys
+        forms.office.com
+
+        # Font streaming
+        fs.microsoft.com
+
+        # Microsoft geo-detection for ISO downloads
+        vlscppe.microsoft.com
+
+        # Visual Studio Code download
+        update.code.visualstudio.com
+
+        # Visual Studio Code auto-update and malicious extension check
+        az764295.vo.msecnd.net
+
+        # Microsoft TechNet stylesheet
+        i-technet.sec.s-msft.com
+
+        # Microsoft TechCommunity stylesheet
+        gxcuf89792.i.lithium.com
+
+        # Office 365 Aria service
+        mobile.pipe.aria.microsoft.com
+
+        # Office 365 portal
+        nexus.officeapps.live.com
+        nexusrules.officeapps.live.com
+
+        # Windows update (https://learn.microsoft.com/en-us/windows/privacy/manage-windows-11-endpoints)
+        dl.delivery.mp.microsoft.com
+        ctldl.windowsupdate.com
+
+        # Edge updates
+        msedge.api.cdp.microsoft.com
+
+        ############ Services / Functionality #############
+        ########## Sorted by second-level domain ##########
+
+        # Tinder confirm phone number
+        graph.accountkit.com
+
+        # Dutch tabloid newspaper
+        ad.nl
+        www.ad.nl
+        live.ad.nl
+        statics.ad.nl
+
+        # Facebook-to-Spotify deep links
+        app.adjust.com
+
+        # Adobe Reader DC download
+        get3.adobe.com
+
+        # Autoblog.com
+        guce.advertising.com
+
+        # Website traffic analysis
+        www.alexa.com
+        # Alexa.com traffic graphs
+        traffic.alexa.com
+
+        # Package shipment status
+        track.aliexpress.com
+
+        # User file hosting
+        s3.amazonaws.com
+        s3.us-east-2.amazonaws.com
+
+        # CNN.com images, embedded content, load times, etc.
+        cdn.ampproject.org
+
+        # Angry IP network scanner
+        angryip.org
+        www.angryip.org
+
+        # Engadget.com fonts
+        s.aolcdn.com
+        # Engadget.com image thumbnails
+        o.aolcdn.com
+
+        # Apple certificate authority
+        ocsp.apple.com
+
+        # North Face store
+        fsm-vfc.attraqt.com
+
+        # BBC video player
+        emp.bbci.co.uk
+
+        # Blogger images
+        4.bp.blogspot.com
+
+        # Eurogamer video player
+        cdn.bluebillywig.com
+
+        # www.regextester.com
+        netdna.bootstrapcdn.com
+
+        # Flixbus PayPal checkout
+        js.braintreegateway.com
+
+        # Hungry Android app
+        api2.branch.io
+
+        # FaceIt email unsubscribe
+        dashboard-01.braze.eu
+
+        # Bring package tracking
+        tracking.bring.dk
+
+        # User file hosting
+        files.catbox.moe
+
+        # CIS cyber security
+        learn.cisecurity.org
+
+        # Dansk Metal email link tracking
+        elinkeu.clickdimensions.com
+
+        # ArsTechnica video
+        d2c8v52ll5s99u.cloudfront.net
+        # UrbanDictionary.com stylesheet
+        d2gatte9o95jao.cloudfront.net
+        # gamechanger.netcompany.com images
+        d9hhrg4mnvzow.cloudfront.net
+
+        # Crypto currency market
+        coinbase.com
+        www.coinbase.com
+        assets.coinbase.com
+
+        # Comodo certificate authority
+        ocsp.comodoca.com
+
+        # TrueNAS ISO download
+        download.sys.truenas.net
+
+        # Cookie consent settings
+        sourcepoint.mgr.consensu.org
+        pm.sourcepoint.mgr.consensu.org
+        # DMI.dk cookie consent
+        cookieinformation.mgr.consensu.org
+        # Fortune.com video
+        trustarc.mgr.consensu.org
+        # PCWorld.com video
+        vendorlist.consensu.org
+
+        # BT.dk videos consent
+        consent.cookiebot.com
+
+        # rockpapershotgun.com third-party embedded consent
+        cdn.cookielaw.org
+
+        # Danish container-deposit information
+        danskretursystem.dk
+
+        # American sporting goods retail company
+        dickssportinggoods.com
+        www.dickssportinggoods.com
+
+        # User profile pictures
+        cdn.discordapp.com
+
+        # User file hosting
+        a.doko.moe
+
+        # Anti-adblock on mmm.dk
+        dotbanner.dk
+
+        # Linux client connectivity checks
+        bolt.dropbox.com
+
+        # Dynatrace website images
+        #dt-cdn.net
+
+        # Putty SSH client download server
+        the.earth.li
+
+        # Elastic email unsubscribe
+        link.elastic.co
+
+        # CDN for embedded content
+        embed.ly
+        cdn.embedly.com
+
+        # Engadget.com
+        guce.engadget.com
+
+        # Epic Games Store order modal
+        tracking.epicgames.com
+
+        # Crypto mining pool
+        ethermine.org
+        eu1.ethermine.org
+        us1.ethermine.org
+
+        # CNET.com video embed / TechRepublic.com video
+        #c.evidon.com
+
+        # Tech news site (ziffdavis.com.edgekey.net is the CNAME blocked domain, an akamai edge server address)
+        www.extremetech.com
+
+        # Humble Bundle 'pay instantly with PayPal'
+        #stripecdn.map.fastly.net
+
+        # Firefox captive portal check
+        detectportal.firefox.com
+
+        # Firewall configuration
+        iplists.firehol.org
+
+        # Fonts / stylesheets
+        fontawesome.com
+        use.fontawesome.com
+        fast.fonts.net
+
+        # Viafree.dk movie streaming
+        5d3e9.v.fwmrm.net
+        5d402.v.fwmrm.net
+        mssl.fwmrm.net
+        gslb-aws-eu-west-01.v.fwmrm.net
+        gslb-op-eu-west-01.v.fwmrm.net
+        g3v.prd.ads.aws.fwmrm.net
+
+        # Business software review site
+        www.g2crowd.com
+
+        # NVIDIA GFE driver downloads
+        gfwsl.geforce.com
+
+        # solokeys.com stylesheets
+        cdn.getshogun.com
+
+        # Corsair.com support login
+        cdns.gigya.com
+        socialize.us1.gigya.com
+
+        # Github archive download
+        codeload.github.com
+        # User text file hosting
+        gist.githubusercontent.com
+        # User file hosting
+        raw.githubusercontent.com
+
+        # KissAnime video player
+        imasdk.googleapis.com
+
+        # Fortune.com video consent
+        #www.googletagmanager.com
+
+        # Job postings
+        boards.greenhouse.io
+
+        # Vulnerability discosure platform
+        hackerone.com
+        www.hackerone.com
+
+        # Mailgun.com contact form
+        js.hsforms.net
+
+        # blog.vyos.io posts
+        cdn2.hubspot.net
+
+        # HuffPost.com consent
+        guce.huffpost.com
+
+        # Anything is possible at zombo.com
+        html5zombo.com
+        www.html5zombo.com
+
+        # User file hosting
+        image.ibb.co
+
+        # m.tiktok.com videos
+        sf16-muse-va.ibytedtos.com
+
+        # IGN articles embedded videos
+        widgets.ign.com
+
+        # Phishing awareness
+        ismycreditcardstolen.com
+        www.ismycreditcardstolen.com
+
+        # Clothing store
+        jackjones.com
+        www.jackjones.com
+
+        # Honey extension
+        d.joinhoney.com
+
+        # Mashable video
+        content.jwplatform.com
+
+        # EkstraBladet.dk/Autoblog.com video
+        cfvod.kaltura.com
+
+        # Launchpad project management
+        bugs.launchpad.net
+
+        # LinkedIn message GIFs
+        snap.licdn.com
+        # LinkedIn Android app news feed
+        exp1.www.linkedin.com
+
+        # Alive Festival volunteer application
+        mandrillapp.com
+
+        # Programming blog
+        mattfischer.com
+        www.mattfischer.com
+
+        # Medium article short links
+        link.medium.com
+
+        # Scripe email client
+        memecode.com
+        www.memecode.com
+
+        # User file hosting
+        my.mixtape.moe
+        track6.mixtape.moe
+        track8.mixtape.moe
+        track9.mixtape.moe
+
+        # Firefox tracking protection rules
+        tracking-protection.cdn.mozilla.net
+        # Firefox tab share
+        push.services.mozilla.com
+        # Peer-to-peer WebRTC connections
+        stun.services.mozilla.com
+
+        # dplay.dk streaming/subscription
+        jssdkcdns.mparticle.com
+
+        # Neustar websites
+        ns-cdn.neustar.biz
+
+        # Nordisk Film Biografer
+        nfbio.dk
+        www.nfbio.dk
+
+        # VPN provider
+        nordvpn.com
+        www.nordvpn.com
+
+        # Computer discussion board
+        forum.notebookreview.com
+
+        # DNS provider
+        ns1.com
+        www.ns1.com
+
+        # NYTimes cookie consent (useful to hide tracking pop-up)
+        purr.nytimes.com
+
+        # Eurogamer cookie consent (required for video player)
+        geolocation.onetrust.com
+
+        # User file hosting
+        openload.co
+        www.openload.co
+
+        # Android NTP pool
+        2.android.pool.ntp.org
+
+        # nymag.com images
+        pixel.nymag.com
+
+        # Text pastes
+        pastebin.com
+
+        # User file hosting
+        pasteboard.co
+        www.pasteboard.co
+
+        # DNSPerf.com graphs
+        api.perfops.net
+
+        # goal.com images
+        images.performgroup.com
+
+        # www.japantimes.co.jp
+        c2-ap.piano.io
+        code.piano.io
+        experience-ap.piano.io
+
+        # PlayStation user profiles
+        profile.api.playstation.com
+        # PlayStation friend list
+        dk-prof.np.community.playstation.net
+        # PlayStation direct messages and online friends
+        dk-gmsg.np.community.playstation.net
+        # PlayStation recent friend activity
+        activity.api.np.km.playstation.net
+        # PlayStation apps login
+        vl.api.np.km.playstation.net
+
+        # PostNord package tracking
+        tracking.postnord.com
+
+        # Telegraaf.nl & Dumpert.nl video consent
+        sdk.privacy-center.org
+
+        # Overleaf v1
+        js.pusher.com
+
+        # User file hosting
+        puu.sh
+
+        # StackOverflow developer survey
+        stackoverflow.az1.qualtrics.com
+
+        # Freetrailer web booking
+        cdn.ravenjs.com
+
+        # Website security monitoring service
+        report-uri.com
+        report-uri.io
+
+        # Email deliverability service
+        returnpath.com
+        www.returnpath.com
+        help.returnpath.com
+
+        # Computer hardware
+        rosewill.com
+        www.rosewill.com
+
+        # RuneScape
+        oldschool.runescape.com
+        www.oldschool.runescape.com
+
+        # Customer-relationship management (CRM) service
+        salesforce.com
+
+        # Snapchat filters
+        gcs.sc-cdn.net
+
+        # Bilbasen parent company
+        schibsted.com
+
+        # Marketing email and SMTP relay
+        sendgrid.net
+
+        # VyOS.io images
+        cdn.shortpixel.ai
+
+        # Email delivery service
+        sparkpost.com
+        www.sparkpost.com
+
+        # PCWorld.com videos
+        spiffymachine.com
+
+        # Hinge registration
+        sdk.split.io
+
+        # Web player
+        apresolve.spotify.com
+        spclient.wg.spotify.com
+        open.spotify.com
+
+        # Statistics community
+        stats.stackexchange.com
+
+        # Humble Bundle 'pay instantly with PayPal'
+        js.stripe.com
+
+        # NAS manufacturer
+        synology.com
+        www.synology.com
+
+        # The Telegraph article assets
+        cf-particle-html.eip.telegraph.co.uk
+
+        # User file hosting
+        users.telenet.be
+
+        # TheFreeDictionary stylesheet
+        img.tfd.com
+
+        # Torrent sites
+        thepiratebay.org
+        cdn-ws.turnto.com
+
+        # Embedded Tweets
+        cdn.syndication.twimg.com
+        # Twitter.com image hosting
+        pbs.twimg.com
+        # Embedded Tweets
+        platform.twitter.com
+
+        # EA.com fonts/symbols / https://helpx.adobe.com/fonts/using/use-typekit-net.html
+        use.typekit.net
+
+        # gamechanger.netcompany.com
+        builder-assets.unbounce.com
+
+        # Drag-and-drop web page creator
+        unbouncepages.com
+
+        # VICE stylesheet
+        vice-web-statics-cdn.vice.com
+
+        # Polygon cookie consent
+        phonograph2.voxmedia.com
+
+        # Wistia videos
+        fast.wistia.com
+
+        # WordPress CDN
+        s1.wp.com
+
+        # Third-party WordPress CDN
+        hb.wpmucdn.com
+
+        # lokalavisen.dk stylesheet
+        vjs.zencdn.net
+
+        # Kraken.com support chat
+        widget-mediator.zopim.com
+        # Hiper.dk support chat
+        v2.zopim.com
+
+        ################## Ads/tracking ##################
+
+        # Pricerunner redirect
+        clk.tradedoubler.com
+        tc.tradetracker.com
+        track.adform.net
+        track.webgains.com
+        tracead.com
+        tracking.lengow.com
+        www.partner-ads.com
+
+        # Ønskeskyen redirect
+        track.adtraction.com
+        click.linksynergy.com
+
+        # CDON redirect
+        solutions.tradedoubler.com
+        redir.tradedoubler.com
+
+        # Ebay.com tracking links
+        rover.ebay.com
+
+        # Giveaways (e.g. ESL gaming)
+        gleam.io
+
+        # Google sponsored links
+        www.googleadservices.com
+
+        # Google shopping redirect
+        ad.atdmt.com
+        ad.doubleclick.net
+        clickserve.dartsearch.net
+
+        # PlayStation email newsletter
+        click.playstationmail.net
+
+        # Driveteam.dk email redirect
+        click.pstmrk.it
+
+        # TechRepublic.com video
+        #s0.2mdn.net
+
+        # airbnb redirect
+        bnc.lt
+        www.bnc.lt
+
+        ##################### Betting #####################
+
+        bet365.com
+        www.bet365.com
+        unibet.com
+        www.unibet.com
+        pinnacle.com
+        www.pinnacle.com
+
+        ###################### Adult ######################
+
+        # xhamster/stripchat live cams
+        #*.stripcdn.com
+        # Stripchat tracking redirect
+        go.strpjmp.com
+        # xhmaster tracking redirect
+        go.xhamsterlive.com
+        # Embedded LiveJasmin
+        aweproto.com
+
+        # Redtube/YouPorn thumbnail host
+        m1.nsimg.net
+        m2.nsimg.net
+
+        beeg.com
+        www.beeg.com
+        bongacams.com
+        www.bongacams.com
+        chaturbate.com
+        www.chaturbate.com
+        cliphunter.com
+        www.cliphunter.com
+        e-hentai.org
+        www.e-hentai.org
+        eporner.com
+        www.eporner.com
+        fapality.com
+        www.fapality.com
+        fuq.com
+        www.fuq.com
+        gotporn.com
+        www.gotporn.com
+        hanime.tv
+        www.hanime.tv
+        hentaihaven.org
+        www.hentaihaven.org
+        hentaihaven.xxx
+        www.hentaihaven.xxx
+        hqporner.com
+        www.hqporner.com
+        keezmovies.com
+        www.keezmovies.com
+        livejasmin.com
+        www.livejasmin.com
+        motherless.com
+        www.motherless.com
+        myfreecams.com
+        www.myfreecams.com
+        nhentai.net
+        www.nhentai.net
+        nuvid.com
+        www.nuvid.com
+        perfectgirls.net
+        www.perfectgirls.net
+        pichunter.com
+        www.pichunter.com
+        porn.com
+        www.porn.com
+        pornhd.com
+        www.pornhd.com
+        pornhub.com
+        www.pornhub.com
+        pornmd.com
+        www.pornmd.com
+        porntrex.com
+        www.porntrex.com
+        porntube.com
+        www.porntube.com
+        redtube.com
+        www.redtube.com
+        spankbang.com
+        www.spankbang.com
+        spankwire.com
+        www.spankwire.com
+        streamate.com
+        www.streamate.com
+        thumbzilla.com
+        www.thumbzilla.com
+        tnaflix.com
+        www.tnaflix.com
+        tube8.com
+        www.tube8.com
+        txxx.com
+        www.txxx.com
+        vporn.com
+        www.vporn.com
+        youporn.com
+        www.youporn.com
+        youjizz.com
+        www.youjizz.com
+        xhamster.com
+        www.xhamster.com
+        xhamsterlive.com
+        www.xhamsterlive.com
+        xlovecam.com
+        www.xlovecam.com
+        xnxx.com
+        www.xnxx.com
+        xtube.com
+        www.xtube.com
+        xvideos.com
+        www.xvideos.com
+  clientGroupsBlock:
+    default:
+      - public_lists
+      - blacklist

@@ -1,6 +1,6 @@
 services:
-  stubby:
-    image: ghcr.io/niklasea/stubby:{{ stubby_version }}
+  blocky:
+    image: spx01/blocky:{{ dns_server_blocky_version }}
     restart: unless-stopped
     deploy:
       resources:
@@ -13,9 +13,9 @@ services:
     security_opt:
       - no-new-privileges:true
     ports:
-      - 53:53/tcp
-      - 53:53/udp
+      - '53:53/tcp'
+      - '53:53/udp'
     environment:
-      LOG_LEVEL: {{ stubby_log_level }}
+      BLOCKY_CONFIG_FILE: /app/config.yml
     volumes:
-      - {{ stubby_config_path }}/stubby.yml:/etc/stubby.yml
+      - {{ dns_server_compose_dir }}/blocky.yml:/app/config.yml:ro
