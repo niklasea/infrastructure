@@ -1,10 +1,6 @@
 #!/usr/bin/env ansible-playbook
 ---
-# TODO: Set up remote backups
-# TODO: Set up Syncthing
-# TODO: Set up CI/CD (DroneCI?)
 # TODO: Monitoring and alerts on everything
-# TODO: nftables module
 # TODO: Email server with SMTP relay (Mailgun/SendGrid)
 
 - name: Configure local networking
