@@ -1,17 +1,13 @@
 #!/usr/bin/env ansible-playbook
 ---
-# TODO: Set up remote backups
-# TODO: Set up Syncthing
-# TODO: Set up CI/CD (DroneCI?)
 # TODO: Monitoring and alerts on everything
-# TODO: nftables module
 # TODO: Email server with SMTP relay (Mailgun/SendGrid)
 
 - name: Configure local networking
   ansible.builtin.import_playbook: local_networking.yml
 
 - name: Common settings
-  hosts: all,!vyos,!localhost
+  hosts: all,!vyos
   tasks:
     - ansible.builtin.import_role:
         name: common
@@ -29,11 +25,8 @@
     - ansible.builtin.import_role:
         name: smb_mount
 
-- name: Set up Netbird management server
-  hosts: netbird
-  tasks:
-    - ansible.builtin.import_role:
-        name: netbird_service
+- name: Configure overlay networking
+  ansible.builtin.import_playbook: overlay_networking.yml
 
 - name: Internal docker server
   hosts: internal-docker

@@ -1,0 +1,27 @@
+---
+- name: (Debian) Install Netbird dependencies
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+    state: present
+
+- name: (Debian) Add the Netbird repository
+  ansible.builtin.deb822_repository:
+    name: netbird
+    types: deb
+    uris: "https://pkgs.netbird.io/debian"
+    suites: "stable"
+    components: "main"
+    architectures: amd64
+    signed_by: "https://pkgs.netbird.io/debian/public.key"
+  register: netbird_peer_repository
+
+- name: (Debian) Install Netbird
+  when: not ansible_check_mode
+  ansible.builtin.apt:
+    name:
+      - netbird
+    state: present
+    update_cache: "{{ netbird_peer_repository is changed | bool }}"

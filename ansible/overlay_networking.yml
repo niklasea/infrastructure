@@ -1,0 +1,74 @@
+---
+- name: Set up Netbird management server
+  hosts: netbird # Only one primary server
+  tasks:
+    - ansible.builtin.import_role:
+        name: firewall
+      vars:
+        firewall_rules:
+          - { chain: INPUT, rule: ACCEPT, port: 443, proto: tcp, comment: HTTPS }
+          - { chain: INPUT, rule: ACCEPT, port: 80, proto: tcp, comment: HTTP }
+    - ansible.builtin.import_role:
+        name: inadyn
+    - ansible.builtin.import_role:
+        name: netbird_service
+  post_tasks:
+    - name: Schedule backup to network drive
+      become: true
+      ansible.builtin.cron:
+        name: "{{ item.name}}"
+        job: "{{ item.job }}"
+        hour: 4
+        minute: 0
+        state: present
+      loop:
+        - name: "Back up netbird to network drive"
+          job: |
+            docker compose -f {{ netbird_service_compose_dir }} down
+            docker compose -f {{ netbird_service_compose_dir }} cp -a netbird-server:/var/lib/netbird/ {{ smb_mounts.backup_netbird.local_path }}
+            docker compose -f {{ netbird_service_compose_dir }} up -d
+
+- name: Join DK VMs to overlay network
+  hosts: proxmox_all_qemu,!role_netbird,!role_infrastructure_bootstrap
+  tasks:
+    - ansible.builtin.import_role:
+        name: netbird_peer
+      vars:
+        netbird_peer_setup_key: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          34613536646433613266383830643334666461616133646430373161663163666231616533346465
+          3539336334333434306635363731323261646134343131300a386566663065303534323832336532
+          36353531623131646334353735383034316632306630313033306263636435313834646265376662
+          3966333963663564350a633764383863323631646638353462623634646537393836633565396631
+          31303432663362326330636664613130333636666463303464653630393866336366353864333464
+          3733343566363563373262353738653961333939363665353366
+
+- name: Join SG VMs to overlay network
+  hosts: hcloud_location_sin,!role_netbird
+  tasks:
+    - ansible.builtin.import_role:
+        name: netbird_peer
+      vars:
+        netbird_peer_setup_key: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          65626533313661393030343430303434376261373761323764323337623937356332396130653234
+          3834343037313032333766346335653832383231653062370a373264656138373336366535353937
+          36626132653635353836303765336138616431363837636431336135623036653263343138633135
+          6539313331633031380a343061656233336162663937313535326335376666663636303763333336
+          64323835373934663032386137323831376337323036643333306335613334636538343562623939
+          6164656565323362393866303730623465346430356237393162
+
+- name: Join DE VMs to overlay network
+  hosts: hcloud_location_nbg1,hcloud_location_fsn1,!role_netbird
+  tasks:
+    - ansible.builtin.import_role:
+        name: netbird_peer
+      vars:
+        netbird_peer_setup_key: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          38663164313837613864666530333661626463386239356134326265393438326266303039643132
+          6364383534636634623731626638356561383832363061610a373937373937623431363339633832
+          66613466303039363030613238363038326137303236356663373338656565303063346130666133
+          6232653331663938310a396265643938343666616535653636376230326463343139366366366634
+          61333230373035656336366239353763323739653033393431346464653965323435616436656135
+          6332393338336132643563653637663731333339396162613830

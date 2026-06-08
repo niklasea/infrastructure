@@ -19,4 +19,4 @@ docker_daemon_default_ulimits:
 docker_daemon_address_pools:
   - base: "10.0.0.0/8"
     size: 26
-docker_remap_user: 165536
+docker_daemon_userns_remap: "default"

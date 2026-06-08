@@ -6,5 +6,5 @@
   "icc": {{ docker_daemon_icc }},
   "default-ulimits": {{ docker_daemon_default_ulimits | ansible.builtin.to_json }},
   "default-address-pools": {{ docker_daemon_address_pools | ansible.builtin.to_json }},
-  "userns-remap": "default"
+  "userns-remap": "{{ docker_daemon_userns_remap }}"
 }
