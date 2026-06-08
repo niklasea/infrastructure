@@ -62,6 +62,7 @@
         name: terraform-agent
         image: hashicorp/tfc-agent:latest
         state: started
+        restart_policy: unless-stopped
         platform: linux/amd64
         env:
           TFC_AGENT_NAME: proxmox-terraform-agent
