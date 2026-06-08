@@ -45,7 +45,7 @@ jobs:
         run: exit 1
 
       - name: Terraform Apply
-        if: steps.plan.outputs.exitcode == '2' && ${{ github.ref_name == github.event.repository.default_branch }}
+        if: ${{ steps.plan.outputs.exitcode == '2' && github.ref_name == github.event.repository.default_branch }}
         run: terraform apply -input=false tfplan
 
   ansible:
