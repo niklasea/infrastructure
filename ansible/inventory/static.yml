@@ -9,3 +9,4 @@ ungrouped:
       ansible_host: "{{ infrastructure_hosts['dns02']['ipv4_address'] }}"
     internal-docker:
       ansible_host: "{{ infrastructure_hosts['internal-docker']['ipv4_address'] }}"
+    localhost:

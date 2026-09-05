@@ -25,9 +25,16 @@
     sockets: "{{ proxmox_vm_sockets }}"
     cores: "{{ proxmox_vm_cores }}"
     memory: "{{ proxmox_vm_memory_mb }}"
+    machine: 'q35'
+    bios: 'ovmf'
+    efidisk0:
+      storage: "{{ proxmox_vm_storage }}"
+      format: 'raw'
+      efitype: '4m'
+      pre_enrolled_keys: true
+    scsi:
+      scsi2: "{{ proxmox_vm_storage }}:cloudinit,format=raw"
     ostype: 'l26'
-    ide:
-      ide2: "{{ proxmox_vm_storage }}:cloudinit,format=raw"
     scsihw: 'virtio-scsi-single'
     boot: order=scsi0;ide2
     searchdomains: "{{ proxmox_vm_searchdomains | default(omit) }}"
