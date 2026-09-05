@@ -7,7 +7,7 @@ resource "proxmox_virtual_environment_file" "cloud_config" {
   source_raw {
     data = templatefile("${path.module}/cloud-init.tftpl", {
       hostname       = each.key
-      local_network  = proxmox_dns_search_domain
+      local_network  = var.proxmox_dns_search_domain
       ssh_keys       = values(var.ssh_public_keys)
       extra_packages = ["qemu-guest-agent"]
       run_commands   = ["systemctl enable qemu-guest-agent", "systemctl start qemu-guest-agent"]
