@@ -52,5 +52,6 @@ variable "proxmox_vms" {
     storage_gb = number
     vlan_id    = number
     tags       = list(string)
+    hardware_address = optional(string)
   }))
 }
