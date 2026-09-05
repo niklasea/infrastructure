@@ -16,7 +16,7 @@
     components: "main"
     architectures: amd64
     signed_by: "https://pkgs.netbird.io/debian/public.key"
-  register: netbird_peer_repository
+  register: _netbird_peer_repository
 
 - name: (Debian) Install Netbird
   when: not ansible_check_mode
@@ -24,4 +24,4 @@
     name:
       - netbird
     state: present
-    update_cache: "{{ netbird_peer_repository is changed | bool }}"
+    update_cache: "{{ _netbird_peer_repository is changed | bool }}"
