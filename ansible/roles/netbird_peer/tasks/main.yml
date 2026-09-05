@@ -8,7 +8,12 @@
 - name: Start Netbird
   become: true
   ansible.builtin.command:
-    cmd: "netbird up --setup-key {{ netbird.peer_setup_key }} --management-url https://{{ netbird.domain }}/"
+    cmd: >
+      netbird up
+      --setup-key {{ netbird_peer_setup_key }}
+      --management-url {{ 'https://%s/' | ansible.builtin.format(netbird_peer_domain) | ansible.builtin.quote }}
+      --dns-resolver-address 127.0.0.1:5353
+      {{ '--disable-dns' if netbird_peer_disable_dns else '' }}
   no_log: true
-  register: netbird_peer_start
-  changed_when: "'Already connected' not in netbird_peer_start.stdout"
+  register: _netbird_peer_start
+  changed_when: "'Already connected' not in _netbird_peer_start.stdout"
