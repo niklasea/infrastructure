@@ -33,6 +33,17 @@ resource "hcloud_firewall" "webserver-firewall" {
   }
 }
 
+resource "hcloud_firewall" "netbird-stun-firewall" {
+  name = "netbird"
+  rule {
+    description = "Allow STUN"
+    direction   = "in"
+    protocol    = "udp"
+    port        = "3478"
+    source_ips  = ["0.0.0.0/0", "::/0"]
+  }
+}
+
 # A single resource block provisions every server in the map
 resource "hcloud_server" "nodes" {
   for_each = var.hcloud_servers
@@ -45,7 +56,8 @@ resource "hcloud_server" "nodes" {
 
   firewall_ids = [
     hcloud_firewall.ssh-only-firewall.id,
-    hcloud_firewall.webserver-firewall.id
+    hcloud_firewall.webserver-firewall.id,
+    hcloud_firewall.netbird-stun-firewall.id
   ]
   user_data = templatefile("${path.module}/cloud-init.tftpl",
     {
