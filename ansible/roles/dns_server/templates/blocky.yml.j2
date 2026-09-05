@@ -123,11 +123,9 @@ blocking:
       - https://v.firebog.net/hosts/neohostsbasic.txt
       - https://raw.githubusercontent.com/RooneyMcNibNug/pihole-stuff/master/SNAFU.txt
       - https://paulgb.github.io/BarbBlock/blacklists/hosts-file.txt
-      # - https://in0de.synology.me/own.txt
       - https://raw.githubusercontent.com/StevenBlack/hosts/master/data/StevenBlack/hosts
       - https://s3.amazonaws.com/lists.disconnect.me/simple_malvertising.txt
       - https://bitbucket.org/ethanr/dns-blacklists/raw/8575c9f96e5b4a1308f2f12394abd86d0927a4a0/bad_lists/Mandiant_APT1_Report_Appendix_D.txt
-      - https://v.firebog.net/hosts/Prigent-Malware.txt
       - https://phishing.army/download/phishing_army_blocklist_extended.txt
       - https://gitlab.com/quidsup/notrack-blocklists/raw/master/notrack-malware.txt
       - https://gitlab.com/curben/urlhaus-filter/raw/master/urlhaus-filter-hosts.txt
@@ -289,6 +287,9 @@ blocking:
 
         # Google projects
         goo.gl
+
+        # User shared links (automatic link shortener in Google phone apps)
+        share.google
 
         # PlayStation projects
         play.st
