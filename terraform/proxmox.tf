@@ -84,6 +84,7 @@ resource "proxmox_virtual_environment_vm" "virtual_machines" {
 
   lifecycle {
     prevent_destroy = true
+    ignore_changes = [ user_data_file_id ]
   }
 }
 
