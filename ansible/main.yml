@@ -7,7 +7,7 @@
   ansible.builtin.import_playbook: local_networking.yml
 
 - name: Common settings
-  hosts: all,!vyos
+  hosts: all,!vyos,!localhost
   tasks:
     - ansible.builtin.import_role:
         name: common
