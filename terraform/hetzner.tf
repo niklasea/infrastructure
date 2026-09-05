@@ -68,6 +68,7 @@ resource "hcloud_server" "nodes" {
   })
 
   lifecycle {
+    ignore_changes = [ user_data ]
     prevent_destroy = true
   }
 }

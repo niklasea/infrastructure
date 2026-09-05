@@ -52,8 +52,17 @@ resource "proxmox_virtual_environment_vm" "virtual_machines" {
     model   = "virtio"
     mtu     = 1 # Use bridge MTU
     vlan_id = each.value.vlan_id
+    mac_address = each.value.hardware_address
   }
 
+  machine = "q35"
+  bios = "ovmf"
+  efi_disk {
+    datastore_id = "local-lvm"
+    file_format = "raw"
+    type = "4m"
+    pre_enrolled_keys = true
+  }
   agent {
     enabled = true
   }
@@ -74,6 +83,7 @@ resource "proxmox_virtual_environment_vm" "virtual_machines" {
   }
 
   lifecycle {
+    ignore_changes = [ initialization ]
     prevent_destroy = true
   }
 }

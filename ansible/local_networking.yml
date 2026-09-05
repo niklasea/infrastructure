@@ -22,7 +22,7 @@
       ansible.builtin.meta: refresh_inventory
 
 - name: Configure internal DNS servers
-  hosts: dns_server
+  hosts: role_dns_server
   tasks:
     - ansible.builtin.include_role:
         name: common
