@@ -5,7 +5,8 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1G
+          # Metadata refreshes crash the container due to OOM if limit is less than 2GB
+          memory: 2G
     cap_drop:
       - ALL
     security_opt:
