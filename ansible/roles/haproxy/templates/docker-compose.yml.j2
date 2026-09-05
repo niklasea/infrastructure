@@ -2,6 +2,7 @@ services:
   haproxy:
     image: haproxy:{{ haproxy_version }}
     container_name: {{ haproxy_container_name }}
+    restart: unless-stopped
     sysctls:
       net.ipv4.ip_unprivileged_port_start: 0
     deploy:
