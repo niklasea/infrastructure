@@ -1,10 +1,6 @@
 #cloud-config
 manage_etc_hosts: localhost
 hostname: ${hostname}
-%{ if local_network != null && local_network != "" ~}
-fqdn: ${hostname}.${local_network}
-prefer_fqdn_over_hostname: true
-%{ endif ~}
 users:
   - name: deployment
     groups:
