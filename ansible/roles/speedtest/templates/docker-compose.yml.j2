@@ -13,9 +13,8 @@ services:
       - CHOWN
     security_opt:
       - no-new-privileges:true
-    networks:
-      reverse_proxy:
-        ipv4_address: {{ haproxy_docker_internal_network | ansible.utils.ipaddr('8') | ansible.utils.ipaddr('address') }}
+    ports:
+      - 127.0.0.1:8004:80
     environment:
       MODE: standalone
 
@@ -34,5 +33,5 @@ services:
       - {{ speedtest_iperf3_port }}:5201
 
 networks:
-  reverse_proxy:
+  caddy_reverse_proxy:
     external: true

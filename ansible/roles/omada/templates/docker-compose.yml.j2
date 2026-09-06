@@ -22,10 +22,8 @@ services:
       - {{ omada_autobackup_dir }}:/opt/tplink/autobackup/
       # Cannot bind-mount host directory as it will obscure the existing contents.
       - omada_data:/opt/tplink/data/
-    networks:
-      reverse_proxy:
-        ipv4_address: {{ haproxy_docker_internal_network | ansible.utils.ipaddr('5') | ansible.utils.ipaddr('address') }}
     ports:
+      - 127.0.0.1:8002:8043
       - 27001:27001/udp
       - 29810:29810/udp
       - 29811-29817:29811-29817/tcp
@@ -37,5 +35,5 @@ volumes:
   omada_data:
 
 networks:
-  reverse_proxy:
+  caddy_reverse_proxy:
     external: true

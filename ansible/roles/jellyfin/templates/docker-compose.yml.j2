@@ -16,16 +16,10 @@ services:
       - {{ jellyfin_config_dir }}:/config
       - {{ jellyfin_media_dir }}:/media:ro
     ports:
+      - 127.0.0.1:8001:8096
       # DLNA
       - 1900:1900/udp
       - 7359:7359/udp
-    networks:
-      reverse_proxy:
-        ipv4_address: {{ haproxy_docker_internal_network | ansible.utils.ipaddr('6') | ansible.utils.ipaddr('address') }}
 
 volumes:
   jellyfin-cache:
-
-networks:
-  reverse_proxy:
-    external: true

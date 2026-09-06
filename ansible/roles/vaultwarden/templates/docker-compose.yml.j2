@@ -14,9 +14,8 @@ services:
     volumes:
       - {{ vaultwarden_data_dir }}:/data/
       - {{ vaultwarden_web_vault_dir }}:/web_vault/
-    networks:
-      reverse_proxy:
-        ipv4_address: {{ haproxy_docker_internal_network | ansible.utils.ipaddr('3') | ansible.utils.ipaddr('address') }}
+    ports:
+      - 127.0.0.1:8000:80
     environment:
       WEB_VAULT_FOLDER: /web_vault/
       WEB_VAULT_ENABLED: {{ vaultwarden_web_vault_enabled }}
@@ -55,7 +54,3 @@ services:
 {% if vaultwarden_hibp_api_key is defined %}
       HIBP_API_KEY: {{ vaultwarden_hibp_api_key }}
 {% endif %}
-
-networks:
-  reverse_proxy:
-    external: true
