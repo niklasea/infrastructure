@@ -71,9 +71,54 @@ inadyn_ddns_configurations:
         password: "{{ vault_cloudflare.zone_key }}"
         hostname: "{{ vault_home_domain }}"
 
-certbot_subject_alt_names:
-  - "bitwarden.{{ local_domain }}"
-  - "omada.{{ local_domain }}"
-  - "jellyfin.{{ local_domain }}"
-  - "gitea.{{ local_domain }}"
-  - "speedtest.{{ local_domain }}"
+
+caddy_blocks:
+  - |
+    bitwarden.{{ local_domain }} {
+      tls {
+          dns cloudflare {{ caddy_cloudflare_api_token }}
+          resolvers 1.1.1.1 1.0.0.1
+      }
+
+      reverse_proxy 127.0.0.1:8000
+    }
+
+    jellyfin.{{ local_domain }} {
+      tls {
+          dns cloudflare {{ caddy_cloudflare_api_token }}
+          resolvers 1.1.1.1 1.0.0.1
+      }
+
+      reverse_proxy 127.0.0.1:8001
+    }
+
+    omada.{{ local_domain }} {
+      tls {
+          dns cloudflare {{ caddy_cloudflare_api_token }}
+          resolvers 1.1.1.1 1.0.0.1
+      }
+
+      reverse_proxy https://127.0.0.1:8002 {
+          transport http {
+              tls_insecure_skip_verify
+          }
+      }
+    }
+
+    gitea.{{ local_domain }} {
+      tls {
+          dns cloudflare {{ caddy_cloudflare_api_token }}
+          resolvers 1.1.1.1 1.0.0.1
+      }
+
+      reverse_proxy 127.0.0.1:8003
+    }
+
+    speedtest.{{ local_domain }} {
+      tls {
+          dns cloudflare {{ caddy_cloudflare_api_token }}
+          resolvers 1.1.1.1 1.0.0.1
+      }
+
+      reverse_proxy 127.0.0.1:8004
+    }

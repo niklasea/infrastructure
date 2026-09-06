@@ -1,3 +1,4 @@
 ---
 haproxy_version: lts
 haproxy_compose_dir: "{{ docker_compose_dir }}/haproxy"
+haproxy_tls_certificate_path: "{{ haproxy_compose_dir }}/certificate.pem"

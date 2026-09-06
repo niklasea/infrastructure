@@ -20,14 +20,8 @@ services:
       - {{ gitea_data_dir }}:/data
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
-    networks:
-      reverse_proxy:
-        ipv4_address: {{ haproxy_docker_internal_network | ansible.utils.ipaddr('7') | ansible.utils.ipaddr('address') }}
     ports:
+      - 127.0.0.1:8003:3000
       - 2222:22/tcp
     environment:
       GITEA__server__DOMAIN: {{ ansible_facts['fqdn'] }}
-
-networks:
-  reverse_proxy:
-    external: true

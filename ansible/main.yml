@@ -32,7 +32,7 @@
   hosts: internal-docker
   tasks:
     - ansible.builtin.import_role:
-        name: certbot-dns-cloudflare
+        name: caddy
     - ansible.builtin.import_role:
         name: wireguard
     - ansible.builtin.import_role:
@@ -85,7 +85,7 @@
         job: >
           /usr/bin/sqlite3
           {{ vaultwarden_data_dir }}/db.sqlite3
-          ".backup ' {{ vaultwarden_data_dir }}/backup.sqlite3'"
+          ".backup '{{ vaultwarden_data_dir }}/backup.sqlite3'"
         hour: 3
         minute: 0
         state: present

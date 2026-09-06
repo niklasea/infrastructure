@@ -16,8 +16,6 @@ dns_server_conditional_forwarding:
     address: "{{ gateway_address }}"
 dns_server_client_lookup_address: "{{ gateway_address }}"
 
-haproxy_docker_internal_network: '10.0.0.0/16'
-
 ansible_ssh_user: "{{ vault_deployment_credentials.username }}"
 ansible_ssh_private_key: "{{ vault_deployment_credentials.ssh_key.private }}"
 ansible_ssh_public_key: "{{ vault_deployment_credentials.ssh_key.public }}"
@@ -38,21 +36,9 @@ create_vm_hetzner_api_credentials:
   api_token: "{{ vault_hetzner.api_token }}"
 
 docker_compose_dir: /etc/compose
-notification_email: "{{ vault_notification_email }}"
-haproxy_tls_certificate_path: "{{ haproxy_compose_dir }}/certificate.pem"
-certbot_domain: "{{ inventory_hostname_short }}.{{ local_domain }}"
-certbot_email: "{{ vault_notification_email }}"
-certbot_use_dns: true
-certbot_dns_plugin: cloudflare
-certbot_dns_credentials: |
-  # https://certbot-dns-cloudflare.readthedocs.io/en/stable/#credentials
-  dns_{{ certbot_dns_plugin }}_api_token = {{ vault_cloudflare.zone_key }}
-certbot_dns_propagation: 15
-certbot_deploy_hook: |
-  #!/usr/bin/env bash
 
-  cat "$RENEWED_LINEAGE/privkey.pem" "$RENEWED_LINEAGE/fullchain.pem" > "{{ haproxy_tls_certificate_path }}"
-  docker compose -f /etc/compose/haproxy/docker-compose.yml restart
+caddy_notification_email: "{{ vault_notification_email }}"
+caddy_cloudflare_api_token: "{{ vault_cloudflare.zone_key }}"
 
 netbird_peer_domain: "netbird.{{ home_domain }}"
 netbird_peer_setup_key: "{{ vault_netbird.peer_setup_key }}"
