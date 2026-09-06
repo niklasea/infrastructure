@@ -10,5 +10,3 @@ ungrouped:
     internal-docker:
       ansible_host: "{{ infrastructure_hosts['internal-docker']['ipv4_address'] }}"
     localhost:
-      vars:
-        ansible_python_interpreter: "{{ ansible_playbook_python }}"
