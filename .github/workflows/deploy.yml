@@ -84,7 +84,9 @@ jobs:
 
       - name: Run playbook
         run: |
-          LC_ALL="C.UTF-8" ansible-playbook main.yml --vault-password-file ./vault_pass.sh
+          LC_ALL="C.UTF-8" ansible-playbook main.yml \
+            --vault-password-file ./vault_pass.sh \
+            -e "ansible_python_interpreter={{ ansible_playbook_python }}"
         env:
           VAULT_PASS: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
         if: ${{ github.ref_name == github.event.repository.default_branch }}
