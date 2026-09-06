@@ -31,7 +31,3 @@ services:
       - no-new-privileges:true
     ports:
       - {{ speedtest_iperf3_port }}:5201
-
-networks:
-  caddy_reverse_proxy:
-    external: true
