@@ -1,6 +1,19 @@
 ---
-- name: Configure chosen firewall
+- name: Configure chosen IPv4 firewall
   ansible.builtin.include_tasks: iptables.yml
+  tags: firewall_reset_all
+
+- name: Configure chosen IPv6 firewall
+  ansible.builtin.include_tasks: ip6tables.yml
+  tags: firewall_reset_all
+
+- name: (Debian) Load iptables rules at boot
+  become: true
+  ansible.builtin.copy:
+    src: iptables-preup
+    dest: /etc/network/if-pre-up.d/iptables
+    mode: '755'
+    backup: true
   tags: firewall_reset_all
 
 # - name: OS-specific configuration
