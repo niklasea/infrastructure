@@ -19,7 +19,7 @@ services:
       - '{{ netbird.stun_port }}:3478/udp'
     volumes:
       - netbird_data:/var/lib/netbird
-      - {{ netbird_service_compose_dir }}/config.yml:/etc/netbird/config.yml
+      - {{ netbird_service_compose_dir }}/config.yml:/etc/netbird/config.yml:ro
     command: ["--config", "/etc/netbird/config.yml"]
     logging:
       driver: "json-file"
