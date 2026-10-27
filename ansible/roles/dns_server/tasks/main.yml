@@ -8,7 +8,7 @@
     owner: "{{ item.owner | default('root') }}"
     group: "{{ item.group | default('root') }}"
   loop:
-    - path: "{{ dns_server_compose_dir }}
+    - path: "{{ dns_server_compose_dir }}"
 
 - name: Apply configuration
   become: true
