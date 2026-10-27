@@ -7,6 +7,7 @@ resource "proxmox_virtual_environment_file" "cloud_config" {
   source_raw {
     data = templatefile("${path.module}/cloud-init.tftpl", {
       hostname       = each.key
+      fqdn           = "${each.key}.${var.proxmox_searchdomain}"
       ssh_keys       = values(var.ssh_public_keys)
       extra_packages = ["qemu-guest-agent"]
       run_commands   = ["systemctl enable qemu-guest-agent", "systemctl start qemu-guest-agent"]
@@ -68,7 +69,7 @@ resource "proxmox_virtual_environment_vm" "virtual_machines" {
   }
   initialization {
     dns {
-      servers = ["1.1.1.1", "1.0.0.1", "8.8.8.8", "8.8.4.4"]
+      domain = var.proxmox_searchdomain
     }
     ip_config {
       ipv4 {
@@ -83,7 +84,7 @@ resource "proxmox_virtual_environment_vm" "virtual_machines" {
   }
 
   lifecycle {
-    ignore_changes = [ initialization ]
+    ignore_changes  = [initialization[0].user_data_file_id]
     prevent_destroy = true
   }
 }

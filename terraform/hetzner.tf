@@ -62,6 +62,7 @@ resource "hcloud_server" "nodes" {
   user_data = templatefile("${path.module}/cloud-init.tftpl",
     {
       hostname       = each.key
+      fqdn           = ""
       ssh_keys       = values(var.ssh_public_keys)
       extra_packages = []
       run_commands   = []

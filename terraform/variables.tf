@@ -20,6 +20,9 @@ variable "proxmox_url" {
 variable "proxmox_node_name" {
   type = string
 }
+variable "proxmox_searchdomain" {
+  type = string
+}
 
 # Global OS Config
 variable "hcloud_image" {
