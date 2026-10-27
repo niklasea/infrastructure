@@ -11,7 +11,8 @@
   ansible.builtin.template:
     src: "{{ item }}"
     dest: "{{ caddy_compose_dir }}/{{ item | splitext | first }}"
-    mode: '644'
+    # The Caddyfile contains the Cloudflare API token; keep the whole directory root-only.
+    mode: '0600'
   loop:
     - docker-compose.yml.j2
     - conf/Caddyfile.j2
