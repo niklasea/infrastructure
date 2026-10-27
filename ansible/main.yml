@@ -32,6 +32,15 @@
   hosts: internal-docker
   tasks:
     - ansible.builtin.import_role:
+        name: firewall
+      vars:
+        firewall_rules:
+          - { chain: INPUT, rule: ACCEPT, port: 443, proto: tcp, comment: HTTPS }
+          - { chain: INPUT, rule: ACCEPT, port: 80, proto: tcp, comment: HTTP }
+        firewall_rules_ipv6:
+          - { chain: INPUT, rule: ACCEPT, port: 443, proto: tcp, comment: HTTPS }
+          - { chain: INPUT, rule: ACCEPT, port: 80, proto: tcp, comment: HTTP }
+    - ansible.builtin.import_role:
         name: caddy
     - ansible.builtin.import_role:
         name: wireguard

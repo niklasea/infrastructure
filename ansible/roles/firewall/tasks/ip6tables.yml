@@ -1,0 +1,51 @@
+---
+- name: Set IPv6 iptables rules
+  become: true
+  ansible.builtin.iptables:
+    ip_version: ipv6
+    table: "{{ item.table | default(omit) }}"
+    chain: "{{ item.chain | default('INPUT') }}"
+    jump: "{{ item.rule | default('ACCEPT') }}"
+    ctstate: "{{ item.ctstate | default(omit) }}"
+    source: "{{ item.src | default(omit) }}"
+    in_interface: "{{ item.in_interface | default(omit) }}"
+    destination: "{{ item.dest | default(omit) }}"
+    destination_port: "{{ item.port | default(omit) }}"
+    icmp_type: "{{ item.icmp_type | default(omit) }}"
+    protocol: "{{ item.proto | default(omit) }}"
+    limit: "{{ item.limit | default(omit) }}"
+    comment: "{{ item.comment | default(omit) }}"
+  loop: "{{ firewall_rules_ipv6_all }}"
+
+- name: Set IPv6 iptables default policies
+  become: true
+  ansible.builtin.iptables:
+    ip_version: ipv6
+    chain: "{{ item.chain | default('INPUT') }}"
+    policy: "{{ item.policy }}"
+  when: firewall_policies is defined
+  loop: "{{ firewall_policies }}"
+
+- tags: firewall_reset_all
+  block:
+    - name: (Debian) Get IPv6 iptables rules
+      become: true
+      ansible.builtin.command: ip6tables-save
+      register: firewall_ip6tables_save
+      changed_when: false
+
+    - name: (Debian) Create iptables conf dir
+      become: true
+      ansible.builtin.file:
+        path: /etc/iptables
+        state: directory
+        mode: '755'
+
+    - name: (Debian) Save IPv6 iptables rules
+      become: true
+      ansible.builtin.copy:
+        content: "{{ firewall_ip6tables_save.stdout }}"
+        dest: /etc/iptables/rules.v6
+        mode: '644'
+      # ip6tables-save output includes a timestamp, not idempotent
+      changed_when: false

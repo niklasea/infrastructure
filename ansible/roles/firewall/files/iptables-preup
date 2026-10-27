@@ -1,2 +1,5 @@
 #!/bin/sh
 iptables-restore < /etc/iptables/rules.v4
+if [ -f /etc/iptables/rules.v6 ]; then
+    ip6tables-restore < /etc/iptables/rules.v6
+fi

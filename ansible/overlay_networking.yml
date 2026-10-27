@@ -8,6 +8,9 @@
         firewall_rules:
           - { chain: INPUT, rule: ACCEPT, port: 443, proto: tcp, comment: HTTPS }
           - { chain: INPUT, rule: ACCEPT, port: 80, proto: tcp, comment: HTTP }
+        firewall_rules_ipv6:
+          - { chain: INPUT, rule: ACCEPT, port: 443, proto: tcp, comment: HTTPS }
+          - { chain: INPUT, rule: ACCEPT, port: 80, proto: tcp, comment: HTTP }
     - ansible.builtin.import_role:
         name: inadyn
     - ansible.builtin.import_role:

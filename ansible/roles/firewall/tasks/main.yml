@@ -1,6 +1,10 @@
 ---
-- name: Configure chosen firewall
+- name: Configure chosen IPv4 firewall
   ansible.builtin.include_tasks: iptables.yml
+  tags: firewall_reset_all
+
+- name: Configure chosen IPv6 firewall
+  ansible.builtin.include_tasks: ip6tables.yml
   tags: firewall_reset_all
 
 # - name: OS-specific configuration
