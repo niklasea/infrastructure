@@ -1,10 +1,12 @@
 ---
 dns_server_compose_dir: /etc/compose/dns_server
+# Loopback is intentionally excluded so NetBird can bind its local DNS
+# resolver on loopback.
 dns_server_listen_addresses: >-
   {{
     ansible_facts['all_ipv4_addresses']
     | ansible.utils.ipaddr('private')
-    | union(['127.0.0.1', '[::1]'])
+    | difference(['127.0.0.1', '[::1]'])
     | ansible.utils.ipwrap
     | list
   }}
