@@ -16,20 +16,44 @@
     - ansible.builtin.import_role:
         name: netbird_service
   post_tasks:
-    - name: Schedule backup to network drive
-      become: true
-      ansible.builtin.cron:
-        name: "{{ item.name}}"
-        job: "{{ item.job }}"
-        hour: 4
-        minute: 0
-        state: present
-      loop:
-        - name: "Back up netbird to network drive"
-          job: |
-            docker compose -f {{ netbird_service_compose_dir }} down
-            docker compose -f {{ netbird_service_compose_dir }} cp -a netbird-server:/var/lib/netbird/ {{ smb_mounts.backup_netbird.local_path }}
-            docker compose -f {{ netbird_service_compose_dir }} up -d
+    - name: Configure backups
+      ansible.builtin.import_role:
+        name: backup
+      vars:
+        backup_legacy_cron_names:
+          - Back up netbird to network drive
+        backup_jobs:
+          - name: netbird
+            mount: "{{ smb_mounts.backup_netbird.local_path }}"
+            hour: 4
+            minute: 0
+            commands:
+              - >-
+                docker compose -f
+                {{ netbird_service_compose_dir }}/docker-compose.yml
+                stop netbird-server
+              - /usr/bin/rm -rf /var/tmp/netbird-backup
+              - /usr/bin/mkdir -p /var/tmp/netbird-backup
+              - >-
+                container_id="$(docker compose -f
+                {{ netbird_service_compose_dir }}/docker-compose.yml
+                ps -a -q netbird-server)"
+              - test -n "$container_id"
+              - >-
+                docker cp
+                "${container_id}:/var/lib/netbird/."
+                /var/tmp/netbird-backup/
+              - >-
+                /usr/bin/tar -zcf
+                "{{ smb_mounts.backup_netbird.local_path }}/netbird-data.tar.gz"
+                -C /var/tmp/netbird-backup .
+              - /usr/bin/rm -rf /var/tmp/netbird-backup
+            cleanup:
+              - >-
+                docker compose -f
+                {{ netbird_service_compose_dir }}/docker-compose.yml
+                start netbird-server
+              - /usr/bin/rm -rf /var/tmp/netbird-backup
 
 - name: Join DK VMs to overlay network
   hosts: proxmox_all_qemu,!role_netbird,!role_infrastructure_bootstrap

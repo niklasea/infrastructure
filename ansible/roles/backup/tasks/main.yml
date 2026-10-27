@@ -1,0 +1,40 @@
+---
+- name: Ensure backup state directory exists
+  become: true
+  ansible.builtin.file:
+    path: "{{ backup_state_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+
+- name: Install backup scripts
+  become: true
+  ansible.builtin.template:
+    src: backup.sh.j2
+    dest: "/usr/local/sbin/backup-{{ item.name }}.sh"
+    owner: root
+    group: root
+    mode: '0700'
+  loop: "{{ backup_jobs }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Schedule backup jobs
+  become: true
+  ansible.builtin.cron:
+    name: "backup-{{ item.name }}"
+    job: "flock -n /var/lock/backup-{{ item.name }}.lock /usr/local/sbin/backup-{{ item.name }}.sh"
+    hour: "{{ item.hour | default(4) }}"
+    minute: "{{ item.minute | default(0) }}"
+    state: present
+  loop: "{{ backup_jobs }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Remove legacy backup cron jobs
+  become: true
+  ansible.builtin.cron:
+    name: "{{ item }}"
+    state: absent
+  loop: "{{ backup_legacy_cron_names }}"

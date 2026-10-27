@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Managed by Ansible. Do not edit manually.
+set -Eeuo pipefail
+
+readonly status_file="{{ backup_state_dir }}/{{ item.name }}"
+readonly log_tag="backup[{{ item.name }}]"
+
+log() {
+    logger -t "${log_tag}" "$*"
+}
+
+cleanup() {
+{% for command in item.cleanup | default([]) %}
+    {{ command }} || true
+{% endfor %}
+}
+
+on_error() {
+    local rc=$?
+    echo "$(date --iso-8601=seconds) FAILED rc=${rc}" > "${status_file}"
+    log "FAILED (rc=${rc})"
+}
+
+trap cleanup EXIT
+trap on_error ERR
+
+{% if item.mount is defined %}
+if ! mountpoint -q "{{ item.mount }}"; then
+    log "backup target {{ item.mount }} is not mounted"
+    false
+fi
+{% endif %}
+
+{% for command in item.commands %}
+{{ command }}
+{% endfor %}
+
+echo "$(date --iso-8601=seconds) OK" > "${status_file}"
+log "completed successfully"
