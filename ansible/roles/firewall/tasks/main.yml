@@ -7,6 +7,15 @@
   ansible.builtin.include_tasks: ip6tables.yml
   tags: firewall_reset_all
 
+- name: (Debian) Load iptables rules at boot
+  become: true
+  ansible.builtin.copy:
+    src: iptables-preup
+    dest: /etc/network/if-pre-up.d/iptables
+    mode: '755'
+    backup: true
+  tags: firewall_reset_all
+
 # - name: OS-specific configuration
 #   ansible.builtin.include_tasks: "{{ ansible_facts['os_family'] }}.yml"
 #   tags: firewall_reset_all

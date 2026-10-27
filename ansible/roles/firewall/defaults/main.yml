@@ -1,7 +1,26 @@
 ---
-# IPv6 rules are intentionally separate from the IPv4 rule list because
-# source/destination addresses and the ICMP protocol differ between families.
+# IPv4 and IPv6 rules are kept in separate lists because source/destination
+# addresses and the ICMP protocol differ between the two families.
+firewall_rules: []
 firewall_rules_ipv6: []
+
+firewall_rules_default:
+  - chain: INPUT
+    rule: ACCEPT
+    ctstate: [ESTABLISHED, RELATED]
+  - chain: INPUT
+    rule: ACCEPT
+    in_interface: lo
+    comment: Localhost connections
+  - chain: INPUT
+    rule: ACCEPT
+    proto: icmp
+    comment: Ping requests
+  - chain: INPUT
+    rule: ACCEPT
+    port: 22
+    proto: tcp
+    comment: SSH
 
 firewall_rules_ipv6_default:
   - chain: INPUT
@@ -22,5 +41,7 @@ firewall_rules_ipv6_default:
     proto: tcp
     comment: SSH
 
+firewall_rules_all: >-
+  {{ firewall_rules_default + firewall_rules }}
 firewall_rules_ipv6_all: >-
   {{ firewall_rules_ipv6_default + firewall_rules_ipv6 }}

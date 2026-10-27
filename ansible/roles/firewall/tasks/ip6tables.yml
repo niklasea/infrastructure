@@ -28,6 +28,7 @@
 
 - tags: firewall_reset_all
   block:
+    # TODO: Might save service-managed rules (e.g. WireGuard). Write direct to config file and load that instead?
     - name: (Debian) Get IPv6 iptables rules
       become: true
       ansible.builtin.command: ip6tables-save
