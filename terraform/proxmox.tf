@@ -68,7 +68,7 @@ resource "proxmox_virtual_environment_vm" "virtual_machines" {
   }
   initialization {
     dns {
-      servers = ["1.1.1.1", "1.0.0.1", "8.8.8.8", "8.8.4.4"]
+      domain = var.proxmox_searchdomain
     }
     ip_config {
       ipv4 {
@@ -83,7 +83,7 @@ resource "proxmox_virtual_environment_vm" "virtual_machines" {
   }
 
   lifecycle {
-    ignore_changes = [ initialization ]
+    ignore_changes  = [initialization[0].user_data_file_id]
     prevent_destroy = true
   }
 }
