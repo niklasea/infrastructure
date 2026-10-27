@@ -10,6 +10,14 @@
   loop:
     - path: "{{ dns_server_compose_dir }}"
 
+- name: Verify DNS listen addresses
+  ansible.builtin.assert:
+    that:
+      - dns_server_listen_addresses is not string
+      - dns_server_listen_addresses | length > 0
+    fail_msg: >-
+      Could not determine any addresses for blocky to listen on.
+
 - name: Apply configuration
   become: true
   ansible.builtin.template:
