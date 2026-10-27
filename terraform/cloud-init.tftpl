@@ -1,6 +1,11 @@
 #cloud-config
 manage_etc_hosts: localhost
 hostname: ${hostname}
+%{ if fqdn != "" ~}
+fqdn: ${fqdn}
+prefer_fqdn_over_hostname: false
+create_hostname_file: true
+%{ endif ~}
 users:
   - name: deployment
     groups:
