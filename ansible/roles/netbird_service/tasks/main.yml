@@ -11,8 +11,8 @@
   ansible.builtin.template:
     src: "{{ item }}"
     dest: "{{ netbird_service_compose_dir }}/{{ item | splitext | first }}"
-    # config.yml and dashboard.env contain secrets.
-    mode: "{{ '0600' if item != 'docker-compose.yml.j2' else '0644' }}"
+    # config.yml and dashboard.env contain secrets; keep the whole directory root-only.
+    mode: '0600'
   loop:
     - docker-compose.yml.j2
     - config.yml.j2
