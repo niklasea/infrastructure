@@ -34,7 +34,7 @@
       ansible.builtin.meta: refresh_inventory
 
 - name: Common settings
-  hosts: infrastructure_bootstrap
+  hosts: role_infrastructure_bootstrap
   tasks:
     - ansible.builtin.include_role:
         name: common
