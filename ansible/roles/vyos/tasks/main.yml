@@ -26,11 +26,14 @@
           confirm
           save
         executable: /bin/vbash
-      failed_when: "'No confirm pending' in _vyos_commands_result.stdout"
+      register: _vyos_save_result
+      failed_when: >-
+        _vyos_save_result.rc != 0 or
+        'No confirm pending' in _vyos_save_result.stdout
   rescue:
     - name: Delete configuration script to force a retry next time
       ansible.builtin.file:
-        path: _vyos_configuration_script.dest
+        path: "{{ _vyos_configuration_script.dest }}"
         state: absent
 
     - name: Fail the deployment
