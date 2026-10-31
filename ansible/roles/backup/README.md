@@ -30,5 +30,3 @@ private staging directory in `/var/tmp`, available as `${tmpdir}` in `pre`,
 `post`, and `cleanup`; it is removed on exit, and INT/TERM are trapped so
 cleanup runs on interruption. Failures are logged to syslog with the
 `backup[<name>]` tag.
-
-Restore procedures are in the [backup runbook](../../backup-runbook.md).

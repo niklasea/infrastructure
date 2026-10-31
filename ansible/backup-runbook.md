@@ -1,16 +1,9 @@
 # Backup runbook
 
 The backup jobs are defined in `main.yml` (Jellyfin, Gitea, Vaultwarden) and
-`overlay_networking.yml` (NetBird) and use the `backup` role. Each job writes
-to the configured SMB share, verifies the archive, and renames it into place.
-A failed run leaves the previous backup untouched.
-
-| Service     | Schedule  | Artifact               |
-|-------------|-----------|------------------------|
-| Jellyfin    | `0 4 * * *`  | `jellyfin.tar.gz`      |
-| Gitea       | `15 4 * * *` | `gitea-dump.zip`       |
-| Vaultwarden | `30 4 * * *` | `data.tar.gz`          |
-| NetBird     | `0 4 * * *`  | `netbird-data.tar.gz`  |
+`overlay_networking.yml` (NetBird). Each job writes to the configured SMB
+share, verifies the archive, and renames it into place. A failed run leaves the
+previous backup untouched.
 
 The target directories are configured through `smb_mounts` in
 `host_vars/internal-docker.yml` and `group_vars/role_netbird/vars.yml`.
