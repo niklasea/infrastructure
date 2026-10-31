@@ -31,9 +31,6 @@ archive() {
             *.tar.gz|*.tgz)
                 /usr/bin/tar -tzf "${target}.tmp" > /dev/null
                 ;;
-            *.zip)
-                /usr/bin/python3 -m zipfile -t "${target}.tmp" > /dev/null
-                ;;
         esac
     fi
     /usr/bin/test -s "${target}.tmp"

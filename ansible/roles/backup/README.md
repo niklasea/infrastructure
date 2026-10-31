@@ -22,7 +22,7 @@ exists and is not an empty directory, then archives it:
 - A directory is written to `<target>.tmp` as a gzip-compressed tar archive
   relative to `source`, then verified with `tar -tzf`.
 - A file is copied to `<target>.tmp` and verified by extension (`.tar.gz`,
-  `.tgz`, `.zip`, or a non-empty check).
+  `.tgz`, or a non-empty check).
 
 The temporary archive is renamed into place only after verification. `post`
 runs after the rename, and `cleanup` always runs on exit. Each run gets a

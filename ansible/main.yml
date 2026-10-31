@@ -76,9 +76,10 @@
                 docker compose -f {{ gitea_compose_dir }}/docker-compose.yml
                 exec -T gitea gitea dump
                 -c /data/gitea/conf/app.ini
-                -f - > "${tmpdir}/gitea-dump.zip"
-            source: "${tmpdir}/gitea-dump.zip"
-            target: gitea-dump.zip
+                --type tar.gz
+                -f - > "${tmpdir}/gitea-dump.tar.gz"
+            source: "${tmpdir}/gitea-dump.tar.gz"
+            target: gitea-dump.tar.gz
           - name: vaultwarden
             mount: "{{ smb_mounts.backup_vaultwarden.local_path }}"
             schedule: "30 4 * * *"

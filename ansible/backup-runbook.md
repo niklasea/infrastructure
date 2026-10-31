@@ -32,12 +32,13 @@ docker compose -f /etc/compose/jellyfin/docker-compose.yml start jellyfin
 
 ## Restore Gitea
 
-`gitea-dump.zip` is a standard `gitea dump` archive containing the database,
+`gitea-dump.tar.gz` is a standard `gitea dump` archive containing the database,
 repositories, configuration, and attachments.
 
 ```sh
 docker compose -f /etc/compose/gitea/docker-compose.yml stop gitea
-unzip gitea-dump.zip -d gitea-restore
+mkdir -p gitea-restore
+tar -xzf gitea-dump.tar.gz -C gitea-restore
 ```
 
 Restore the database, `repos/`, and `data/` contents from the extracted
