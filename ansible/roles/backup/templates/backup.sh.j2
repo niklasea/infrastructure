@@ -1,28 +1,31 @@
 #!/usr/bin/env bash
 # Managed by Ansible. Do not edit manually.
 set -Eeuo pipefail
+umask 077
 
-readonly status_file="{{ backup_state_dir }}/{{ item.name }}"
-readonly log_tag="backup[{{ item.name }}]"
+readonly job="{{ item.name }}"
+readonly tmpdir="$(/usr/bin/mktemp -d "/var/tmp/backup-${job}.XXXXXX")"
 
 log() {
-    logger -t "${log_tag}" "$*"
+    logger -t "backup[${job}]" "$*"
 }
 
 cleanup() {
 {% for command in item.cleanup | default([]) %}
     {{ command }} || true
 {% endfor %}
+    /usr/bin/rm -rf "${tmpdir}" || true
 }
 
 on_error() {
     local rc=$?
-    echo "$(date --iso-8601=seconds) FAILED rc=${rc}" > "${status_file}"
-    log "FAILED (rc=${rc})"
+    log "FAILED: ${BASH_COMMAND} (rc=${rc})"
 }
 
 trap cleanup EXIT
 trap on_error ERR
+trap 'log "interrupted"; exit 130' INT
+trap 'log "terminated"; exit 143' TERM
 
 {% if item.mount is defined %}
 if ! mountpoint -q "{{ item.mount }}"; then
@@ -35,5 +38,4 @@ fi
 {{ command }}
 {% endfor %}
 
-echo "$(date --iso-8601=seconds) OK" > "${status_file}"
 log "completed successfully"

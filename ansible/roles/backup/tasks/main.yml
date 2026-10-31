@@ -1,13 +1,4 @@
 ---
-- name: Ensure backup state directory exists
-  become: true
-  ansible.builtin.file:
-    path: "{{ backup_state_dir }}"
-    state: directory
-    owner: root
-    group: root
-    mode: '0700'
-
 - name: Install backup scripts
   become: true
   ansible.builtin.template:
@@ -16,6 +7,7 @@
     owner: root
     group: root
     mode: '0700'
+    validate: "/usr/bin/bash -n %s"
   loop: "{{ backup_jobs }}"
   loop_control:
     label: "{{ item.name }}"
@@ -31,10 +23,3 @@
   loop: "{{ backup_jobs }}"
   loop_control:
     label: "{{ item.name }}"
-
-- name: Remove legacy backup cron jobs
-  become: true
-  ansible.builtin.cron:
-    name: "{{ item }}"
-    state: absent
-  loop: "{{ backup_legacy_cron_names }}"

@@ -12,7 +12,7 @@ services:
   # Combined server (Management + Signal + Relay + STUN)
   netbird-server:
     image: netbirdio/netbird-server:{{ netbird_service_version }}
-    restart: unless-stopped
+    restart: always
     networks: [netbird]
     ports:
       - '127.0.0.1:{{ netbird.management_port }}:80'

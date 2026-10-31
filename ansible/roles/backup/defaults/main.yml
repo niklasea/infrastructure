@@ -1,4 +1,2 @@
 ---
-backup_state_dir: /var/lib/backup-status
 backup_jobs: []
-backup_legacy_cron_names: []
