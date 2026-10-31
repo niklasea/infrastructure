@@ -31,6 +31,8 @@ jobs:
         env:
           VALIDATE_ALL_CODEBASE: true
           DEFAULT_BRANCH: main
+          # Jinja templates are not valid shell before rendering.
+          FILTER_REGEX_EXCLUDE: ".*\\.j2$"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SAVE_SUPER_LINTER_SUMMARY: true
           LOG_LEVEL: WARN
@@ -46,6 +48,7 @@ jobs:
           VALIDATE_MARKDOWN: true
           VALIDATE_POWERSHELL: true
           VALIDATE_PYTHON: true
+          VALIDATE_BASH: true
           VALIDATE_SQLFLUFF: true
           VALIDATE_TERRAFORM_TFLINT: true
           VALIDATE_XML: true
