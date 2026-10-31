@@ -17,8 +17,11 @@
   ansible.builtin.cron:
     name: "backup-{{ item.name }}"
     job: "flock -n /var/lock/backup-{{ item.name }}.lock /usr/local/sbin/backup-{{ item.name }}.sh"
-    hour: "{{ item.hour | default(4) }}"
-    minute: "{{ item.minute | default(0) }}"
+    minute: "{{ item.schedule.split()[0] }}"
+    hour: "{{ item.schedule.split()[1] }}"
+    day: "{{ item.schedule.split()[2] }}"
+    month: "{{ item.schedule.split()[3] }}"
+    weekday: "{{ item.schedule.split()[4] }}"
     state: present
   loop: "{{ backup_jobs }}"
   loop_control:

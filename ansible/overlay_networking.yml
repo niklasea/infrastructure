@@ -23,8 +23,7 @@
         backup_jobs:
           - name: netbird
             mount: "{{ smb_mounts.backup_netbird.local_path }}"
-            hour: 4
-            minute: 0
+            schedule: "0 4 * * *"
             commands:
               - >-
                 docker compose -f

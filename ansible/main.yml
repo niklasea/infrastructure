@@ -65,8 +65,7 @@
         backup_jobs:
           - name: jellyfin
             mount: "{{ smb_mounts.backup_jellyfin.local_path }}"
-            hour: 4
-            minute: 0
+            schedule: "0 4 * * *"
             commands:
               - >-
                 /usr/bin/tar -zcf
@@ -89,8 +88,7 @@
                 "{{ smb_mounts.backup_jellyfin.local_path }}/jellyfin.tar.gz.tmp"
           - name: gitea
             mount: "{{ smb_mounts.backup_gitea.local_path }}"
-            hour: 4
-            minute: 15
+            schedule: "15 4 * * *"
             commands:
               - >-
                 docker compose -f {{ gitea_compose_dir }}/docker-compose.yml
@@ -114,8 +112,7 @@
                 "{{ smb_mounts.backup_gitea.local_path }}/gitea-dump.zip.tmp"
           - name: vaultwarden
             mount: "{{ smb_mounts.backup_vaultwarden.local_path }}"
-            hour: 4
-            minute: 30
+            schedule: "30 4 * * *"
             commands:
               - >-
                 /usr/bin/sqlite3
