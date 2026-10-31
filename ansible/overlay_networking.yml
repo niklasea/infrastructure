@@ -24,7 +24,7 @@
           - name: netbird
             mount: "{{ smb_mounts.backup_netbird.local_path }}"
             schedule: "0 4 * * *"
-            commands:
+            pre:
               - >-
                 docker compose -f
                 {{ netbird_service_compose_dir }}/docker-compose.yml
@@ -38,21 +38,9 @@
                 docker cp
                 "${container_id}:/var/lib/netbird/."
                 "${tmpdir}/"
-              - >-
-                /usr/bin/tar -zcf
-                "{{ smb_mounts.backup_netbird.local_path }}/netbird-data.tar.gz.tmp"
-                -C "${tmpdir}" .
-              - >-
-                /usr/bin/test -s
-                "{{ smb_mounts.backup_netbird.local_path }}/netbird-data.tar.gz.tmp"
-              - >-
-                /usr/bin/tar -tzf
-                "{{ smb_mounts.backup_netbird.local_path }}/netbird-data.tar.gz.tmp"
-                > /dev/null
-              - >-
-                /usr/bin/mv -f
-                "{{ smb_mounts.backup_netbird.local_path }}/netbird-data.tar.gz.tmp"
-                "{{ smb_mounts.backup_netbird.local_path }}/netbird-data.tar.gz"
+            source: "${tmpdir}"
+            target: netbird-data.tar.gz
+            post:
               - >-
                 docker compose -f
                 {{ netbird_service_compose_dir }}/docker-compose.yml
@@ -62,9 +50,6 @@
                 docker compose -f
                 {{ netbird_service_compose_dir }}/docker-compose.yml
                 start netbird-server || log "failed to restart netbird-server"
-              - >-
-                /usr/bin/rm -f
-                "{{ smb_mounts.backup_netbird.local_path }}/netbird-data.tar.gz.tmp"
 
 - name: Join DK VMs to overlay network
   hosts: proxmox_all_qemu,!role_netbird,!role_infrastructure_bootstrap

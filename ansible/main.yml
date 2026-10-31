@@ -66,83 +66,37 @@
           - name: jellyfin
             mount: "{{ smb_mounts.backup_jellyfin.local_path }}"
             schedule: "0 4 * * *"
-            commands:
-              - >-
-                /usr/bin/tar -zcf
-                "{{ smb_mounts.backup_jellyfin.local_path }}/jellyfin.tar.gz.tmp"
-                "{{ jellyfin_config_dir }}"
-              - >-
-                /usr/bin/test -s
-                "{{ smb_mounts.backup_jellyfin.local_path }}/jellyfin.tar.gz.tmp"
-              - >-
-                /usr/bin/tar -tzf
-                "{{ smb_mounts.backup_jellyfin.local_path }}/jellyfin.tar.gz.tmp"
-                > /dev/null
-              - >-
-                /usr/bin/mv -f
-                "{{ smb_mounts.backup_jellyfin.local_path }}/jellyfin.tar.gz.tmp"
-                "{{ smb_mounts.backup_jellyfin.local_path }}/jellyfin.tar.gz"
-            cleanup:
-              - >-
-                /usr/bin/rm -f
-                "{{ smb_mounts.backup_jellyfin.local_path }}/jellyfin.tar.gz.tmp"
+            source: "{{ jellyfin_config_dir }}"
+            target: jellyfin.tar.gz
           - name: gitea
             mount: "{{ smb_mounts.backup_gitea.local_path }}"
             schedule: "15 4 * * *"
-            commands:
+            pre:
               - >-
                 docker compose -f {{ gitea_compose_dir }}/docker-compose.yml
                 exec -T gitea gitea dump
                 -c /data/gitea/conf/app.ini
-                -f -
-                > "{{ smb_mounts.backup_gitea.local_path }}/gitea-dump.zip.tmp"
-              - >-
-                /usr/bin/test -s
-                "{{ smb_mounts.backup_gitea.local_path }}/gitea-dump.zip.tmp"
-              - >-
-                /usr/bin/python3 -m zipfile -t
-                "{{ smb_mounts.backup_gitea.local_path }}/gitea-dump.zip.tmp"
-              - >-
-                /usr/bin/mv -f
-                "{{ smb_mounts.backup_gitea.local_path }}/gitea-dump.zip.tmp"
-                "{{ smb_mounts.backup_gitea.local_path }}/gitea-dump.zip"
-            cleanup:
-              - >-
-                /usr/bin/rm -f
-                "{{ smb_mounts.backup_gitea.local_path }}/gitea-dump.zip.tmp"
+                -f - > "${tmpdir}/gitea-dump.zip"
+            source: "${tmpdir}/gitea-dump.zip"
+            target: gitea-dump.zip
           - name: vaultwarden
             mount: "{{ smb_mounts.backup_vaultwarden.local_path }}"
             schedule: "30 4 * * *"
-            commands:
+            pre:
               - >-
-                /usr/bin/sqlite3
-                "{{ vaultwarden_data_dir }}/db.sqlite3"
-                ".backup '${tmpdir}/vaultwarden-db.sqlite3'"
+                /usr/bin/cp -al "{{ vaultwarden_data_dir }}/." "${tmpdir}/" 2>/dev/null
+                || /usr/bin/cp -a "{{ vaultwarden_data_dir }}/." "${tmpdir}/"
               - >-
-                /usr/bin/tar -czf
-                "{{ smb_mounts.backup_vaultwarden.local_path }}/data.tar.gz.tmp"
-                --exclude='./db.sqlite3'
-                --exclude='./db.sqlite3-journal'
-                --exclude='./db.sqlite3-wal'
-                --exclude='./db.sqlite3-shm'
-                --exclude='./backup.sqlite3'
-                -C "${tmpdir}" vaultwarden-db.sqlite3
-                -C "{{ vaultwarden_data_dir }}" .
+                /usr/bin/rm -f "${tmpdir}/db.sqlite3"
+                "${tmpdir}/db.sqlite3-journal"
+                "${tmpdir}/db.sqlite3-wal"
+                "${tmpdir}/db.sqlite3-shm"
+                "${tmpdir}/backup.sqlite3"
               - >-
-                /usr/bin/test -s
-                "{{ smb_mounts.backup_vaultwarden.local_path }}/data.tar.gz.tmp"
-              - >-
-                /usr/bin/tar -tzf
-                "{{ smb_mounts.backup_vaultwarden.local_path }}/data.tar.gz.tmp"
-                > /dev/null
-              - >-
-                /usr/bin/mv -f
-                "{{ smb_mounts.backup_vaultwarden.local_path }}/data.tar.gz.tmp"
-                "{{ smb_mounts.backup_vaultwarden.local_path }}/data.tar.gz"
-            cleanup:
-              - >-
-                /usr/bin/rm -f
-                "{{ smb_mounts.backup_vaultwarden.local_path }}/data.tar.gz.tmp"
+                /usr/bin/sqlite3 "{{ vaultwarden_data_dir }}/db.sqlite3"
+                ".backup '${tmpdir}/db.sqlite3'"
+            source: "${tmpdir}"
+            target: data.tar.gz
 
 - name: Configure RetroPie
   hosts: retropie

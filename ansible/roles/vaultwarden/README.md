@@ -3,10 +3,9 @@
 ## Backup and restore
 
 The backup job in `main.yml` writes `data.tar.gz` to the configured backup
-share. The archive contains the Vaultwarden data directory plus a consistent
-SQLite snapshot named `vaultwarden-db.sqlite3` at the archive root. The live
-`db.sqlite3`, its WAL/SHM/journal files, and any old `backup.sqlite3` are
-excluded.
+share. The archive contains the Vaultwarden data directory with a consistent
+SQLite snapshot as `db.sqlite3`. The live WAL/SHM/journal files and any old
+`backup.sqlite3` are not included.
 
 ```sh
 docker compose -f /etc/compose/vaultwarden/docker-compose.yml stop vaultwarden
@@ -15,8 +14,6 @@ rm -f /etc/compose/vaultwarden/data/db.sqlite3 \
       /etc/compose/vaultwarden/data/db.sqlite3-shm \
       /etc/compose/vaultwarden/data/db.sqlite3-journal
 tar -xzf data.tar.gz -C /etc/compose/vaultwarden/data
-mv /etc/compose/vaultwarden/data/vaultwarden-db.sqlite3 \
-   /etc/compose/vaultwarden/data/db.sqlite3
 docker compose -f /etc/compose/vaultwarden/docker-compose.yml start vaultwarden
 ```
 

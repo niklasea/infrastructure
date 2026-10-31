@@ -6,17 +6,29 @@ The role renders one script per entry in `backup_jobs` to
 ## Job fields
 
 - `name` — script and cron job name.
-- `mount` — optional mountpoint that must be mounted before the job runs.
+- `mount` — backup share path; must be mounted before the job runs.
+- `target` — filename within `mount`.
 - `schedule` — five-field cron expression; for example `0 4 * * *`.
-- `commands` — shell commands to run; the first failure aborts the job.
-- `cleanup` — optional commands that run on exit, including on failure.
+- `source` — path to archive (directory) or copy (file).
+- `pre` — optional commands that create or populate `source`.
+- `post` — optional commands that run after a successful save.
+- `cleanup` — optional commands that always run on exit.
 
 ## Behaviour
 
-Each run gets a private staging directory in `/var/tmp`, available as
-`${tmpdir}` in `commands` and `cleanup`. The directory is removed on exit, and
-INT/TERM are trapped so cleanup runs on interruption. Callers should write the
-backup to a temporary file on the target share and rename it into place after
-verifying it. Failures are logged to syslog with the `backup[<name>]` tag.
+The generated script checks the mount, runs `pre`, verifies that `source`
+exists and is not an empty directory, then archives it:
+
+- A directory is written to `<target>.tmp` as a gzip-compressed tar archive
+  relative to `source`, then verified with `tar -tzf`.
+- A file is copied to `<target>.tmp` and verified by extension (`.tar.gz`,
+  `.tgz`, `.zip`, or a non-empty check).
+
+The temporary archive is renamed into place only after verification. `post`
+runs after the rename, and `cleanup` always runs on exit. Each run gets a
+private staging directory in `/var/tmp`, available as `${tmpdir}` in `pre`,
+`post`, and `cleanup`; it is removed on exit, and INT/TERM are trapped so
+cleanup runs on interruption. Failures are logged to syslog with the
+`backup[<name>]` tag.
 
 Restore instructions live with the service that owns the data.
