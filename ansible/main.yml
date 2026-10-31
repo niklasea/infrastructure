@@ -52,47 +52,52 @@
     - ansible.builtin.import_role:
         name: omada
   post_tasks:
-    - name: Schedule backup to network drive
-      become: true
-      ansible.builtin.cron:
-        name: "{{ item.name}}"
-        job: "{{ item.job }}"
-        hour: 4
-        minute: 0
-        state: present
-      loop:
-        - name: Back up Jellyfin to network drive
-          job: >
-            /usr/bin/tar -zcf
-            {{ smb_mounts.backup_jellyfin.local_path }}/jellyfin.tar.gz
-            {{ jellyfin_config_dir }}
-        - name: "Back up Gitea to network drive"
-          job: >
-            /usr/bin/tar -czf
-            {{ smb_mounts.backup_gitea.local_path }}/gitea-dump.zip
-            {{ gitea_data_dir }}
-        - name: "Back up vaultwarden to network drive"
-          job: >
-            /usr/bin/tar -zcf
-            {{ smb_mounts.backup_vaultwarden.local_path }}/data.tar.gz
-            {{ vaultwarden_data_dir }}
-
     - name: Install sqlite for vaultwarden backup
       become: true
       ansible.builtin.package:
         name: sqlite3
         state: present
-    - name: Schedule vaultwarden database backup
-      become: true
-      ansible.builtin.cron:
-        name: "Dump vaultwarden sqlite3 database to backup file"
-        job: >
-          /usr/bin/sqlite3
-          {{ vaultwarden_data_dir }}/db.sqlite3
-          ".backup '{{ vaultwarden_data_dir }}/backup.sqlite3'"
-        hour: 3
-        minute: 0
-        state: present
+
+    - name: Configure backups
+      ansible.builtin.import_role:
+        name: backup
+      vars:
+        backup_jobs:
+          - name: jellyfin
+            mount: "{{ smb_mounts.backup_jellyfin.local_path }}"
+            schedule: "0 4 * * *"
+            source: "{{ jellyfin_config_dir }}"
+            target: jellyfin.tar.gz
+          - name: gitea
+            mount: "{{ smb_mounts.backup_gitea.local_path }}"
+            schedule: "15 4 * * *"
+            pre:
+              - >-
+                docker compose -f {{ gitea_compose_dir }}/docker-compose.yml
+                exec -T gitea gitea dump
+                -c /data/gitea/conf/app.ini
+                --type tar.gz
+                -f - > "${tmpdir}/gitea-dump.tar.gz"
+            source: "${tmpdir}/gitea-dump.tar.gz"
+            target: gitea-dump.tar.gz
+          - name: vaultwarden
+            mount: "{{ smb_mounts.backup_vaultwarden.local_path }}"
+            schedule: "30 4 * * *"
+            pre:
+              - >-
+                /usr/bin/cp -al "{{ vaultwarden_data_dir }}/." "${tmpdir}/" 2>/dev/null
+                || /usr/bin/cp -a "{{ vaultwarden_data_dir }}/." "${tmpdir}/"
+              - >-
+                /usr/bin/rm -f "${tmpdir}/db.sqlite3"
+                "${tmpdir}/db.sqlite3-journal"
+                "${tmpdir}/db.sqlite3-wal"
+                "${tmpdir}/db.sqlite3-shm"
+                "${tmpdir}/backup.sqlite3"
+              - >-
+                /usr/bin/sqlite3 "{{ vaultwarden_data_dir }}/db.sqlite3"
+                ".backup '${tmpdir}/db.sqlite3'"
+            source: "${tmpdir}"
+            target: data.tar.gz
 
 - name: Configure RetroPie
   hosts: retropie

@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# Managed by Ansible. Do not edit manually.
+set -Eeuo pipefail
+umask 077
+
+readonly job="{{ item.name }}"
+readonly tmpdir="$(/usr/bin/mktemp -d "/var/tmp/backup-${job}.XXXXXX")"
+readonly mount="{{ item.mount }}"
+readonly target="${mount}/{{ item.target }}"
+readonly source="{{ item.source }}"
+
+log() {
+    logger -t "backup[${job}]" "$*"
+}
+
+cleanup() {
+{% for command in item.cleanup | default([]) %}
+    {{ command }} || true
+{% endfor %}
+    /usr/bin/rm -f "${target}.tmp" || true
+    /usr/bin/rm -rf "${tmpdir}" || true
+}
+
+archive() {
+    if [ -d "${source}" ]; then
+        /usr/bin/tar -zcf "${target}.tmp" -C "${source}" .
+        /usr/bin/tar -tzf "${target}.tmp" > /dev/null
+    else
+        /usr/bin/cp -- "${source}" "${target}.tmp"
+        case "${source}" in
+            *.tar.gz|*.tgz)
+                /usr/bin/tar -tzf "${target}.tmp" > /dev/null
+                ;;
+        esac
+    fi
+    /usr/bin/test -s "${target}.tmp"
+    /usr/bin/mv -f "${target}.tmp" "${target}"
+}
+
+on_error() {
+    local rc=$?
+    log "FAILED: ${BASH_COMMAND} (rc=${rc})"
+}
+
+trap cleanup EXIT
+trap on_error ERR
+trap 'log "interrupted"; exit 130' INT
+trap 'log "terminated"; exit 143' TERM
+
+if ! mountpoint -q "${mount}"; then
+    log "backup target ${mount} is not mounted"
+    false
+fi
+
+{% for command in item.pre | default([]) %}
+{{ command }}
+{% endfor %}
+
+if [ ! -e "${source}" ]; then
+    log "backup source ${source} does not exist"
+    false
+fi
+
+if [ -d "${source}" ] && [ -z "$(ls -A "${source}")" ]; then
+    log "backup source ${source} is empty"
+    false
+fi
+
+archive
+
+{% for command in item.post | default([]) %}
+{{ command }}
+{% endfor %}
+
+log "completed successfully"
