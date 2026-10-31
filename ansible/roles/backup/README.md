@@ -31,4 +31,4 @@ private staging directory in `/var/tmp`, available as `${tmpdir}` in `pre`,
 cleanup runs on interruption. Failures are logged to syslog with the
 `backup[<name>]` tag.
 
-Restore instructions live with the service that owns the data.
+Restore procedures are in the [backup runbook](../../backup-runbook.md).
