@@ -87,6 +87,9 @@ set service dhcp-server shared-network-name {{ interface.name }} subnet '{{ inte
 set service dns forwarding listen-address '{{ current_interface_gateway }}'
 set service dns forwarding allow-from '{{ interface.subnet }}'
 {% endfor %}
+{% for network in vyos_dns_forwarding_allow_from %}
+set service dns forwarding allow-from '{{ network }}'
+{% endfor %}
 set service dns forwarding system
 set service dns forwarding dnssec process
 

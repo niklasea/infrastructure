@@ -8,6 +8,8 @@ vyos_users:
     ssh_public_key: "{{ (ansible_ssh_public_key | ansible.builtin.split(' '))[1] }}"
     ssh_public_key_type: "{{ (ansible_ssh_public_key | ansible.builtin.split(' '))[0] }}"
 vyos_dhcp_dns_addresses: "{{ dhcp_dns_addresses }}"
+vyos_dns_forwarding_allow_from:
+  - "{{ vpn_network_ipv4['network'] }}"
 vyos_local_domain: "{{ local_domain }}"
 vyos_local_interfaces:
   - device: eth1
