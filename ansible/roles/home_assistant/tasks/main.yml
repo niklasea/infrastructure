@@ -51,3 +51,47 @@
     pull: "always"
     recreate: "auto"
     remove_orphans: true
+
+# Home Assistant writes its default configuration on first start, so the
+# packages include can only be added once the container has run.
+- name: Wait for Home Assistant configuration
+  become: true
+  ansible.builtin.wait_for:
+    path: "{{ home_assistant_config_dir }}/configuration.yaml"
+    timeout: 120
+
+- name: Read Home Assistant configuration
+  become: true
+  ansible.builtin.slurp:
+    src: "{{ home_assistant_config_dir }}/configuration.yaml"
+  register: _home_assistant_configuration
+
+- name: Set Home Assistant configuration content
+  ansible.builtin.set_fact:
+    _home_assistant_configuration_text: >-
+      {{ _home_assistant_configuration.content | b64decode }}
+
+- name: Add packages include to existing homeassistant block
+  become: true
+  ansible.builtin.lineinfile:
+    path: "{{ home_assistant_config_dir }}/configuration.yaml"
+    insertafter: '^homeassistant:'
+    line: '  packages: !include_dir_named packages'
+  when:
+    - "'packages:' not in _home_assistant_configuration_text"
+    - "_home_assistant_configuration_text is search('(?m)^homeassistant:')"
+  notify: Restart Home Assistant
+
+- name: Add homeassistant block with packages include
+  become: true
+  ansible.builtin.blockinfile:
+    path: "{{ home_assistant_config_dir }}/configuration.yaml"
+    insertafter: EOF
+    marker: "# {mark} ANSIBLE MANAGED HOMEASSISTANT"
+    block: |
+      homeassistant:
+        packages: !include_dir_named packages
+  when:
+    - "'packages:' not in _home_assistant_configuration_text"
+    - "_home_assistant_configuration_text is not search('(?m)^homeassistant:')"
+  notify: Restart Home Assistant
