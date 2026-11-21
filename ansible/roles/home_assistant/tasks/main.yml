@@ -9,6 +9,8 @@
     - path: "{{ home_assistant_compose_dir }}"
     - path: "{{ home_assistant_config_dir }}"
       mode: '700'
+      owner: "{{ docker_remap_user }}"
+      group: "{{ docker_remap_user }}"
 
 - name: Add Docker compose file
   become: true
