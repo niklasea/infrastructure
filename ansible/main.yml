@@ -87,7 +87,7 @@
     - name: Schedule Home Assistant database and config backup
       become: true
       ansible.builtin.cron:
-        name: "Back up Home Assistant database and config to network drive"
+        name: "Back up Home Assistant to network drive"
         job: >
           test ! -f {{ home_assistant_config_dir }}/home-assistant_v2.db ||
           /usr/bin/sqlite3 {{ home_assistant_config_dir }}/home-assistant_v2.db
