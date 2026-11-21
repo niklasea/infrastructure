@@ -1,13 +1,4 @@
 ---
-- name: Render configuration script on the controller
-  ansible.builtin.template:
-    src: commands.sh.j2
-    dest: "{{ vyos_script_local_path }}"
-    mode: '600'
-  delegate_to: localhost
-  changed_when: false
-  register: _vyos_configuration_script
-
 - name: Get checksum of the configuration script on the router
   ansible.builtin.raw: "sha256sum {{ vyos_script_remote_path }} 2>/dev/null || true"
   changed_when: false
@@ -16,15 +7,15 @@
 
 - name: Upload configuration script
   ansible.builtin.raw: >-
-    printf '%s' '{{ lookup('ansible.builtin.file', _vyos_configuration_script.dest) | b64encode }}'
+    printf '%s' '{{ _vyos_configuration_script | b64encode }}'
     | base64 -d > {{ vyos_script_remote_path }} &&
     chmod 700 {{ vyos_script_remote_path }}
   vars:
-    _vyos_configuration_script_hash: >-
-      {{ lookup('ansible.builtin.file', _vyos_configuration_script.dest) | hash('sha256') }}
+    _vyos_configuration_script: >-
+      {{ lookup('ansible.builtin.template', 'commands.sh.j2') }}
   when: >-
     _vyos_configuration_script_checksum.stdout.split() | first | default('') !=
-    _vyos_configuration_script_hash
+    (_vyos_configuration_script | hash('sha256'))
   register: _vyos_configuration_script_upload
 
 - name: Apply configuration
