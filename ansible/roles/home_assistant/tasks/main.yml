@@ -28,7 +28,22 @@
 
 - name: Add config files
   become: true
+  when: not item.src.endswith('.j2')
   ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ home_assistant_config_dir }}/{{ item.dest }}"
+    owner: "{{ docker_remap_user }}"
+    group: "{{ docker_remap_user }}"
+    mode: '644'
+  loop: "{{ home_assistant_config_files }}"
+  loop_control:
+    label: "{{ item.dest }}"
+  notify: Restart Home Assistant
+
+- name: Add config templates
+  become: true
+  when: item.src.endswith('.j2')
+  ansible.builtin.template:
     src: "{{ item.src }}"
     dest: "{{ home_assistant_config_dir }}/{{ item.dest }}"
     owner: "{{ docker_remap_user }}"

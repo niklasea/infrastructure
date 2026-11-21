@@ -5,7 +5,7 @@ automation:
     mode: single
     trigger:
       - platform: state
-        entity_id: binary_sensor.ikea_parasoll_door_window_sensor
+        entity_id: {{ home_assistant_entity_ids.door_sensor }}
         from: "off"
         to: "on"
     condition:
@@ -13,12 +13,12 @@ automation:
         after: "18:00:00"
         before: "03:00:00"
       - condition: state
-        entity_id: light.ikea_tradfri_bulb_e27_ww_g95_cl_470lm
+        entity_id: {{ home_assistant_entity_ids.living_room_light }}
         state: "off"
     action:
       - service: light.turn_on
         target:
-          entity_id: light.ikea_tradfri_bulb_e27_ww_g95_cl_470lm
+          entity_id: {{ home_assistant_entity_ids.living_room_light }}
         data:
           brightness_pct: 100
           transition: 5
