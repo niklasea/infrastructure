@@ -36,7 +36,8 @@
       ansible.builtin.meta: refresh_inventory
 
 - name: Common settings
-  hosts: role_infrastructure_bootstrap
+  # The router carries the bootstrap tag but is managed by its own play.
+  hosts: role_infrastructure_bootstrap,!vyos
   tasks:
     - ansible.builtin.include_role:
         name: common
