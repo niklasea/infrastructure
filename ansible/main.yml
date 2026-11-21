@@ -53,6 +53,8 @@
         name: speedtest
     - ansible.builtin.import_role:
         name: omada
+    - ansible.builtin.import_role:
+        name: home_assistant
   post_tasks:
     - name: Schedule backup to network drive
       become: true
@@ -88,10 +90,25 @@
         minute: 0
         state: present
 
-    - name: Install sqlite for vaultwarden backup
+    - name: Install sqlite for database backups
       become: true
       ansible.builtin.package:
         name: sqlite3
+        state: present
+    - name: Schedule Home Assistant database and config backup
+      become: true
+      ansible.builtin.cron:
+        name: "Back up Home Assistant to network drive"
+        job: >
+          test ! -f {{ home_assistant_config_dir }}/home-assistant_v2.db ||
+          /usr/bin/sqlite3 {{ home_assistant_config_dir }}/home-assistant_v2.db
+          ".backup '{{ home_assistant_config_dir }}/home-assistant_v2.backup'" &&
+          /usr/bin/tar -zcf
+          {{ smb_mounts.backup_home_assistant.local_path }}/homeassistant.tar.gz
+          --exclude='home-assistant_v2.db*'
+          {{ home_assistant_config_dir }}
+        hour: 4
+        minute: 0
         state: present
     - name: Schedule vaultwarden database backup
       become: true

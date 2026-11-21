@@ -1,0 +1,29 @@
+---
+services:
+  homeassistant:
+    container_name: homeassistant
+    image: ghcr.io/home-assistant/home-assistant:{{ home_assistant_version }}
+    restart: unless-stopped
+    stop_grace_period: 60s
+    privileged: {{ home_assistant_privileged }}
+    # Docker user namespace remapping is incompatible with privileged
+    # containers and host networking.
+    userns_mode: "host"
+    network_mode: "host"
+    volumes:
+      - {{ home_assistant_config_dir }}:/config
+      - /etc/localtime:/etc/localtime:ro
+{% if home_assistant_dbus_enabled %}
+      - /run/dbus:/run/dbus:ro
+{% endif %}
+{% if home_assistant_devices | length > 0 %}
+    devices:
+{% for device in home_assistant_devices %}
+      - {{ device }}
+{% endfor %}
+{% endif %}
+    environment:
+      TZ: {{ home_assistant_timezone }}
+{% if home_assistant_disable_jemalloc %}
+      DISABLE_JEMALLOC: "true"
+{% endif %}
