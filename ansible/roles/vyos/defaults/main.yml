@@ -1,6 +1,5 @@
 ---
 vyos_script_remote_path: commands.sh
-vyos_static_routes: []
 vyos_dns_forwarding_allow_from: []
 vyos_system_dns_addresses:
   - '1.1.1.1'
