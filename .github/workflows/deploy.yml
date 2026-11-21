@@ -72,7 +72,7 @@ jobs:
 
       - name: Install Ansible collections
         run: |
-          LC_ALL="C.UTF-8" ansible-galaxy install -r requirements.yml
+          LC_ALL="C.UTF-8" ansible-galaxy install --upgrade -r requirements.yml
 
       - name: Create a script for the vault password
         run: |
