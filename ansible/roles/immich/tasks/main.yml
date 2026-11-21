@@ -1,0 +1,76 @@
+---
+# https://immich.app/docs/install/docker-compose
+- name: Validate database password
+  ansible.builtin.assert:
+    that:
+      - immich_db_password is defined
+      - (immich_db_password | default('')) is match('^[A-Za-z0-9]+$')
+    fail_msg: "immich_db_password must contain only alphanumeric characters."
+    quiet: true
+
+- name: Create application directories
+  become: true
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    mode: "{{ item.mode | default('755') }}"
+    owner: "{{ item.owner | default('root') }}"
+    group: "{{ item.group | default('root') }}"
+  loop:
+    - path: "{{ immich_compose_dir }}"
+    - path: "{{ immich_upload_dir }}"
+      owner: "{{ docker_remap_user }}"
+      group: "{{ docker_remap_user }}"
+
+# Postgres creates and secures its own data directory. Re-owning an initialised
+# database would remove the permissions of the postgres user.
+- name: Check database directory
+  become: true
+  ansible.builtin.stat:
+    path: "{{ immich_db_data_dir }}"
+  register: _immich_db_data_dir
+
+- name: Create database directory
+  become: true
+  when: not _immich_db_data_dir.stat.exists
+  ansible.builtin.file:
+    path: "{{ immich_db_data_dir }}"
+    state: directory
+    mode: '755'
+    owner: "{{ docker_remap_user }}"
+    group: "{{ docker_remap_user }}"
+
+- name: Add configuration files
+  become: true
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "{{ item.mode }}"
+  loop:
+    - src: docker-compose.yml.j2
+      dest: "{{ immich_compose_dir }}/docker-compose.yml"
+      mode: '0640'
+    - src: env.j2
+      dest: "{{ immich_compose_dir }}/.env"
+      mode: '0600'
+  register: _immich_configuration_files
+
+- name: Add backup script
+  become: true
+  ansible.builtin.template:
+    src: backup.sh.j2
+    dest: "{{ immich_compose_dir }}/backup.sh"
+    owner: root
+    group: root
+    mode: '0750'
+
+- name: Start Immich
+  become: true
+  community.docker.docker_compose_v2:
+    project_src: "{{ immich_compose_dir }}"
+    state: "present"
+    pull: "always"
+    recreate: "{{ 'always' if _immich_configuration_files is changed else 'auto' }}"
+    remove_orphans: true

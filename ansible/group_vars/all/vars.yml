@@ -74,6 +74,7 @@ infrastructure_hosts:
       - bitwarden
       - gitea
       - homeassistant
+      - immich
       - jellyfin
       - omada
       - speedtest
