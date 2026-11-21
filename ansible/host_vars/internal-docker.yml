@@ -126,7 +126,12 @@ caddy_blocks:
           resolvers 1.1.1.1 1.0.0.1
       }
 
-      reverse_proxy 127.0.0.1:8123
+      # Home Assistant rejects X-Forwarded-For from an untrusted proxy, and its
+      # HTTP settings are UI-managed. Strip the header until 127.0.0.1 is added
+      # as a trusted proxy in Home Assistant.
+      reverse_proxy 127.0.0.1:8123 {
+          header_up -X-Forwarded-For
+      }
     }
 
     speedtest.{{ local_domain }} {

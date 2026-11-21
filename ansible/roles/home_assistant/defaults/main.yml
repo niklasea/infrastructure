@@ -8,7 +8,9 @@ home_assistant_timezone: Europe/Copenhagen
 # Home Assistant is hosted away from the devices it controls. mDNS does not
 # cross the site-to-site VPN, so clients must use the Caddy URL and
 # integrations need static addresses or a separate mDNS reflector.
-home_assistant_privileged: true
-home_assistant_dbus_enabled: true
+#
+# Enable these only when the host has local USB or Bluetooth radios.
+home_assistant_privileged: false
+home_assistant_dbus_enabled: false
 home_assistant_devices: []
 home_assistant_disable_jemalloc: false
