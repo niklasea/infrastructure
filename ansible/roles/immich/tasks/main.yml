@@ -1,0 +1,44 @@
+---
+# https://immich.app/docs/install/docker-compose
+- name: Create directories
+  become: true
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    mode: "{{ item.mode | default('755') }}"
+    owner: "{{ item.owner | default('root') }}"
+    group: "{{ item.group | default('root') }}"
+  loop:
+    - path: "{{ immich_compose_dir }}"
+    - path: "{{ immich_upload_dir }}"
+      owner: "{{ docker_remap_user }}"
+      group: "{{ docker_remap_user }}"
+    - path: "{{ immich_db_data_dir }}"
+      owner: "{{ docker_remap_user }}"
+      group: "{{ docker_remap_user }}"
+
+- name: Add configuration files
+  become: true
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "{{ item.mode }}"
+  loop:
+    - src: docker-compose.yml.j2
+      dest: "{{ immich_compose_dir }}/docker-compose.yml"
+      mode: '0640'
+    - src: env.j2
+      dest: "{{ immich_compose_dir }}/.env"
+      mode: '0600'
+  register: _immich_configuration_files
+
+- name: Start Immich
+  become: true
+  community.docker.docker_compose_v2:
+    project_src: "{{ immich_compose_dir }}"
+    state: "present"
+    pull: "always"
+    recreate: "{{ 'always' if _immich_configuration_files is changed else 'auto' }}"
+    remove_orphans: true

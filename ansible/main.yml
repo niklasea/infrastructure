@@ -46,6 +46,8 @@
     - ansible.builtin.import_role:
         name: gitea
     - ansible.builtin.import_role:
+        name: immich
+    - ansible.builtin.import_role:
         name: vaultwarden
     - ansible.builtin.import_role:
         name: speedtest
@@ -71,6 +73,11 @@
             /usr/bin/tar -czf
             {{ smb_mounts.backup_gitea.local_path }}/gitea-dump.zip
             {{ gitea_data_dir }}
+        - name: "Back up Immich to network drive"
+          job: >
+            /usr/bin/tar -zcf
+            {{ smb_mounts.backup_immich.local_path }}/immich.tar.gz
+            {{ immich_upload_dir }}
         - name: "Back up vaultwarden to network drive"
           job: >
             /usr/bin/tar -zcf

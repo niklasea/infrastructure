@@ -73,6 +73,7 @@ infrastructure_hosts:
     alternate_hostnames:
       - bitwarden
       - gitea
+      - immich
       - jellyfin
       - omada
       - speedtest
