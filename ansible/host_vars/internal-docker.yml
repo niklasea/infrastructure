@@ -47,6 +47,9 @@ smb_mounts:
   backup_home_assistant:
     network_path: //harkonnen.{{ local_domain }}/ServerBackup/homeassistant
     local_path: "{{ smb_backup_dir }}/homeassistant"
+    options: '_netdev,dir_mode=0555,file_mode=0444'
+    username: "{{ vault_smb_server_backup_credentials.username }}"
+    password: "{{ vault_smb_server_backup_credentials.password }}"
   backup_immich:
     network_path: //harkonnen.{{ local_domain }}/ServerBackup/immich
     local_path: "{{ smb_backup_dir }}/immich"
