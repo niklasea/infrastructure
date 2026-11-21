@@ -69,6 +69,8 @@ jellyfin_media_dir: "{{ smb_mounts.media.local_path }}"
 
 immich_db_password: "{{ vault_immich.db_password }}"
 immich_backup_dir: "{{ smb_mounts.backup_immich.local_path }}"
+immich_external_library_paths:
+  - "{{ smb_mounts.media.local_path }}"
 
 vaultwarden_signups_allowed: false
 vaultwarden_admin_token: "{{ vault_vaultwarden.admin_token }}"
