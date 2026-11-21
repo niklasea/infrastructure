@@ -12,6 +12,7 @@
       netbird up
       --setup-key {{ netbird_peer_setup_key }}
       --management-url {{ 'https://%s/' | ansible.builtin.format(netbird_peer_domain) | ansible.builtin.quote }}
+      --wireguard-port {{ netbird_peer_wireguard_port }}
       {{ '--disable-dns' if netbird_peer_disable_dns else '' }}
   no_log: true
   register: _netbird_peer_start
