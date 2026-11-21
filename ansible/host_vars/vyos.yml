@@ -124,14 +124,9 @@ vyos_nat_destination_rules:
     inbound-interface: "{{ vyos_wan_interface }}"
     protocol: 'udp'
     translation address: "{{ vpn_network_ipv4['local_address'] }}"
-  - description: 'Port forward NetBird'
-    destination port: '{{ netbird_docker_wireguard_port }}'
-    inbound-interface: "{{ vyos_wan_interface }}"
-    protocol: 'udp'
-    translation address: "{{ vpn_network_ipv4['local_address'] }}"
 vyos_static_host_mappings: "{{ infrastructure_hosts | ansible.builtin.dict2items | selectattr('value.ipv4_address', 'defined') | selectattr('value.alternate_hostnames', 'defined') | ansible.builtin.items2dict }}"
 vyos_static_routes:
   - network: "{{ vpn_network_ipv4['network'] }}"
     gateway: "{{ vpn_network_ipv4['local_address'] }}"
-  - network: "{{ asus_network_ipv4 }}"
+  - network: "{{ vpn_network_ipv4['asus_network'] }}"
     gateway: "{{ vpn_network_ipv4['local_address'] }}"

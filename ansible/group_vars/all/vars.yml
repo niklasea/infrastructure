@@ -42,12 +42,10 @@ caddy_cloudflare_api_token: "{{ vault_cloudflare.zone_key }}"
 
 netbird_peer_domain: "netbird.{{ home_domain }}"
 netbird_peer_setup_key: "{{ vault_netbird.peer_setup_key }}"
-asus_network_ipv4: '192.168.50.0/24'
 vpn_network_ipv4:
   network: '172.21.0.0/24'
   local_address: "{{ infrastructure_hosts['internal-docker']['ipv4_address'] }}"
-# NetBird on internal-docker cannot use 51820 because the WireGuard server owns it.
-netbird_docker_wireguard_port: 51821
+  asus_network: '192.168.50.0/24'
 wireguard_client_dns_servers: "{{ dhcp_dns_addresses }}"
 
 wifi_pass: "{{ vault_wifi_pass }}"
