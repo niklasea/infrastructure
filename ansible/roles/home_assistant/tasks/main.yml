@@ -12,6 +12,26 @@
       owner: "{{ docker_remap_user }}"
       group: "{{ docker_remap_user }}"
 
+- name: Create blueprint directories
+  become: true
+  ansible.builtin.file:
+    path: "{{ home_assistant_config_dir }}/blueprints/automation/kiann"
+    state: directory
+    owner: "{{ docker_remap_user }}"
+    group: "{{ docker_remap_user }}"
+    mode: '755'
+
+# Vendored blueprints contain non-standard YAML tags, so the source file uses a
+# .blueprint suffix to keep YAML linters from parsing it.
+- name: Add STYRBAR blueprint
+  become: true
+  ansible.builtin.copy:
+    src: blueprints/automation/kiann/styrbar_zha.yaml.blueprint
+    dest: "{{ home_assistant_config_dir }}/blueprints/automation/kiann/styrbar_zha.yaml"
+    owner: "{{ docker_remap_user }}"
+    group: "{{ docker_remap_user }}"
+    mode: '644'
+
 - name: Add Docker compose file
   become: true
   ansible.builtin.template:
