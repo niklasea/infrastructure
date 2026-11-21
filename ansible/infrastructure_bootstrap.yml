@@ -5,6 +5,13 @@
   # VyOS runs Python 3.7, which ansible-core no longer supports on targets.
   gather_facts: false
   tasks:
+    - name: Build static routes
+      ansible.builtin.set_fact:
+        vyos_static_routes: >-
+          {{ vyos_static_routes | default([])
+             + [{'network': item, 'gateway': vpn_network_ipv4['local_address']}] }}
+      loop: "{{ [vpn_network_ipv4['network']] + vpn_network_ipv4['peer_networks'] }}"
+
     - ansible.builtin.include_role:
         name: vyos
 
