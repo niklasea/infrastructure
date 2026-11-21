@@ -137,7 +137,7 @@ caddy_blocks:
 
       # Home Assistant rejects X-Forwarded-For from an untrusted proxy, and its
       # HTTP settings are UI-managed. Strip the header until Trust X-Forwarded-For
-      # is enabled and 127.0.0.1 is added as a trusted proxy in Home Assistant.
+      # is enabled and the Docker bridge gateway is added as a trusted proxy.
       reverse_proxy 127.0.0.1:8123 {
           header_up -X-Forwarded-For
       }

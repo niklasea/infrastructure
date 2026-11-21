@@ -6,10 +6,10 @@ services:
     restart: unless-stopped
     stop_grace_period: 60s
     privileged: {{ home_assistant_privileged }}
-    # Docker user namespace remapping is incompatible with privileged
-    # containers and host networking.
-    userns_mode: "host"
-    network_mode: "host"
+    # The daemon uses user namespace remapping, so host networking is not
+    # available. Publish the port on loopback for Caddy instead.
+    ports:
+      - 127.0.0.1:8123:8123
     volumes:
       - {{ home_assistant_config_dir }}:/config
       - /etc/localtime:/etc/localtime:ro

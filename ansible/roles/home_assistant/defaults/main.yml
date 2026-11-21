@@ -10,6 +10,7 @@ home_assistant_timezone: Europe/Copenhagen
 # integrations need static addresses or a separate mDNS reflector.
 #
 # Enable these only when the host has local USB or Bluetooth radios.
+# Privileged mode is incompatible with the daemon's user namespace remapping.
 home_assistant_privileged: false
 home_assistant_dbus_enabled: false
 home_assistant_devices: []
