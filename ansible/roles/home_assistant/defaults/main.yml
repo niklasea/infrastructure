@@ -2,6 +2,10 @@
 home_assistant_compose_dir: "{{ docker_compose_dir }}/home_assistant"
 home_assistant_config_dir: "{{ home_assistant_compose_dir }}/config"
 
+# Paths relative to the config directory, sourced from files/blueprints.
+home_assistant_blueprints:
+  - automation/kiann/styrbar_zha.yaml
+
 home_assistant_version: stable
 home_assistant_timezone: Europe/Copenhagen
 
