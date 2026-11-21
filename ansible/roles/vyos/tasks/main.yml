@@ -1,40 +1,59 @@
 ---
-- name: Upload configuration script
+- name: Render configuration script on the controller
   ansible.builtin.template:
     src: commands.sh.j2
-    dest: ./commands.sh
-    mode: '700'
+    dest: "{{ vyos_script_local_path }}"
+    mode: '600'
+  delegate_to: localhost
+  changed_when: false
   register: _vyos_configuration_script
 
-- when: _vyos_configuration_script is changed
+- name: Get checksum of the configuration script on the router
+  ansible.builtin.raw: "sha256sum {{ vyos_script_remote_path }} 2>/dev/null || true"
+  changed_when: false
+  failed_when: false
+  register: _vyos_configuration_script_checksum
+
+- name: Upload configuration script
+  ansible.builtin.raw: >-
+    printf '%s' '{{ lookup('ansible.builtin.file', _vyos_configuration_script.dest) | b64encode }}'
+    | base64 -d > {{ vyos_script_remote_path }} &&
+    chmod 700 {{ vyos_script_remote_path }}
+  vars:
+    _vyos_configuration_script_hash: >-
+      {{ lookup('ansible.builtin.file', _vyos_configuration_script.dest) | hash('sha256') }}
+  when: >-
+    _vyos_configuration_script_checksum.stdout.split() | first | default('') !=
+    _vyos_configuration_script_hash
+  register: _vyos_configuration_script_upload
+
+- name: Apply configuration
+  when: _vyos_configuration_script_upload is changed
   block:
     # Run commands and say yes to any prompts.
     - name: Run script
-      ansible.builtin.shell:
-        cmd: |
-          set -o pipefail
-          yes | ./commands.sh
-        executable: /bin/vbash
+      ansible.builtin.raw: |
+        set -o pipefail
+        yes | ./{{ vyos_script_remote_path }}
+      executable: /bin/vbash
       register: _vyos_commands_result
       failed_when: "'Commit failed' in _vyos_commands_result.stdout"
 
     - name: Save changes
-      ansible.builtin.shell:
-        cmd: |
-          source /opt/vyatta/etc/functions/script-template
-          configure
-          confirm
-          save
-        executable: /bin/vbash
+      ansible.builtin.raw: |
+        source /opt/vyatta/etc/functions/script-template
+        configure
+        confirm
+        save
+      executable: /bin/vbash
       register: _vyos_save_result
       failed_when: >-
         _vyos_save_result.rc != 0 or
         'No confirm pending' in _vyos_save_result.stdout
   rescue:
     - name: Delete configuration script to force a retry next time
-      ansible.builtin.file:
-        path: "{{ _vyos_configuration_script.dest }}"
-        state: absent
+      ansible.builtin.raw: "rm -f {{ vyos_script_remote_path }}"
+      failed_when: false
 
     - name: Fail the deployment
       ansible.builtin.fail:
