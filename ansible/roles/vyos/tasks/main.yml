@@ -35,7 +35,8 @@
       ansible.builtin.raw: |
         set -o pipefail
         yes | ./{{ vyos_script_remote_path }}
-      executable: /bin/vbash
+      args:
+        executable: /bin/vbash
       register: _vyos_commands_result
       failed_when: "'Commit failed' in _vyos_commands_result.stdout"
 
@@ -45,7 +46,8 @@
         configure
         confirm
         save
-      executable: /bin/vbash
+      args:
+        executable: /bin/vbash
       register: _vyos_save_result
       failed_when: >-
         _vyos_save_result.rc != 0 or
