@@ -12,6 +12,28 @@
       owner: "{{ docker_remap_user }}"
       group: "{{ docker_remap_user }}"
 
+- name: Create blueprint directories
+  become: true
+  ansible.builtin.file:
+    path: "{{ home_assistant_config_dir }}/blueprints/{{ item }}"
+    state: directory
+    owner: "{{ docker_remap_user }}"
+    group: "{{ docker_remap_user }}"
+    mode: '755'
+  loop: "{{ home_assistant_blueprints | map('dirname') | unique }}"
+
+# Vendored blueprints contain non-standard YAML tags, so the source files use a
+# .blueprint suffix to keep YAML linters from parsing them.
+- name: Add blueprints
+  become: true
+  ansible.builtin.copy:
+    src: "blueprints/{{ item }}.blueprint"
+    dest: "{{ home_assistant_config_dir }}/blueprints/{{ item }}"
+    owner: "{{ docker_remap_user }}"
+    group: "{{ docker_remap_user }}"
+    mode: '644'
+  loop: "{{ home_assistant_blueprints }}"
+
 - name: Add Docker compose file
   become: true
   ansible.builtin.template:
