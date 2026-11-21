@@ -1,0 +1,14 @@
+---
+home_assistant_compose_dir: "{{ docker_compose_dir }}/home_assistant"
+home_assistant_config_dir: "{{ home_assistant_compose_dir }}/config"
+
+home_assistant_version: stable
+home_assistant_timezone: Europe/Copenhagen
+
+# Home Assistant is hosted away from the devices it controls. mDNS does not
+# cross the site-to-site VPN, so clients must use the Caddy URL and
+# integrations need static addresses or a separate mDNS reflector.
+home_assistant_privileged: true
+home_assistant_dbus_enabled: true
+home_assistant_devices: []
+home_assistant_disable_jemalloc: false

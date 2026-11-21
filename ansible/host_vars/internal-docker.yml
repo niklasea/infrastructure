@@ -44,6 +44,12 @@ smb_mounts:
     options: '_netdev,dir_mode=0555,file_mode=0444'
     username: "{{ vault_smb_server_backup_credentials.username }}"
     password: "{{ vault_smb_server_backup_credentials.password }}"
+  backup_home_assistant:
+    network_path: //harkonnen.{{ local_domain }}/ServerBackup/homeassistant
+    local_path: "{{ smb_backup_dir }}/homeassistant"
+    options: '_netdev,dir_mode=0555,file_mode=0444'
+    username: "{{ vault_smb_server_backup_credentials.username }}"
+    password: "{{ vault_smb_server_backup_credentials.password }}"
   media:
     network_path: //harkonnen.{{ local_domain }}/Media
     local_path: "/mnt/media"
@@ -112,6 +118,15 @@ caddy_blocks:
       }
 
       reverse_proxy 127.0.0.1:8003
+    }
+
+    homeassistant.{{ local_domain }} {
+      tls {
+          dns cloudflare {{ caddy_cloudflare_api_token }}
+          resolvers 1.1.1.1 1.0.0.1
+      }
+
+      reverse_proxy 127.0.0.1:8123
     }
 
     speedtest.{{ local_domain }} {

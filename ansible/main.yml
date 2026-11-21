@@ -51,6 +51,8 @@
         name: speedtest
     - ansible.builtin.import_role:
         name: omada
+    - ansible.builtin.import_role:
+        name: home_assistant
   post_tasks:
     - name: Schedule backup to network drive
       become: true
@@ -76,6 +78,11 @@
             /usr/bin/tar -zcf
             {{ smb_mounts.backup_vaultwarden.local_path }}/data.tar.gz
             {{ vaultwarden_data_dir }}
+        - name: "Back up Home Assistant to network drive"
+          job: >
+            /usr/bin/tar -zcf
+            {{ smb_mounts.backup_home_assistant.local_path }}/homeassistant.tar.gz
+            {{ home_assistant_config_dir }}
 
     - name: Install sqlite for vaultwarden backup
       become: true
