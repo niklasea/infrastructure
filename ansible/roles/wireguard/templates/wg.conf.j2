@@ -24,6 +24,6 @@ PostDown = {{ rule }}
 
 [Peer] # {{ name }}
 {% for key, value in options.items() %}
-{{ key }} = {{ value }}
+{{ key }} = {{ value | join(', ') if value is sequence and value is not string else value }}
 {% endfor %}
 {% endfor %}

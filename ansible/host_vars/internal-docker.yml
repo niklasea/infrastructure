@@ -22,9 +22,9 @@ wireguard_peers:
     AllowedIPs: "{{ vpn_network_ipv4['network'] | ansible.utils.ipaddr('6') | ansible.utils.ipaddr('address') }}/32"
   AsusSingapore:
     PublicKey: 'ru4nKI499VFdKoS0YMHEZuq5wrgnDBDD3dovsHtDYnU='
-    AllowedIPs: >-
-      {{ ([vpn_network_ipv4['network'] | ansible.utils.ipaddr('7') | ansible.utils.ipaddr('address') ~ '/32']
-          + vpn_network_ipv4['peer_networks']) | join(', ') }}
+    AllowedIPs:
+      - "{{ vpn_network_ipv4['network'] | ansible.utils.ipaddr('7') | ansible.utils.ipaddr('address') }}/32"
+      - "{{ vpn_network_ipv4['peer_networks'] | join(', ') }}"
 
 smb_backup_dir: /mnt/backup
 smb_mounts:
