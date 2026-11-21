@@ -125,7 +125,3 @@ vyos_nat_destination_rules:
     protocol: 'udp'
     translation address: "{{ vpn_network_ipv4['local_address'] }}"
 vyos_static_host_mappings: "{{ infrastructure_hosts | ansible.builtin.dict2items | selectattr('value.ipv4_address', 'defined') | selectattr('value.alternate_hostnames', 'defined') | ansible.builtin.items2dict }}"
-vyos_static_routes: >-
-  {{ ({vpn_network_ipv4['network']: vpn_network_ipv4['local_address']}
-      | combine(vpn_network_ipv4['peer_networks']))
-     | dict2items(key_name='network', value_name='gateway') }}

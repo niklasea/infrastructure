@@ -1,4 +1,11 @@
 ---
+- name: Build static routes
+  ansible.builtin.set_fact:
+    vyos_static_routes: >-
+      {{ vyos_static_routes | default([])
+         + [{'network': item, 'gateway': vpn_network_ipv4['local_address']}] }}
+  loop: "{{ [vpn_network_ipv4['network']] + vpn_network_ipv4['peer_networks'] }}"
+
 - name: Get checksum of the configuration script on the router
   ansible.builtin.raw: "sha256sum {{ vyos_script_remote_path }} 2>/dev/null || true"
   changed_when: false
