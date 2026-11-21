@@ -1,6 +1,14 @@
 ---
 # https://immich.app/docs/install/docker-compose
-- name: Create directories
+- name: Validate database password
+  ansible.builtin.assert:
+    that:
+      - immich_db_password is defined
+      - (immich_db_password | default('')) is match('^[A-Za-z0-9]{16,}$')
+    fail_msg: "immich_db_password must be at least 16 alphanumeric characters."
+    quiet: true
+
+- name: Create application directories
   become: true
   ansible.builtin.file:
     path: "{{ item.path }}"
@@ -13,9 +21,24 @@
     - path: "{{ immich_upload_dir }}"
       owner: "{{ docker_remap_user }}"
       group: "{{ docker_remap_user }}"
-    - path: "{{ immich_db_data_dir }}"
-      owner: "{{ docker_remap_user }}"
-      group: "{{ docker_remap_user }}"
+
+# Postgres creates and secures its own data directory. Re-owning an initialised
+# database would remove the permissions of the postgres user.
+- name: Check database directory
+  become: true
+  ansible.builtin.stat:
+    path: "{{ immich_db_data_dir }}"
+  register: _immich_db_data_dir
+
+- name: Create database directory
+  become: true
+  when: not _immich_db_data_dir.stat.exists
+  ansible.builtin.file:
+    path: "{{ immich_db_data_dir }}"
+    state: directory
+    mode: '755'
+    owner: "{{ docker_remap_user }}"
+    group: "{{ docker_remap_user }}"
 
 - name: Add configuration files
   become: true
@@ -33,6 +56,15 @@
       dest: "{{ immich_compose_dir }}/.env"
       mode: '0600'
   register: _immich_configuration_files
+
+- name: Add backup script
+  become: true
+  ansible.builtin.template:
+    src: backup.sh.j2
+    dest: "{{ immich_compose_dir }}/backup.sh"
+    owner: root
+    group: root
+    mode: '0750'
 
 - name: Start Immich
   become: true
