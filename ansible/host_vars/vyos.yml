@@ -128,5 +128,3 @@ vyos_static_host_mappings: "{{ infrastructure_hosts | ansible.builtin.dict2items
 vyos_static_routes:
   - network: "{{ vpn_network_ipv4['network'] }}"
     gateway: "{{ vpn_network_ipv4['local_address'] }}"
-  - network: "{{ vpn_network_ipv4['peer_network'] }}"
-    gateway: "{{ vpn_network_ipv4['local_address'] }}"

@@ -248,6 +248,9 @@ set nat source rule 100 translation address 'masquerade'
 {% for route in vyos_static_routes %}
 set protocols static route {{ route.network }} next-hop {{ route.gateway }} distance '1'
 {% endfor %}
+{% for network in vpn_network_ipv4['peer_networks'] %}
+set protocols static route {{ network }} next-hop {{ vpn_network_ipv4['local_address'] }} distance '1'
+{% endfor %}
 
 # Configure traffic shaping
 
