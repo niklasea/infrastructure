@@ -46,6 +46,8 @@
     - ansible.builtin.import_role:
         name: gitea
     - ansible.builtin.import_role:
+        name: immich
+    - ansible.builtin.import_role:
         name: vaultwarden
     - ansible.builtin.import_role:
         name: speedtest
@@ -76,6 +78,15 @@
             /usr/bin/tar -zcf
             {{ smb_mounts.backup_vaultwarden.local_path }}/data.tar.gz
             {{ vaultwarden_data_dir }}
+
+    - name: Schedule Immich backup to network drive
+      become: true
+      ansible.builtin.cron:
+        name: "Back up Immich to network drive"
+        job: "{{ immich_compose_dir }}/backup.sh"
+        hour: 4
+        minute: 0
+        state: present
 
     - name: Install sqlite for vaultwarden backup
       become: true
