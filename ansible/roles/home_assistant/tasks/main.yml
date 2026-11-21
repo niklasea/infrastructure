@@ -5,6 +5,8 @@
     path: "{{ item.path }}"
     state: directory
     mode: "{{ item.mode | default('755') }}"
+    owner: "{{ item.owner | default(omit) }}"
+    group: "{{ item.group | default(omit) }}"
   loop:
     - path: "{{ home_assistant_compose_dir }}"
     - path: "{{ home_assistant_config_dir }}"
@@ -22,7 +24,7 @@
     mode: '755'
   loop: >-
     {{ home_assistant_config_files
-    | map(attribute='dest') | map('dirname') | unique }}
+    | map(attribute='dest') | map('dirname') | reject('eq', '') | unique }}
 
 - name: Add config files
   become: true
@@ -35,6 +37,7 @@
   loop: "{{ home_assistant_config_files }}"
   loop_control:
     label: "{{ item.dest }}"
+  notify: Restart Home Assistant
 
 - name: Add Docker compose file
   become: true
@@ -56,42 +59,104 @@
 # packages include can only be added once the container has run.
 - name: Wait for Home Assistant configuration
   become: true
+  when: not ansible_check_mode
   ansible.builtin.wait_for:
     path: "{{ home_assistant_config_dir }}/configuration.yaml"
     timeout: 120
 
+- name: Check Home Assistant configuration
+  become: true
+  ansible.builtin.stat:
+    path: "{{ home_assistant_config_dir }}/configuration.yaml"
+  register: _home_assistant_configuration_file
+
+- name: Fail without a Home Assistant configuration
+  ansible.builtin.fail:
+    msg: "{{ home_assistant_config_dir }}/configuration.yaml was not created"
+  when:
+    - not ansible_check_mode
+    - not _home_assistant_configuration_file.stat.exists
+
 - name: Read Home Assistant configuration
   become: true
+  when: _home_assistant_configuration_file.stat.exists
   ansible.builtin.slurp:
     src: "{{ home_assistant_config_dir }}/configuration.yaml"
   register: _home_assistant_configuration
 
 - name: Set Home Assistant configuration content
+  when: _home_assistant_configuration_file.stat.exists
   ansible.builtin.set_fact:
     _home_assistant_configuration_text: >-
       {{ _home_assistant_configuration.content | b64decode }}
 
+- name: Fail on unsupported packages setting
+  ansible.builtin.fail:
+    msg: >-
+      configuration.yaml sets packages without
+      "!include_dir_named packages"; update it by hand.
+  when:
+    - _home_assistant_configuration_file.stat.exists
+    - >-
+      _home_assistant_configuration_text
+      is search('(?m)^\s*packages:')
+    - >-
+      _home_assistant_configuration_text
+      is not search('(?m)^\s+packages:\s*!include_dir_named\s+packages\s*$')
+
+- name: Fail on unsupported homeassistant block
+  ansible.builtin.fail:
+    msg: >-
+      configuration.yaml has a homeassistant block that is not a bare key
+      with two-space children; add the packages include by hand.
+  when:
+    - _home_assistant_configuration_file.stat.exists
+    - >-
+      _home_assistant_configuration_text
+      is search('(?m)^homeassistant:')
+    - >-
+      _home_assistant_configuration_text
+      is not search('(?m)^homeassistant:[ \t]*\n[ ]{2}\S')
+    - >-
+      _home_assistant_configuration_text
+      is not search('(?m)^\s+packages:\s*!include_dir_named\s+packages\s*$')
+
 - name: Add packages include to existing homeassistant block
   become: true
+  when:
+    - _home_assistant_configuration_file.stat.exists
+    - >-
+      _home_assistant_configuration_text
+      is search('(?m)^homeassistant:[ \t]*\n[ ]{2}\S')
+    - >-
+      _home_assistant_configuration_text
+      is not search('(?m)^\s+packages:\s*!include_dir_named\s+packages\s*$')
   ansible.builtin.lineinfile:
     path: "{{ home_assistant_config_dir }}/configuration.yaml"
     insertafter: '^homeassistant:'
     line: '  packages: !include_dir_named packages'
-  when:
-    - "'packages:' not in _home_assistant_configuration_text"
-    - "_home_assistant_configuration_text is search('(?m)^homeassistant:')"
+    backup: true
   notify: Restart Home Assistant
 
 - name: Add homeassistant block with packages include
   become: true
+  when:
+    - _home_assistant_configuration_file.stat.exists
+    - >-
+      _home_assistant_configuration_text
+      is not search('(?m)^homeassistant:')
+    - >-
+      _home_assistant_configuration_text
+      is not search('(?m)^\s*packages:')
   ansible.builtin.blockinfile:
     path: "{{ home_assistant_config_dir }}/configuration.yaml"
     insertafter: EOF
     marker: "# {mark} ANSIBLE MANAGED HOMEASSISTANT"
+    backup: true
     block: |
       homeassistant:
         packages: !include_dir_named packages
-  when:
-    - "'packages:' not in _home_assistant_configuration_text"
-    - "_home_assistant_configuration_text is not search('(?m)^homeassistant:')"
   notify: Restart Home Assistant
+
+- name: Apply Home Assistant configuration changes
+  ansible.builtin.meta: flush_handlers
