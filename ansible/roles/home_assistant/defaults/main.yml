@@ -2,9 +2,18 @@
 home_assistant_compose_dir: "{{ docker_compose_dir }}/home_assistant"
 home_assistant_config_dir: "{{ home_assistant_compose_dir }}/config"
 
-# Paths relative to the config directory, sourced from files/blueprints.
-home_assistant_blueprints:
-  - automation/kiann/styrbar_zha.yaml
+home_assistant_entity_ids:
+  door_sensor: binary_sensor.ikea_parasoll_door_window_sensor
+  living_room_light: light.ikea_tradfri_bulb_e27_ww_g95_cl_470lm
+
+# Paths relative to files/ or templates/ and the config directory. Blueprint
+# sources keep a .blueprint suffix because their !input tags are not valid YAML,
+# and .j2 sources are rendered as templates.
+home_assistant_config_files:
+  - src: blueprints/automation/kiann/styrbar_zha.yaml.blueprint
+    dest: blueprints/automation/kiann/styrbar_zha.yaml
+  - src: packages/lighting.yaml.j2
+    dest: packages/lighting.yaml
 
 home_assistant_version: stable
 home_assistant_timezone: Europe/Copenhagen

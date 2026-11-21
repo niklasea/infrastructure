@@ -5,6 +5,8 @@
     path: "{{ item.path }}"
     state: directory
     mode: "{{ item.mode | default('755') }}"
+    owner: "{{ item.owner | default(omit) }}"
+    group: "{{ item.group | default(omit) }}"
   loop:
     - path: "{{ home_assistant_compose_dir }}"
     - path: "{{ home_assistant_config_dir }}"
@@ -12,27 +14,45 @@
       owner: "{{ docker_remap_user }}"
       group: "{{ docker_remap_user }}"
 
-- name: Create blueprint directories
+- name: Create config directories
   become: true
   ansible.builtin.file:
-    path: "{{ home_assistant_config_dir }}/blueprints/{{ item }}"
+    path: "{{ home_assistant_config_dir }}/{{ item }}"
     state: directory
     owner: "{{ docker_remap_user }}"
     group: "{{ docker_remap_user }}"
     mode: '755'
-  loop: "{{ home_assistant_blueprints | map('dirname') | unique }}"
+  loop: >-
+    {{ home_assistant_config_files
+    | map(attribute='dest') | map('dirname') | reject('eq', '') | unique }}
 
-# Vendored blueprints contain non-standard YAML tags, so the source files use a
-# .blueprint suffix to keep YAML linters from parsing them.
-- name: Add blueprints
+- name: Add config files
   become: true
+  when: not item.src.endswith('.j2')
   ansible.builtin.copy:
-    src: "blueprints/{{ item }}.blueprint"
-    dest: "{{ home_assistant_config_dir }}/blueprints/{{ item }}"
+    src: "{{ item.src }}"
+    dest: "{{ home_assistant_config_dir }}/{{ item.dest }}"
     owner: "{{ docker_remap_user }}"
     group: "{{ docker_remap_user }}"
     mode: '644'
-  loop: "{{ home_assistant_blueprints }}"
+  loop: "{{ home_assistant_config_files }}"
+  loop_control:
+    label: "{{ item.dest }}"
+  notify: Restart Home Assistant
+
+- name: Add config templates
+  become: true
+  when: item.src.endswith('.j2')
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ home_assistant_config_dir }}/{{ item.dest }}"
+    owner: "{{ docker_remap_user }}"
+    group: "{{ docker_remap_user }}"
+    mode: '644'
+  loop: "{{ home_assistant_config_files }}"
+  loop_control:
+    label: "{{ item.dest }}"
+  notify: Restart Home Assistant
 
 - name: Add Docker compose file
   become: true
@@ -49,3 +69,109 @@
     pull: "always"
     recreate: "auto"
     remove_orphans: true
+
+# Home Assistant writes its default configuration on first start, so the
+# packages include can only be added once the container has run.
+- name: Wait for Home Assistant configuration
+  become: true
+  when: not ansible_check_mode
+  ansible.builtin.wait_for:
+    path: "{{ home_assistant_config_dir }}/configuration.yaml"
+    timeout: 120
+
+- name: Check Home Assistant configuration
+  become: true
+  ansible.builtin.stat:
+    path: "{{ home_assistant_config_dir }}/configuration.yaml"
+  register: _home_assistant_configuration_file
+
+- name: Fail without a Home Assistant configuration
+  ansible.builtin.fail:
+    msg: "{{ home_assistant_config_dir }}/configuration.yaml was not created"
+  when:
+    - not ansible_check_mode
+    - not _home_assistant_configuration_file.stat.exists
+
+- name: Read Home Assistant configuration
+  become: true
+  when: _home_assistant_configuration_file.stat.exists
+  ansible.builtin.slurp:
+    src: "{{ home_assistant_config_dir }}/configuration.yaml"
+  register: _home_assistant_configuration
+
+- name: Set Home Assistant configuration content
+  when: _home_assistant_configuration_file.stat.exists
+  ansible.builtin.set_fact:
+    _home_assistant_configuration_text: >-
+      {{ _home_assistant_configuration.content | b64decode }}
+
+- name: Fail on unsupported packages setting
+  ansible.builtin.fail:
+    msg: >-
+      configuration.yaml sets packages without
+      "!include_dir_named packages"; update it by hand.
+  when:
+    - _home_assistant_configuration_file.stat.exists
+    - >-
+      _home_assistant_configuration_text
+      is search('(?m)^\s*packages:')
+    - >-
+      _home_assistant_configuration_text
+      is not search('(?m)^\s+packages:\s*!include_dir_named\s+packages\s*$')
+
+- name: Fail on unsupported homeassistant block
+  ansible.builtin.fail:
+    msg: >-
+      configuration.yaml has a homeassistant block that is not a bare key
+      with two-space children; add the packages include by hand.
+  when:
+    - _home_assistant_configuration_file.stat.exists
+    - >-
+      _home_assistant_configuration_text
+      is search('(?m)^homeassistant:')
+    - >-
+      _home_assistant_configuration_text
+      is not search('(?m)^homeassistant:[ \t]*\n[ ]{2}\S')
+    - >-
+      _home_assistant_configuration_text
+      is not search('(?m)^\s+packages:\s*!include_dir_named\s+packages\s*$')
+
+- name: Add packages include to existing homeassistant block
+  become: true
+  when:
+    - _home_assistant_configuration_file.stat.exists
+    - >-
+      _home_assistant_configuration_text
+      is search('(?m)^homeassistant:[ \t]*\n[ ]{2}\S')
+    - >-
+      _home_assistant_configuration_text
+      is not search('(?m)^\s+packages:\s*!include_dir_named\s+packages\s*$')
+  ansible.builtin.lineinfile:
+    path: "{{ home_assistant_config_dir }}/configuration.yaml"
+    insertafter: '^homeassistant:'
+    line: '  packages: !include_dir_named packages'
+    backup: true
+  notify: Restart Home Assistant
+
+- name: Add homeassistant block with packages include
+  become: true
+  when:
+    - _home_assistant_configuration_file.stat.exists
+    - >-
+      _home_assistant_configuration_text
+      is not search('(?m)^homeassistant:')
+    - >-
+      _home_assistant_configuration_text
+      is not search('(?m)^\s*packages:')
+  ansible.builtin.blockinfile:
+    path: "{{ home_assistant_config_dir }}/configuration.yaml"
+    insertafter: EOF
+    marker: "# {mark} ANSIBLE MANAGED HOMEASSISTANT"
+    backup: true
+    block: |
+      homeassistant:
+        packages: !include_dir_named packages
+  notify: Restart Home Assistant
+
+- name: Apply Home Assistant configuration changes
+  ansible.builtin.meta: flush_handlers

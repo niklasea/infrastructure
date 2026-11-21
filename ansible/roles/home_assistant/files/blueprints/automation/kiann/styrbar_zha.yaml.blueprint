@@ -1,5 +1,6 @@
 # Vendored from https://community.home-assistant.io/t/854854/16 (kiann).
-# Local modifications: none.
+# Local modifications: targets restricted to lights, and the dimming loop is
+# bounded so a lost stop event cannot run it indefinitely.
 blueprint:
   name: IKEA Styrbar (ZHA) - Smooth & Complete
   description: "ZHA Styrbar with absolute dimming, selection flash, and smooth transitions."
@@ -11,12 +12,12 @@ blueprint:
         device:
           integration: zha
     targets:
-      name: Light/Switch Entities
+      name: Light Entities
       selector:
         entity:
           multiple: true
           filter:
-            - domain: [light, switch]
+            - domain: [light]
     selected_target:
       name: Target Index Helper
       selector:
@@ -135,7 +136,7 @@ action:
       - conditions: "{{ command == 'move' and cluster_id == 8 }}"
         sequence:
           - repeat:
-              while: "{{ true }}"
+              count: 200
               sequence:
                 - variables:
                     is_up: "{{ args[0] == 0 }}"
