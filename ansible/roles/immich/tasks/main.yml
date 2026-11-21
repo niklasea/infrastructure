@@ -4,8 +4,8 @@
   ansible.builtin.assert:
     that:
       - immich_db_password is defined
-      - (immich_db_password | default('')) is match('^[A-Za-z0-9]{16,}$')
-    fail_msg: "immich_db_password must be at least 16 alphanumeric characters."
+      - (immich_db_password | default('')) is match('^[A-Za-z0-9]+$')
+    fail_msg: "immich_db_password must contain only alphanumeric characters."
     quiet: true
 
 - name: Create application directories
