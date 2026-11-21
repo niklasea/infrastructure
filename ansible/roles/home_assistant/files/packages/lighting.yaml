@@ -1,0 +1,24 @@
+---
+automation:
+  - id: living_room_lights_on_door_open
+    alias: Living room lights on door open (evening)
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.ikea_parasoll_door_window_sensor
+        from: "off"
+        to: "on"
+    condition:
+      - condition: time
+        after: "18:00:00"
+        before: "03:00:00"
+      - condition: state
+        entity_id: light.ikea_tradfri_bulb_e27_ww_g95_cl_470lm
+        state: "off"
+    action:
+      - service: light.turn_on
+        target:
+          entity_id: light.ikea_tradfri_bulb_e27_ww_g95_cl_470lm
+        data:
+          brightness_pct: 100
+          transition: 5

@@ -2,9 +2,13 @@
 home_assistant_compose_dir: "{{ docker_compose_dir }}/home_assistant"
 home_assistant_config_dir: "{{ home_assistant_compose_dir }}/config"
 
-# Paths relative to the config directory, sourced from files/blueprints.
-home_assistant_blueprints:
-  - automation/kiann/styrbar_zha.yaml
+# Paths relative to files/ and the config directory. Blueprint sources keep a
+# .blueprint suffix because their !input tags are not valid YAML.
+home_assistant_config_files:
+  - src: blueprints/automation/kiann/styrbar_zha.yaml.blueprint
+    dest: blueprints/automation/kiann/styrbar_zha.yaml
+  - src: packages/lighting.yaml
+    dest: packages/lighting.yaml
 
 home_assistant_version: stable
 home_assistant_timezone: Europe/Copenhagen
