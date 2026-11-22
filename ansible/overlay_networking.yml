@@ -11,8 +11,10 @@
         firewall_rules_ipv6:
           - { chain: INPUT, rule: ACCEPT, port: 443, proto: tcp, comment: HTTPS }
           - { chain: INPUT, rule: ACCEPT, port: 80, proto: tcp, comment: HTTP }
+
     - ansible.builtin.import_role:
         name: inadyn
+
     - ansible.builtin.import_role:
         name: netbird_service
 
@@ -72,11 +74,14 @@
       retries: 15
       delay: 2
       changed_when: false
+
     - name: Refresh network facts after the overlay joins
       ansible.builtin.setup:
         gather_subset: [network]
+
     - ansible.builtin.import_role:
         name: dns_server
+
     - name: Install NetBird DNS boot service
       become: true
       ansible.builtin.copy:
@@ -102,6 +107,7 @@
           [Install]
           WantedBy=multi-user.target
       register: _netbird_dns_service
+
     - name: Enable NetBird DNS boot service
       become: true
       ansible.builtin.systemd:
@@ -119,6 +125,7 @@
       ansible.builtin.stat:
         path: /etc/resolvconf/resolv.conf.d/head
       register: _netbird_resolvconf_head
+
     - name: Prefer the NetBird resolver
       become: true
       when: _netbird_resolvconf_head.stat.exists
@@ -129,6 +136,7 @@
           nameserver 1.1.1.1
         mode: '644'
       register: _netbird_resolvconf_update
+
     - name: Apply the resolver configuration
       become: true
       when:
@@ -136,6 +144,7 @@
         - _netbird_resolvconf_update is changed
       ansible.builtin.command:
         cmd: /usr/sbin/resolvconf -u
+
     - name: Wait for the backup hostname to resolve
       ansible.builtin.command:
         cmd: getent hosts harkonnen.{{ local_domain }}
@@ -144,10 +153,12 @@
       retries: 30
       delay: 2
       changed_when: false
+
     - ansible.builtin.import_role:
         name: smb_mount
       vars:
         smb_mounts: "{{ netbird_backup_smb_mounts }}"  # noqa: var-naming[no-role-prefix]
+
   post_tasks:
     - name: Schedule backup to network drive
       become: true
