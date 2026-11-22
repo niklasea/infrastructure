@@ -9,6 +9,7 @@ automation:
         to: "on"
     action:
       - service: notify.send_message
+        continue_on_error: true
         target:
           entity_id: {{ home_assistant_notify.email }}
         data:
@@ -17,6 +18,7 @@ automation:
             {% raw %}{{ trigger.to_state.name }}{% endraw %} detected water at
             {% raw %}{{ now().strftime('%Y-%m-%d %H:%M') }}{% endraw %}.
       - service: notify.send_message
+        continue_on_error: true
         target:
           entity_id: {{ home_assistant_notify.mobile }}
         data:
