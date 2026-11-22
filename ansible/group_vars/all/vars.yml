@@ -40,7 +40,6 @@ docker_compose_dir: /etc/compose
 caddy_notification_email: "{{ vault_notification_email }}"
 caddy_cloudflare_api_token: "{{ vault_cloudflare.zone_key }}"
 
-netbird_version: "0.83.2"
 netbird_peer_domain: "netbird.{{ home_domain }}"
 netbird_peer_setup_key: "{{ vault_netbird.peer_setup_key }}"
 vpn_network_ipv4:
