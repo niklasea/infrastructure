@@ -30,18 +30,3 @@
   no_log: true
   register: _netbird_peer_start
   changed_when: "'Already connected' not in _netbird_peer_start.stdout"
-
-- name: Read the NetBird IPv4 address
-  become: true
-  ansible.builtin.command:
-    cmd: netbird status --ipv4
-  register: _netbird_peer_ipv4
-  until: _netbird_peer_ipv4.stdout | trim | length > 0
-  retries: 30
-  delay: 2
-  changed_when: false
-  check_mode: false
-
-- name: Store the NetBird IPv4 address
-  ansible.builtin.set_fact:
-    netbird_peer_ipv4: "{{ _netbird_peer_ipv4.stdout | trim }}"

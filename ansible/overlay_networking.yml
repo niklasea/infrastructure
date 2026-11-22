@@ -66,6 +66,10 @@
 - name: Configure Hetzner DNS servers
   hosts: hcloud
   tasks:
+    - name: Refresh network facts after the overlay joins
+      ansible.builtin.setup:
+        gather_subset: [network]
+
     - ansible.builtin.import_role:
         name: dns_server
 
