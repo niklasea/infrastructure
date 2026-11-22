@@ -25,7 +25,7 @@
       netbird up
       --setup-key {{ netbird_peer_setup_key }}
       --management-url {{ 'https://%s/' | ansible.builtin.format(netbird_peer_domain) | ansible.builtin.quote }}
-      --disable-dns={{ netbird_peer_disable_dns | ternary('true', 'false') }}
+      --disable-dns={{ netbird_peer_disable_dns | lower }}
       --dns-resolver-address {{ netbird_peer_dns_resolver_address | ansible.builtin.quote }}
   no_log: true
   register: _netbird_peer_start
