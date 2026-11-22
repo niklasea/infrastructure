@@ -4,19 +4,20 @@
   ansible.builtin.file:
     path: "{{ netbird_service_compose_dir }}"
     state: directory
-    mode: '755'
+    mode: '0700'
 
 - name: Add configuration files
   become: true
   ansible.builtin.template:
-    src: "{{ item }}"
-    dest: "{{ netbird_service_compose_dir }}/{{ item | splitext | first }}"
-    # config.yml and dashboard.env contain secrets; keep the whole directory root-only.
-    mode: '0600'
+    src: "{{ item.src }}"
+    dest: "{{ netbird_service_compose_dir }}/{{ item.src | splitext | first }}"
+    # The unprivileged server container must read config.yml; the root-only
+    # directory still protects it on the host.
+    mode: "{{ item.mode }}"
   loop:
-    - docker-compose.yml.j2
-    - config.yml.j2
-    - dashboard.env.j2
+    - { src: docker-compose.yml.j2, mode: '0600' }
+    - { src: config.yml.j2, mode: '0644' }
+    - { src: dashboard.env.j2, mode: '0600' }
   register: _netbird_service_configuration_files
 
 - name: Start container
