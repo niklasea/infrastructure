@@ -1,17 +1,23 @@
 ---
 automation:
   - id: living_room_lights_on_door_open
-    alias: Living room lights on door open (evening)
+    alias: Living room lights on when home (evening)
     mode: single
     trigger:
       - platform: state
         entity_id: {{ home_assistant_entity_ids.door_sensor }}
         from: "off"
         to: "on"
+      - platform: time
+        at: "18:00:00"
     condition:
+      # The time trigger sits on the window boundary.
       - condition: time
-        after: "18:00:00"
+        after: "17:59:00"
         before: "03:00:00"
+      - condition: numeric_state
+        entity_id: {{ home_assistant_entity_ids.presence }}
+        above: 0
     action:
       - if:
           - condition: state
@@ -42,6 +48,10 @@ automation:
     trigger:
       - platform: time
         at: "22:00:00"
+    condition:
+      - condition: numeric_state
+        entity_id: {{ home_assistant_entity_ids.presence }}
+        above: 0
     action:
       - if:
           - condition: state

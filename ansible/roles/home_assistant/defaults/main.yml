@@ -7,6 +7,7 @@ home_assistant_entity_ids:
   living_room_light: light.ikea_tradfri_bulb_e27_ww_g95_cl_470lm
   work_light: light.work_lamp
   bedside_light: light.bedside_table
+  presence: zone.home
 
 home_assistant_water_leak_sensors:
   - binary_sensor.kitchen_ikea_badring_water_leakage_sensor
