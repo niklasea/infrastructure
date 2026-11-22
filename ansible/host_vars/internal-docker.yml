@@ -64,11 +64,19 @@ smb_mounts:
     options: '_netdev,dir_mode=0555,file_mode=0444'
     username: "{{ vault_smb_jellyfin_credentials.username }}"
     password: "{{ vault_smb_jellyfin_credentials.password }}"
+  camera:
+    network_path: //harkonnen.{{ local_domain }}/NiklasCamera
+    local_path: "/mnt/niklas/camera"
+    options: '_netdev,ro,dir_mode=0555,file_mode=0444'
+    username: "{{ vault_smb_immich_credentials.username }}"
+    password: "{{ vault_smb_immich_credentials.password }}"
 
 jellyfin_media_dir: "{{ smb_mounts.media.local_path }}"
 
 immich_db_password: "{{ vault_immich.db_password }}"
 immich_backup_dir: "{{ smb_mounts.backup_immich.local_path }}"
+immich_external_library_paths:
+  - "{{ smb_mounts.camera.local_path }}"
 
 vaultwarden_signups_allowed: false
 vaultwarden_admin_token: "{{ vault_vaultwarden.admin_token }}"
