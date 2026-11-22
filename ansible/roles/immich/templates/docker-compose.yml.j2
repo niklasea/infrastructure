@@ -16,10 +16,10 @@ services:
     security_opt:
       - no-new-privileges:true
     volumes:
-      - {{ immich_upload_dir }}:/data
+      - "{{ immich_upload_dir }}:/data"
       - /etc/localtime:/etc/localtime:ro
 {% for path in immich_external_library_paths %}
-      - {{ path }}:{{ path }}:ro
+      - "{{ path }}:{{ path }}:ro"
 {% endfor %}
     env_file:
       - .env

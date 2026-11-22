@@ -39,3 +39,63 @@
         opts: "{{ item.1.options }},credentials={{ smb_mount_credential_dir }}/{{ item.0 }}"
       loop: "{{ smb_mounts.items() }}"
       no_log: true
+
+    - name: Check mounted volumes
+      become: true
+      ansible.builtin.command:
+        cmd: "findmnt --raw -n -o SOURCE,FSTYPE,OPTIONS --mountpoint {{ item.1.local_path }}"
+      loop: "{{ smb_mounts.items() }}"
+      register: _smb_mount_checks
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Require mounted volumes
+      ansible.builtin.assert:
+        that:
+          - >-
+            item.rc == 0 and
+            (item.stdout.split() | length) >= 3 and
+            item.stdout.split()[0] == item.item.1.network_path and
+            item.stdout.split()[1] == 'cifs' and
+            (('ro' in item.stdout.split()[2].split(',')) if ('ro' in item.item.1.options.split(',')) else ('rw' in item.stdout.split()[2].split(',')))
+        fail_msg: "{{ item.item.1.local_path }} is not mounted from {{ item.item.1.network_path }} with the expected access mode."
+        quiet: true
+      loop: "{{ _smb_mount_checks.results }}"
+
+    - name: Initialize Docker dependency paths
+      ansible.builtin.set_fact:
+        _smb_mount_docker_paths: []
+
+    - name: Collect Docker dependency paths
+      ansible.builtin.set_fact:
+        _smb_mount_docker_paths: "{{ _smb_mount_docker_paths + [item.value.local_path] }}"
+      loop: "{{ smb_mounts | dict2items }}"
+      when: item.value.docker_dependency | default(false)
+
+    - name: Create Docker systemd override directory
+      become: true
+      when: _smb_mount_docker_paths | length > 0
+      ansible.builtin.file:
+        path: /etc/systemd/system/docker.service.d
+        state: directory
+        mode: '0755'
+
+    - name: Configure Docker mount dependencies
+      become: true
+      when: _smb_mount_docker_paths | length > 0
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/docker.service.d/smb-mounts.conf
+        mode: '0644'
+        content: |
+          [Unit]
+          RequiresMountsFor={{ _smb_mount_docker_paths | join(' ') }}
+      notify: Reload systemd
+
+    - name: Remove Docker mount dependencies
+      become: true
+      when: _smb_mount_docker_paths | length == 0
+      ansible.builtin.file:
+        path: /etc/systemd/system/docker.service.d/smb-mounts.conf
+        state: absent
+      notify: Reload systemd

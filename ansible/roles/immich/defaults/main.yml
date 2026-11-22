@@ -1,5 +1,6 @@
 ---
 immich_compose_dir: "{{ docker_compose_dir }}/immich"
+# Must already exist and be writable by the Docker remapped user.
 immich_upload_dir: "{{ immich_compose_dir }}/library"
 immich_db_data_dir: "{{ immich_compose_dir }}/postgres"
 

@@ -8,19 +8,26 @@
     fail_msg: "immich_db_password must contain only alphanumeric characters."
     quiet: true
 
-- name: Create application directories
+- name: Create application directory
   become: true
   ansible.builtin.file:
-    path: "{{ item.path }}"
+    path: "{{ immich_compose_dir }}"
     state: directory
-    mode: "{{ item.mode | default('755') }}"
-    owner: "{{ item.owner | default('root') }}"
-    group: "{{ item.group | default('root') }}"
-  loop:
-    - path: "{{ immich_compose_dir }}"
-    - path: "{{ immich_upload_dir }}"
-      owner: "{{ docker_remap_user }}"
-      group: "{{ docker_remap_user }}"
+    mode: '755'
+
+- name: Check upload directory
+  become: true
+  ansible.builtin.stat:
+    path: "{{ immich_upload_dir }}"
+  register: _immich_upload_dir
+
+- name: Require upload directory
+  ansible.builtin.assert:
+    that:
+      - _immich_upload_dir.stat.exists
+      - _immich_upload_dir.stat.isdir
+    fail_msg: "{{ immich_upload_dir }} must exist and be a directory."
+    quiet: true
 
 # Postgres creates and secures its own data directory. Re-owning an initialised
 # database would remove the permissions of the postgres user.
