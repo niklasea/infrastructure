@@ -30,7 +30,7 @@
   ansible.builtin.include_role:
     name: smb_mount
   vars:
-    smb_mounts:
+    smb_mounts:  # noqa: var-naming[no-role-prefix]
       immich_uploads: "{{ immich_uploads_smb }}"
 
 - name: Check upload storage mount
@@ -120,8 +120,10 @@
 
 - name: Set upload storage mount change fact
   when: immich_uploads_smb is defined
+  vars:
+    _immich_previous_upload_mount_id: "{{ _immich_upload_mount_id_previous.content | default('') | b64decode | trim }}"
   ansible.builtin.set_fact:
-    _immich_upload_mount_changed: "{{ _immich_upload_mount_id_previous.content is not defined or (_immich_upload_mount_id_previous.content | b64decode | trim) != (_immich_upload_mount_id.stdout | trim) }}"
+    _immich_upload_mount_changed: "{{ _immich_previous_upload_mount_id != (_immich_upload_mount_id.stdout | trim) }}"
 
 - name: Store upload storage mount ID
   become: true
