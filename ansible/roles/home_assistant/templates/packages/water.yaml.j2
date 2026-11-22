@@ -1,0 +1,52 @@
+---
+automation:
+  - id: water_leak_notification
+    alias: Water leak notification
+    mode: queued
+    trigger:
+      - platform: state
+        entity_id: {{ home_assistant_water_leak_sensors | to_json }}
+        to: "on"
+    action:
+      - service: notify.send_message
+        continue_on_error: true
+        target:
+          entity_id: {{ home_assistant_notify.email }}
+        data:
+          title: "Water leak: {% raw %}{{ trigger.to_state.name }}{% endraw %}"
+          message: >-
+            {% raw %}{{ trigger.to_state.name }}{% endraw %} detected water at
+            {% raw %}{{ now().strftime('%Y-%m-%d %H:%M') }}{% endraw %} SGT.
+      - service: notify.send_message
+        continue_on_error: true
+        target:
+          entity_id: {{ home_assistant_notify.mobile }}
+        data:
+          title: "Water leak"
+          message: "{% raw %}{{ trigger.to_state.name }}{% endraw %} is wet."
+
+  - id: water_leak_resolved
+    alias: Water leak resolved
+    mode: queued
+    trigger:
+      - platform: state
+        entity_id: {{ home_assistant_water_leak_sensors | to_json }}
+        from: "on"
+        to: "off"
+    action:
+      - service: notify.send_message
+        continue_on_error: true
+        target:
+          entity_id: {{ home_assistant_notify.email }}
+        data:
+          title: "Water leak cleared: {% raw %}{{ trigger.to_state.name }}{% endraw %}"
+          message: >-
+            {% raw %}{{ trigger.to_state.name }}{% endraw %} is dry again at
+            {% raw %}{{ now().strftime('%Y-%m-%d %H:%M') }}{% endraw %} SGT.
+      - service: notify.send_message
+        continue_on_error: true
+        target:
+          entity_id: {{ home_assistant_notify.mobile }}
+        data:
+          title: "Water leak cleared"
+          message: "{% raw %}{{ trigger.to_state.name }}{% endraw %} is dry again."
