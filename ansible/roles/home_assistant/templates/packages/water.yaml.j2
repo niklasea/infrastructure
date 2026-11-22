@@ -1,0 +1,24 @@
+---
+automation:
+  - id: water_leak_notification
+    alias: Water leak notification
+    mode: queued
+    trigger:
+      - platform: state
+        entity_id: {{ home_assistant_water_leak_sensors | to_json }}
+        to: "on"
+    action:
+      - service: notify.send_message
+        target:
+          entity_id: {{ home_assistant_notify.email }}
+        data:
+          title: "Water leak: {% raw %}{{ trigger.to_state.name }}{% endraw %}"
+          message: >-
+            {% raw %}{{ trigger.to_state.name }}{% endraw %} detected water at
+            {% raw %}{{ now().strftime('%Y-%m-%d %H:%M') }}{% endraw %}.
+      - service: notify.send_message
+        target:
+          entity_id: {{ home_assistant_notify.mobile }}
+        data:
+          title: "Water leak"
+          message: "{% raw %}{{ trigger.to_state.name }}{% endraw %} is wet."
