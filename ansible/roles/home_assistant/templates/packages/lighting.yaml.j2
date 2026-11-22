@@ -54,8 +54,7 @@ script:
               - delay:
                   milliseconds: 150
               - condition: template
-                value_template: >-
-                  {% raw %}{{ is_state(target_entity, 'on') }}{% endraw %}
+                value_template: "{% raw %}{{ is_state(target_entity, 'on') }}{% endraw %}"
               - service: light.turn_on
                 target:
                   entity_id: "{% raw %}{{ target_entity }}{% endraw %}"
