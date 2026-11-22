@@ -38,7 +38,7 @@
   loop: "{{ home_assistant_config_files }}"
   loop_control:
     label: "{{ item.dest }}"
-  notify: Restart Home Assistant
+  notify: restart_home_assistant
 
 - name: Add config templates
   become: true
@@ -52,7 +52,7 @@
   loop: "{{ home_assistant_config_files }}"
   loop_control:
     label: "{{ item.dest }}"
-  notify: Restart Home Assistant
+  notify: restart_home_assistant
 
 - name: Add Docker compose file
   become: true
@@ -151,7 +151,7 @@
     insertafter: '^homeassistant:'
     line: '  packages: !include_dir_named packages'
     backup: true
-  notify: Restart Home Assistant
+  notify: restart_home_assistant
 
 - name: Add homeassistant block with packages include
   become: true
@@ -171,7 +171,7 @@
     block: |
       homeassistant:
         packages: !include_dir_named packages
-  notify: Restart Home Assistant
+  notify: restart_home_assistant
 
 - name: Apply Home Assistant configuration changes
   ansible.builtin.meta: flush_handlers
