@@ -65,7 +65,7 @@ smb_mounts:
     username: "{{ vault_smb_jellyfin_credentials.username }}"
     password: "{{ vault_smb_jellyfin_credentials.password }}"
   camera:
-    network_path: //harkonnen.{{ local_domain }}/Niklas/Camera
+    network_path: //harkonnen.{{ local_domain }}/NiklasCamera
     local_path: "/mnt/niklas/camera"
     options: '_netdev,ro,dir_mode=0555,file_mode=0444'
     username: "{{ vault_smb_immich_credentials.username }}"
