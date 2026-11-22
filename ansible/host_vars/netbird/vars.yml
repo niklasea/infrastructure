@@ -39,6 +39,6 @@ netbird_backup_smb_mounts:
   backup_netbird:
     network_path: "//harkonnen.{{ local_domain }}/ServerBackup/netbird"
     local_path: "{{ smb_backup_dir }}/netbird"
-    options: '_netdev,x-systemd.requires=netbird.service,x-systemd.after=netbird.service,dir_mode=0555,file_mode=0444'
+    options: '_netdev,x-systemd.requires=netbird.service,dir_mode=0555,file_mode=0444'
     username: "{{ vault_smb_server_backup_credentials.username }}"
     password: "{{ vault_smb_server_backup_credentials.password }}"

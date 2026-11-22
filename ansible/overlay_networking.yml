@@ -87,7 +87,7 @@
           Type=oneshot
           RemainAfterExit=yes
           ExecStartPre=/usr/bin/timeout 60 /bin/sh -c 'until /usr/bin/netbird status --check ready >/dev/null 2>&1; do sleep 2; done'
-          ExecStart=/usr/bin/docker compose -f {{ dns_server_compose_dir }}/docker-compose.yml up -d
+          ExecStart=/usr/bin/docker compose -f {{ dns_server_compose_dir }}/docker-compose.yml up -d --wait
           Restart=on-failure
           RestartSec=5
 
@@ -106,7 +106,7 @@
 # The backup mount requires the management server's overlay connection, which
 # is established by the location peer joins above.
 - name: Configure Netbird management server backup
-  hosts: role_netbird
+  hosts: netbird
   tasks:
     - name: Check for a resolvconf head file
       ansible.builtin.stat:
