@@ -45,6 +45,12 @@
         name: jellyfin
     - ansible.builtin.import_role:
         name: gitea
+    - name: Mount Immich upload storage
+      ansible.builtin.import_role:
+        name: smb_mount
+      vars:
+        smb_mounts:  # noqa: var-naming[no-role-prefix]
+          immich_uploads: "{{ immich_uploads_smb }}"
     - ansible.builtin.import_role:
         name: immich
     - ansible.builtin.import_role:

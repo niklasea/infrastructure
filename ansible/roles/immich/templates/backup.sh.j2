@@ -3,11 +3,6 @@ set -euo pipefail
 
 backup_dir="{{ immich_backup_dir }}"
 
-if ! /usr/bin/mountpoint -q "${backup_dir}"; then
-  echo "${backup_dir} is not a mount point" >&2
-  exit 1
-fi
-
 /usr/bin/docker exec -i immich_postgres \
   pg_dump --clean --if-exists \
   --dbname="{{ immich_db_name }}" \

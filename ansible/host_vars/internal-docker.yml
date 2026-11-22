@@ -75,9 +75,11 @@ jellyfin_media_dir: "{{ smb_mounts.media.local_path }}"
 
 immich_db_password: "{{ vault_immich.db_password }}"
 immich_backup_dir: "{{ smb_mounts.backup_immich.local_path }}"
+immich_upload_dir: /mnt/immich
 immich_uploads_smb:
   network_path: //harkonnen.{{ local_domain }}/Immich
   local_path: "/mnt/immich"
+  docker_dependency: true
   options: "_netdev,rw,nosuid,nodev,uid={{ docker_remap_user }},gid={{ docker_remap_user }},file_mode=0660,dir_mode=0770"
   username: "{{ vault_smb_immich_credentials.username }}"
   password: "{{ vault_smb_immich_credentials.password }}"

@@ -15,124 +15,19 @@
     state: directory
     mode: '755'
 
-- name: Create local upload directory
+- name: Check upload directory
   become: true
-  when: immich_uploads_smb is not defined
-  ansible.builtin.file:
+  ansible.builtin.stat:
     path: "{{ immich_upload_dir }}"
-    state: directory
-    mode: '755'
-    owner: "{{ docker_remap_user }}"
-    group: "{{ docker_remap_user }}"
+  register: _immich_upload_dir
 
-- name: Mount upload storage
-  when: immich_uploads_smb is defined
-  ansible.builtin.include_role:
-    name: smb_mount
-  vars:
-    smb_mounts:  # noqa: var-naming[no-role-prefix]
-      immich_uploads: "{{ immich_uploads_smb }}"
-
-- name: Check upload storage mount
-  become: true
-  when: immich_uploads_smb is defined
-  ansible.builtin.command:
-    cmd: "findmnt --raw -n -o SOURCE,FSTYPE,OPTIONS --mountpoint {{ immich_upload_dir }}"
-  register: _immich_upload_mount
-  changed_when: false
-  failed_when: false
-  check_mode: false
-
-- name: Require upload storage mount
-  when: immich_uploads_smb is defined
+- name: Require upload directory
   ansible.builtin.assert:
     that:
-      - >-
-        _immich_upload_mount.rc == 0 and
-        (_immich_upload_mount.stdout.split() | length) >= 3 and
-        _immich_upload_mount.stdout.split()[0] == immich_uploads_smb.network_path and
-        _immich_upload_mount.stdout.split()[1] == 'cifs' and
-        'rw' in _immich_upload_mount.stdout.split()[2].split(',') and
-        ('uid=' ~ docker_remap_user) in _immich_upload_mount.stdout.split()[2].split(',')
-    fail_msg: "{{ immich_upload_dir }} is not a writable CIFS mount for the Immich container."
+      - _immich_upload_dir.stat.exists
+      - _immich_upload_dir.stat.isdir
+    fail_msg: "{{ immich_upload_dir }} must exist and be a directory."
     quiet: true
-
-- name: Test upload storage write access
-  become: true
-  when:
-    - immich_uploads_smb is defined
-    - not ansible_check_mode
-  ansible.builtin.command:
-    cmd: >-
-      /usr/bin/setpriv --reuid={{ docker_remap_user }} --regid={{ docker_remap_user }}
-      --clear-groups /usr/bin/touch {{ immich_upload_dir }}/.immich-write-test
-  changed_when: false
-
-- name: Remove upload storage write test
-  become: true
-  when:
-    - immich_uploads_smb is defined
-    - not ansible_check_mode
-  ansible.builtin.file:
-    path: "{{ immich_upload_dir }}/.immich-write-test"
-    state: absent
-
-- name: Check external library mounts
-  become: true
-  when: immich_external_library_paths | default([]) | length > 0
-  ansible.builtin.command:
-    cmd: "findmnt --raw -n -o FSTYPE,OPTIONS --mountpoint {{ item }}"
-  loop: "{{ immich_external_library_paths | default([]) }}"
-  register: _immich_external_library_mounts
-  changed_when: false
-  failed_when: false
-  check_mode: false
-
-- name: Require external library mounts
-  when: immich_external_library_paths | default([]) | length > 0
-  ansible.builtin.assert:
-    that:
-      - >-
-        item.rc == 0 and
-        (item.stdout.split() | length) >= 2 and
-        item.stdout.split()[0] == 'cifs' and
-        'ro' in item.stdout.split()[1].split(',')
-    fail_msg: "{{ item.item }} is not a read-only CIFS mount."
-    quiet: true
-  loop: "{{ _immich_external_library_mounts.results }}"
-
-- name: Set required storage mounts
-  ansible.builtin.set_fact:
-    _immich_required_mounts: "{{ [immich_upload_dir] if immich_uploads_smb is defined else [] }}"
-
-- name: Create Docker systemd override directory
-  become: true
-  when: _immich_required_mounts | length > 0
-  ansible.builtin.file:
-    path: /etc/systemd/system/docker.service.d
-    state: directory
-    mode: '0755'
-
-# Docker must not start before the upload mount exists, otherwise it binds an
-# empty local directory into the container.
-- name: Configure Docker mount dependencies
-  become: true
-  when: _immich_required_mounts | length > 0
-  ansible.builtin.copy:
-    dest: /etc/systemd/system/docker.service.d/immich-storage.conf
-    mode: '0644'
-    content: |
-      [Unit]
-      RequiresMountsFor={{ _immich_required_mounts | join(' ') }}
-  notify: Reload systemd
-
-- name: Remove Docker mount dependencies
-  become: true
-  when: _immich_required_mounts | length == 0
-  ansible.builtin.file:
-    path: /etc/systemd/system/docker.service.d/immich-storage.conf
-    state: absent
-  notify: Reload systemd
 
 # Postgres creates and secures its own data directory. Re-owning an initialised
 # database would remove the permissions of the postgres user.
