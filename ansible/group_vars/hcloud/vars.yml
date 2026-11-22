@@ -1,5 +1,7 @@
 ---
 netbird_peer_disable_dns: true
+
+# Overlay clients are unknown to the home gateway; skip client-name lookup.
 dns_server_client_lookup_address: ""
 dns_server_listen_addresses: >-
   {{ [ansible_facts['all_ipv4_addresses']
