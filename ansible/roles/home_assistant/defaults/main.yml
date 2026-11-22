@@ -5,6 +5,7 @@ home_assistant_config_dir: "{{ home_assistant_compose_dir }}/config"
 home_assistant_entity_ids:
   door_sensor: binary_sensor.ikea_parasoll_door_window_sensor
   living_room_light: light.ikea_tradfri_bulb_e27_ww_g95_cl_470lm
+  work_light: light.work_lamp
 
 # Paths relative to files/ or templates/ and the config directory. Blueprint
 # sources keep a .blueprint suffix because their !input tags are not valid YAML,
@@ -16,7 +17,6 @@ home_assistant_config_files:
     dest: packages/lighting.yaml
 
 home_assistant_version: stable
-home_assistant_timezone: Europe/Copenhagen
 
 # Home Assistant is hosted away from the devices it controls. mDNS does not
 # cross the site-to-site VPN, so clients must use the Caddy URL and
@@ -27,4 +27,3 @@ home_assistant_timezone: Europe/Copenhagen
 home_assistant_privileged: false
 home_assistant_dbus_enabled: false
 home_assistant_devices: []
-home_assistant_disable_jemalloc: false
