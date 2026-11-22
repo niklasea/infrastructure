@@ -1,3 +1,4 @@
 ---
 netbird_peer_version: "0.83.2"
 netbird_peer_disable_dns: false
+netbird_peer_dns_resolver_address: ""
