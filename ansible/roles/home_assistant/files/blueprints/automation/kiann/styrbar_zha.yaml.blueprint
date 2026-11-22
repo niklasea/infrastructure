@@ -1,6 +1,7 @@
 # Vendored from https://community.home-assistant.io/t/854854/16 (kiann).
-# Local modifications: targets restricted to lights, and the dimming loop is
-# bounded so a lost stop event cannot run it indefinitely.
+# Local modifications: targets restricted to lights, the dimming loop is
+# bounded so a lost stop event cannot run it indefinitely, and the dimming
+# branch matches move_with_on_off because the remote uses it to dim up.
 blueprint:
   name: IKEA Styrbar (ZHA) - Smooth & Complete
   description: "ZHA Styrbar with absolute dimming, selection flash, and smooth transitions."
@@ -133,7 +134,7 @@ action:
               {% else %} {} {% endif %}
 
       # 3. DIMMING (Cluster 8)
-      - conditions: "{{ command == 'move' and cluster_id == 8 }}"
+      - conditions: "{{ command in ['move', 'move_with_on_off'] and cluster_id == 8 }}"
         sequence:
           - repeat:
               count: 200
