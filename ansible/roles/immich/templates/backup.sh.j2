@@ -2,16 +2,10 @@
 set -euo pipefail
 
 backup_dir="{{ immich_backup_dir }}"
-upload_dir="{{ immich_upload_dir }}"
 
-# Dump the database before the filesystem so a restore can only leave
-# unreferenced files, never files missing from the database.
 /usr/bin/docker exec -i immich_postgres \
   pg_dump --clean --if-exists \
   --dbname="{{ immich_db_name }}" \
   --username="{{ immich_db_username }}" \
   | /usr/bin/gzip > "${backup_dir}/immich-db.sql.gz.tmp"
 /usr/bin/mv "${backup_dir}/immich-db.sql.gz.tmp" "${backup_dir}/immich-db.sql.gz"
-
-/usr/bin/tar -zcf "${backup_dir}/immich.tar.gz.tmp" -C / "${upload_dir#/}"
-/usr/bin/mv "${backup_dir}/immich.tar.gz.tmp" "${backup_dir}/immich.tar.gz"
