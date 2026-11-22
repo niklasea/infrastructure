@@ -2,10 +2,12 @@
 # Local modifications: targets restricted to lights, the dimming loop is
 # bounded so a lost stop event cannot run it indefinitely, the dimming branch
 # matches move_with_on_off, and direction comes from the command rather than
-# the move mode argument.
+# the move mode argument. The dimming ramp uses the starting brightness and
+# repeat index so delayed state reports do not make it stutter. Selection
+# feedback is a single target dip rather than the bulb's built-in double flash.
 blueprint:
   name: IKEA Styrbar (ZHA) - Smooth & Complete
-  description: "ZHA Styrbar with absolute dimming, selection flash, and smooth transitions."
+  description: "ZHA Styrbar with absolute dimming, selection dip, and smooth transitions."
   domain: automation
   input:
     switch_remote:
@@ -25,8 +27,8 @@ blueprint:
       selector:
         entity:
           domain: input_number
-    enable_flash:
-      name: Enable Selection Flash
+    enable_selection_dip:
+      name: Enable Selection Dip
       default: true
       selector:
         boolean: {}
@@ -42,18 +44,18 @@ blueprint:
         number: {min: 0, max: 100, mode: slider}
     repeat_delay:
       name: Dimming Speed (ms)
-      default: 150
+      default: 200
       selector:
         number: {min: 50, max: 1000, step: 10, mode: slider}
     brightness_step_pct:
       name: Dimming Step (%)
-      default: 10
+      default: 5
       selector:
         number: {min: 1, max: 100, mode: slider}
     transition_time:
       name: Transition Smoothness (s)
       description: "How long the bulb takes to reach the next brightness level. Try 0.2 to 0.4 for smoothness."
-      default: 0.3
+      default: 0.2
       selector:
         number: {min: 0, max: 2, step: 0.1, mode: slider}
     arrow_left_hold:
@@ -85,7 +87,7 @@ action:
   - variables:
       target_entities: !input targets
       helper: !input selected_target
-      flash_enabled: !input enable_flash
+      dip_enabled: !input enable_selection_dip
       force_br: !input force_brightness
       br_val: !input brightness_pct
       step_val: !input brightness_step_pct
@@ -116,10 +118,13 @@ action:
               entity_id: "{{ helper }}"
               value: "{{ new_idx }}"
           - condition: template
-            value_template: "{{ flash_enabled }}"
-          - service: light.turn_on
-            target: { entity_id: "{{ target_entities[new_idx] }}" }
-            data: { flash: short }
+            value_template: "{{ dip_enabled | bool }}"
+          - service: script.turn_on
+            target:
+              entity_id: script.styrbar_target_dip
+            data:
+              variables:
+                target_entity: "{{ target_entities[new_idx] }}"
             continue_on_error: true
 
       # 2. POWER (Cluster 6)
@@ -137,26 +142,37 @@ action:
       # 3. DIMMING (Cluster 8)
       - conditions: "{{ command in ['move', 'move_with_on_off'] and cluster_id == 8 }}"
         sequence:
-          - repeat:
-              count: 200
-              sequence:
-                - variables:
-                    is_up: "{{ command == 'move_with_on_off' }}"
-                    current_br: "{{ state_attr(active_entity, 'brightness') | int(0) }}"
-                    new_br: >
-                      {% if is_up %} {{ [current_br + (step_val * 2.55), 255] | min | int }}
-                      {% else %} {{ [current_br - (step_val * 2.55), 15] | max | int }}
-                      {% endif %}
-
-                - condition: template
-                  value_template: "{{ is_up or current_br > 15 }}"
-
-                - service: light.turn_on
-                  target: { entity_id: "{{ active_entity }}" }
-                  data:
-                    brightness: "{{ new_br }}"
-                    transition: "{{ trans_val }}"
-                - delay: { milliseconds: "{{ delay_val }}" }
+          - variables:
+              is_up: "{{ command == 'move_with_on_off' }}"
+              start_br: "{{ state_attr(active_entity, 'brightness') | int(0) }}"
+              step_raw: "{{ step_val | float * 2.55 }}"
+          - variables:
+              steps: >-
+                {% if is_up | bool %}
+                  {{ [((255 - (start_br | int)) / (step_raw | float)) | round(0, 'ceil') | int, 0] | max }}
+                {% else %}
+                  {{ [(((start_br | int) - 15) / (step_raw | float)) | round(0, 'ceil') | int, 0] | max }}
+                {% endif %}
+          - if:
+              - condition: template
+                value_template: "{{ steps | int > 0 }}"
+            then:
+              - repeat:
+                  count: "{{ steps | int }}"
+                  sequence:
+                    - variables:
+                        new_br: >-
+                          {% if is_up | bool %}
+                            {{ [((start_br | int) + (repeat.index * (step_raw | float))), 255] | min | int }}
+                          {% else %}
+                            {{ [((start_br | int) - (repeat.index * (step_raw | float))), 15] | max | int }}
+                          {% endif %}
+                    - service: light.turn_on
+                      target: { entity_id: "{{ active_entity }}" }
+                      data:
+                        brightness: "{{ new_br }}"
+                        transition: "{{ trans_val }}"
+                    - delay: { milliseconds: "{{ delay_val }}" }
 
       # 4. STOP (Cluster 8)
       - conditions: "{{ command == 'stop' and cluster_id == 8 }}"

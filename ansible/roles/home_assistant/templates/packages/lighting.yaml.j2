@@ -27,6 +27,57 @@ script:
               brightness_pct: 75
               transition: 5
 
+  styrbar_target_dip:
+    alias: STYRBAR target dip
+    mode: queued
+    max: 5
+    fields:
+      target_entity:
+        description: Light to dip
+    sequence:
+      - variables:
+          was_on: "{% raw %}{{ is_state(target_entity, 'on') }}{% endraw %}"
+          old_brightness: "{% raw %}{{ state_attr(target_entity, 'brightness') | int(0) }}{% endraw %}"
+      - variables:
+          restore_brightness: "{% raw %}{{ (old_brightness | int) if (old_brightness | int) > 0 else 255 }}{% endraw %}"
+      - choose:
+          - conditions: "{% raw %}{{ was_on | bool }}{% endraw %}"
+            sequence:
+              - variables:
+                  dip_brightness: "{% raw %}{{ [(old_brightness | int) - 26, 1] | max }}{% endraw %}"
+              - service: light.turn_on
+                target:
+                  entity_id: "{% raw %}{{ target_entity }}{% endraw %}"
+                data:
+                  brightness: "{% raw %}{{ dip_brightness }}{% endraw %}"
+                  transition: 0.1
+                continue_on_error: true
+              - delay:
+                  milliseconds: 150
+              - service: light.turn_on
+                target:
+                  entity_id: "{% raw %}{{ target_entity }}{% endraw %}"
+                data:
+                  brightness: "{% raw %}{{ restore_brightness }}{% endraw %}"
+                  transition: 0.2
+                continue_on_error: true
+        default:
+          - service: light.turn_on
+            target:
+              entity_id: "{% raw %}{{ target_entity }}{% endraw %}"
+            data:
+              brightness: 25
+              transition: 0.1
+            continue_on_error: true
+          - delay:
+              milliseconds: 150
+          - service: light.turn_off
+            target:
+              entity_id: "{% raw %}{{ target_entity }}{% endraw %}"
+            data:
+              transition: 0.2
+            continue_on_error: true
+
 automation:
   - id: living_room_lights_on_door_open
     alias: Living room lights on door open (evening)
@@ -40,8 +91,46 @@ automation:
       - condition: time
         after: "18:00:00"
         before: "03:00:00"
+      - condition: template
+        value_template: >-
+          {% raw %}{{ states.light
+             | rejectattr('attributes.entity_id', 'defined')
+             | selectattr('state', 'eq', 'off')
+             | map(attribute='last_changed')
+             | map('as_timestamp')
+             | select('gt', as_timestamp(now()) - 300)
+             | list | count == 0 }}{% endraw %}
+
     action:
       - service: script.evening_lights
+
+  - id: door_open_while_away
+    alias: Door open while away
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: {{ home_assistant_entity_ids.door_sensor }}
+        to: "on"
+        for: "00:02:00"
+      - platform: state
+        entity_id: {{ home_assistant_entity_ids.presence }}
+        to: "0"
+        for: "00:02:00"
+    condition:
+      - condition: numeric_state
+        entity_id: {{ home_assistant_entity_ids.presence }}
+        below: 1
+      - condition: state
+        entity_id: {{ home_assistant_entity_ids.door_sensor }}
+        state: "on"
+    action:
+      - service: notify.send_message
+        continue_on_error: true
+        target:
+          entity_id: {{ home_assistant_notify.mobile }}
+        data:
+          title: "Door left open"
+          message: "The front door has been open for 2 minutes while nobody is home."
 
   - id: living_room_lights_on_already_home
     alias: Living room lights on when already home (evening)
@@ -86,12 +175,12 @@ automation:
         switch_remote: {{ home_assistant_styrbar.device_id }}
         targets: {{ home_assistant_styrbar.targets | to_json }}
         selected_target: input_number.styrbar_target
-        enable_flash: true
+        enable_selection_dip: true
         force_brightness: false
         brightness_pct: 50
-        repeat_delay: 150
-        brightness_step_pct: 10
-        transition_time: 0.3
+        repeat_delay: 200
+        brightness_step_pct: 5
+        transition_time: 0.2
 
 input_number:
   styrbar_target:
