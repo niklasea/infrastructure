@@ -96,7 +96,7 @@ automation:
         value_template: >-
           {% raw %}{{ states.light
              | rejectattr('attributes.entity_id', 'defined')
-             | selectattr('state', 'eq', 'off')
+             | selectattr('state', 'in', ['off', 'unavailable'])
              | map(attribute='last_changed')
              | map('as_timestamp')
              | select('gt', as_timestamp(now()) - 300)
