@@ -24,6 +24,16 @@ home_assistant_styrbar:
     - light.ikea_tradfri_bulb_e27_ww_g95_cl_470lm
     - light.work_lamp
 
+home_assistant_battery_devices:
+  - name: Living room door sensor
+    entity: binary_sensor.ikea_parasoll_door_window_sensor
+  - name: Kitchen leak sensor
+    entity: binary_sensor.kitchen_ikea_badring_water_leakage_sensor
+  - name: Leak sensor
+    entity: binary_sensor.ikea_badring_water_leakage_sensor
+  - name: STYRBAR remote
+    entity: sensor.ikea_remote_control_n2_battery
+
 # Paths relative to files/ or templates/ and the config directory. Blueprint
 # sources keep a .blueprint suffix because their !input tags are not valid YAML,
 # and .j2 sources are rendered as templates.
@@ -32,6 +42,8 @@ home_assistant_config_files:
     dest: blueprints/automation/kiann/styrbar_zha.yaml
   - src: packages/lighting.yaml.j2
     dest: packages/lighting.yaml
+  - src: packages/battery.yaml.j2
+    dest: packages/battery.yaml
   - src: packages/water.yaml.j2
     dest: packages/water.yaml
 
