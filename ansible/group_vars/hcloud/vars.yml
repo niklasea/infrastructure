@@ -1,6 +1,5 @@
 ---
 netbird_peer_disable_dns: true
-dns_server_conditional_forwarding: []
 dns_server_client_lookup_address: ""
 dns_server_listen_addresses: >-
   {{ [ansible_facts['all_ipv4_addresses']
