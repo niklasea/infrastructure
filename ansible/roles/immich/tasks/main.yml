@@ -37,7 +37,7 @@
   become: true
   when: immich_uploads_smb is defined
   ansible.builtin.command:
-    cmd: "findmnt --raw -n -o SOURCE,FSTYPE,OPTIONS --target {{ immich_upload_dir }}"
+    cmd: "findmnt --raw -n -o SOURCE,FSTYPE,OPTIONS --mountpoint {{ immich_upload_dir }}"
   register: _immich_upload_mount
   changed_when: false
   failed_when: false
@@ -81,7 +81,7 @@
   become: true
   when: immich_external_library_paths | default([]) | length > 0
   ansible.builtin.command:
-    cmd: "findmnt --raw -n -o FSTYPE,OPTIONS --target {{ item }}"
+    cmd: "findmnt --raw -n -o FSTYPE,OPTIONS --mountpoint {{ item }}"
   loop: "{{ immich_external_library_paths | default([]) }}"
   register: _immich_external_library_mounts
   changed_when: false
@@ -101,41 +101,9 @@
     quiet: true
   loop: "{{ _immich_external_library_mounts.results }}"
 
-- name: Read upload storage mount ID
-  become: true
-  when: immich_uploads_smb is defined
-  ansible.builtin.command:
-    cmd: "findmnt --raw -n -o ID --target {{ immich_upload_dir }}"
-  register: _immich_upload_mount_id
-  changed_when: false
-  check_mode: false
-
-- name: Read previous upload storage mount ID
-  become: true
-  when: immich_uploads_smb is defined
-  ansible.builtin.slurp:
-    src: "{{ immich_compose_dir }}/.upload-mount-id"
-  register: _immich_upload_mount_id_previous
-  failed_when: false
-
-- name: Set upload storage mount change fact
-  when: immich_uploads_smb is defined
-  vars:
-    _immich_previous_upload_mount_id: "{{ _immich_upload_mount_id_previous.content | default('') | b64decode | trim }}"
-  ansible.builtin.set_fact:
-    _immich_upload_mount_changed: "{{ _immich_previous_upload_mount_id != (_immich_upload_mount_id.stdout | trim) }}"
-
-- name: Store upload storage mount ID
-  become: true
-  when: immich_uploads_smb is defined
-  ansible.builtin.copy:
-    content: "{{ _immich_upload_mount_id.stdout | trim }}\n"
-    dest: "{{ immich_compose_dir }}/.upload-mount-id"
-    mode: '0644'
-
 - name: Set required storage mounts
   ansible.builtin.set_fact:
-    _immich_required_mounts: "{{ ([immich_upload_dir] if immich_uploads_smb is defined else []) + (immich_external_library_paths | default([])) }}"
+    _immich_required_mounts: "{{ [immich_upload_dir] if immich_uploads_smb is defined else [] }}"
 
 - name: Create Docker systemd override directory
   become: true
@@ -145,8 +113,8 @@
     state: directory
     mode: '0755'
 
-# Docker must not start before the Immich storage mounts exist, otherwise it
-# binds empty local directories into the container.
+# Docker must not start before the upload mount exists, otherwise it binds an
+# empty local directory into the container.
 - name: Configure Docker mount dependencies
   become: true
   when: _immich_required_mounts | length > 0
@@ -216,5 +184,5 @@
     project_src: "{{ immich_compose_dir }}"
     state: "present"
     pull: "always"
-    recreate: "{{ 'always' if _immich_configuration_files is changed or (_immich_upload_mount_changed | default(false) | bool) else 'auto' }}"
+    recreate: "{{ 'always' if _immich_configuration_files is changed else 'auto' }}"
     remove_orphans: true

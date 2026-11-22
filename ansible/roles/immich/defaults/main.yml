@@ -1,6 +1,6 @@
 ---
 immich_compose_dir: "{{ docker_compose_dir }}/immich"
-immich_upload_dir: "{{ immich_compose_dir }}/library"
+immich_upload_dir: "{{ immich_uploads_smb.local_path if immich_uploads_smb is defined else immich_compose_dir ~ '/library' }}"
 immich_db_data_dir: "{{ immich_compose_dir }}/postgres"
 
 immich_version: v3
