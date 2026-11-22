@@ -53,3 +53,26 @@ automation:
               entity_id: {{ home_assistant_entity_ids.bedside_light }}
             data:
               transition: 5
+
+  - id: styrbar_living_room
+    alias: STYRBAR living room
+    use_blueprint:
+      path: kiann/styrbar_zha.yaml
+      input:
+        switch_remote: {{ home_assistant_styrbar.device_id }}
+        targets: {{ home_assistant_styrbar.targets | to_json }}
+        selected_target: input_number.styrbar_target
+        enable_flash: true
+        force_brightness: false
+        brightness_pct: 50
+        repeat_delay: 150
+        brightness_step_pct: 10
+        transition_time: 0.3
+
+input_number:
+  styrbar_target:
+    name: STYRBAR target
+    min: 0
+    max: {{ (home_assistant_styrbar.targets | length) - 1 }}
+    step: 1
+    mode: slider

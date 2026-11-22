@@ -8,6 +8,13 @@ home_assistant_entity_ids:
   work_light: light.work_lamp
   bedside_light: light.bedside_table
 
+# Device registry ID; changes if the remote is removed and paired again.
+home_assistant_styrbar:
+  device_id: 086baa3ced1dc43db09e24947c67dda2
+  targets:
+    - light.ikea_tradfri_bulb_e27_ww_g95_cl_470lm
+    - light.work_lamp
+
 # Paths relative to files/ or templates/ and the config directory. Blueprint
 # sources keep a .blueprint suffix because their !input tags are not valid YAML,
 # and .j2 sources are rendered as templates.
