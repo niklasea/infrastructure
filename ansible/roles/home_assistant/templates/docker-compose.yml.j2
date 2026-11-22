@@ -22,8 +22,3 @@ services:
       - {{ device }}
 {% endfor %}
 {% endif %}
-    environment:
-      TZ: {{ home_assistant_timezone }}
-{% if home_assistant_disable_jemalloc %}
-      DISABLE_JEMALLOC: "true"
-{% endif %}

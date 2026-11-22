@@ -17,7 +17,6 @@ home_assistant_config_files:
     dest: packages/lighting.yaml
 
 home_assistant_version: stable
-home_assistant_timezone: Europe/Copenhagen
 
 # Home Assistant is hosted away from the devices it controls. mDNS does not
 # cross the site-to-site VPN, so clients must use the Caddy URL and
@@ -28,4 +27,3 @@ home_assistant_timezone: Europe/Copenhagen
 home_assistant_privileged: false
 home_assistant_dbus_enabled: false
 home_assistant_devices: []
-home_assistant_disable_jemalloc: false
