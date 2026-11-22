@@ -12,6 +12,7 @@ on:
     paths:
       - .github/workflows/build_iperf3.yml
       - ansible/dockerfiles/iperf3/**
+  workflow_dispatch:
 
 jobs:
   build:
