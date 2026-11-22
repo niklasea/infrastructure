@@ -15,7 +15,18 @@
     state: directory
     mode: '755'
 
+- name: Create local upload directory
+  become: true
+  when: immich_uploads_smb is not defined
+  ansible.builtin.file:
+    path: "{{ immich_upload_dir }}"
+    state: directory
+    mode: '755'
+    owner: "{{ docker_remap_user }}"
+    group: "{{ docker_remap_user }}"
+
 - name: Mount upload storage
+  when: immich_uploads_smb is defined
   ansible.builtin.include_role:
     name: smb_mount
   vars:
@@ -24,41 +35,134 @@
 
 - name: Check upload storage mount
   become: true
+  when: immich_uploads_smb is defined
   ansible.builtin.command:
-    cmd: "mountpoint -q {{ immich_upload_dir }}"
+    cmd: "findmnt --raw -n -o SOURCE,FSTYPE,OPTIONS --target {{ immich_upload_dir }}"
   register: _immich_upload_mount
   changed_when: false
   failed_when: false
+  check_mode: false
 
 - name: Require upload storage mount
+  when: immich_uploads_smb is defined
   ansible.builtin.assert:
     that:
-      - _immich_upload_mount.rc == 0
-    fail_msg: "{{ immich_upload_dir }} is not a mount point; refusing to start Immich."
+      - >-
+        _immich_upload_mount.rc == 0 and
+        (_immich_upload_mount.stdout.split() | length) >= 3 and
+        _immich_upload_mount.stdout.split()[0] == immich_uploads_smb.network_path and
+        _immich_upload_mount.stdout.split()[1] == 'cifs' and
+        'rw' in _immich_upload_mount.stdout.split()[2].split(',') and
+        ('uid=' ~ docker_remap_user) in _immich_upload_mount.stdout.split()[2].split(',')
+    fail_msg: "{{ immich_upload_dir }} is not a writable CIFS mount for the Immich container."
     quiet: true
+
+- name: Test upload storage write access
+  become: true
+  when:
+    - immich_uploads_smb is defined
+    - not ansible_check_mode
+  ansible.builtin.command:
+    cmd: >-
+      /usr/bin/setpriv --reuid={{ docker_remap_user }} --regid={{ docker_remap_user }}
+      --clear-groups /usr/bin/touch {{ immich_upload_dir }}/.immich-write-test
+  changed_when: false
+
+- name: Remove upload storage write test
+  become: true
+  when:
+    - immich_uploads_smb is defined
+    - not ansible_check_mode
+  ansible.builtin.file:
+    path: "{{ immich_upload_dir }}/.immich-write-test"
+    state: absent
+
+- name: Check external library mounts
+  become: true
+  when: immich_external_library_paths | default([]) | length > 0
+  ansible.builtin.command:
+    cmd: "findmnt --raw -n -o FSTYPE,OPTIONS --target {{ item }}"
+  loop: "{{ immich_external_library_paths | default([]) }}"
+  register: _immich_external_library_mounts
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Require external library mounts
+  when: immich_external_library_paths | default([]) | length > 0
+  ansible.builtin.assert:
+    that:
+      - >-
+        item.rc == 0 and
+        (item.stdout.split() | length) >= 2 and
+        item.stdout.split()[0] == 'cifs' and
+        'ro' in item.stdout.split()[1].split(',')
+    fail_msg: "{{ item.item }} is not a read-only CIFS mount."
+    quiet: true
+  loop: "{{ _immich_external_library_mounts.results }}"
+
+- name: Read upload storage mount ID
+  become: true
+  when: immich_uploads_smb is defined
+  ansible.builtin.command:
+    cmd: "findmnt --raw -n -o ID --target {{ immich_upload_dir }}"
+  register: _immich_upload_mount_id
+  changed_when: false
+  check_mode: false
+
+- name: Read previous upload storage mount ID
+  become: true
+  when: immich_uploads_smb is defined
+  ansible.builtin.slurp:
+    src: "{{ immich_compose_dir }}/.upload-mount-id"
+  register: _immich_upload_mount_id_previous
+  failed_when: false
+
+- name: Set upload storage mount change fact
+  when: immich_uploads_smb is defined
+  ansible.builtin.set_fact:
+    _immich_upload_mount_changed: "{{ _immich_upload_mount_id_previous.content is not defined or (_immich_upload_mount_id_previous.content | b64decode | trim) != (_immich_upload_mount_id.stdout | trim) }}"
+
+- name: Store upload storage mount ID
+  become: true
+  when: immich_uploads_smb is defined
+  ansible.builtin.copy:
+    content: "{{ _immich_upload_mount_id.stdout | trim }}\n"
+    dest: "{{ immich_compose_dir }}/.upload-mount-id"
+    mode: '0644'
+
+- name: Set required storage mounts
+  ansible.builtin.set_fact:
+    _immich_required_mounts: "{{ ([immich_upload_dir] if immich_uploads_smb is defined else []) + (immich_external_library_paths | default([])) }}"
 
 - name: Create Docker systemd override directory
   become: true
+  when: _immich_required_mounts | length > 0
   ansible.builtin.file:
     path: /etc/systemd/system/docker.service.d
     state: directory
     mode: '0755'
 
-- name: Configure Docker mount dependency
+# Docker must not start before the Immich storage mounts exist, otherwise it
+# binds empty local directories into the container.
+- name: Configure Docker mount dependencies
   become: true
+  when: _immich_required_mounts | length > 0
   ansible.builtin.copy:
     dest: /etc/systemd/system/docker.service.d/immich-storage.conf
     mode: '0644'
     content: |
       [Unit]
-      RequiresMountsFor={{ immich_upload_dir }}
-  register: _immich_docker_mount_dependency
+      RequiresMountsFor={{ _immich_required_mounts | join(' ') }}
+  notify: Reload systemd
 
-- name: Reload systemd
+- name: Remove Docker mount dependencies
   become: true
-  ansible.builtin.systemd_service:
-    daemon_reload: true
-  when: _immich_docker_mount_dependency is changed
+  when: _immich_required_mounts | length == 0
+  ansible.builtin.file:
+    path: /etc/systemd/system/docker.service.d/immich-storage.conf
+    state: absent
+  notify: Reload systemd
 
 # Postgres creates and secures its own data directory. Re-owning an initialised
 # database would remove the permissions of the postgres user.
@@ -110,5 +214,5 @@
     project_src: "{{ immich_compose_dir }}"
     state: "present"
     pull: "always"
-    recreate: "{{ 'always' if _immich_configuration_files is changed else 'auto' }}"
+    recreate: "{{ 'always' if _immich_configuration_files is changed or (_immich_upload_mount_changed | default(false) | bool) else 'auto' }}"
     remove_orphans: true
