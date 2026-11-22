@@ -6,6 +6,7 @@ home_assistant_entity_ids:
   door_sensor: binary_sensor.ikea_parasoll_door_window_sensor
   living_room_light: light.ikea_tradfri_bulb_e27_ww_g95_cl_470lm
   work_light: light.work_lamp
+  bedside_light: light.bedside_table
 
 # Paths relative to files/ or templates/ and the config directory. Blueprint
 # sources keep a .blueprint suffix because their !input tags are not valid YAML,
