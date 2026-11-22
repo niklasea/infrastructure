@@ -1,2 +1,4 @@
 ---
 netbird_peer_disable_dns: true
+dns_server_listen_addresses:
+  - "{{ netbird_peer_ipv4 }}"
