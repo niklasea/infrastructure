@@ -1,18 +1,9 @@
 ---
-automation:
-  - id: living_room_lights_on_door_open
-    alias: Living room lights on door open (evening)
+script:
+  evening_lights:
+    alias: Evening lights
     mode: single
-    trigger:
-      - platform: state
-        entity_id: {{ home_assistant_entity_ids.door_sensor }}
-        from: "off"
-        to: "on"
-    condition:
-      - condition: time
-        after: "18:00:00"
-        before: "03:00:00"
-    action:
+    sequence:
       - if:
           - condition: state
             entity_id: {{ home_assistant_entity_ids.living_room_light }}
@@ -36,12 +27,45 @@ automation:
               brightness_pct: 75
               transition: 5
 
+automation:
+  - id: living_room_lights_on_door_open
+    alias: Living room lights on door open (evening)
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: {{ home_assistant_entity_ids.door_sensor }}
+        from: "off"
+        to: "on"
+    condition:
+      - condition: time
+        after: "18:00:00"
+        before: "03:00:00"
+    action:
+      - service: script.evening_lights
+
+  - id: living_room_lights_on_already_home
+    alias: Living room lights on when already home (evening)
+    mode: single
+    trigger:
+      - platform: time
+        at: "18:00:00"
+    condition:
+      - condition: numeric_state
+        entity_id: {{ home_assistant_entity_ids.presence }}
+        above: 0
+    action:
+      - service: script.evening_lights
+
   - id: bedside_table_on_nightly
     alias: Bedside table on at night
     mode: single
     trigger:
       - platform: time
         at: "22:00:00"
+    condition:
+      - condition: numeric_state
+        entity_id: {{ home_assistant_entity_ids.presence }}
+        above: 0
     action:
       - if:
           - condition: state
