@@ -18,6 +18,21 @@
     - { name: net.ipv4.ip_forward, value: '1' }
     - { name: net.ipv6.conf.all.forwarding, value: '1' }
 
+- name: Ensure systemd-resolved is installed
+  become: true
+  when: netbird_peer_ensure_systemd_resolved
+  ansible.builtin.package:
+    name: systemd-resolved
+    state: present
+
+- name: Ensure systemd-resolved is running
+  become: true
+  when: netbird_peer_ensure_systemd_resolved
+  ansible.builtin.systemd:
+    name: systemd-resolved
+    enabled: true
+    state: started
+
 - name: Start Netbird
   become: true
   ansible.builtin.command:

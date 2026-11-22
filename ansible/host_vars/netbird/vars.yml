@@ -1,7 +1,4 @@
 ---
-netbird_peer_disable_dns: false
-netbird_peer_dns_resolver_address: "127.0.0.1:53"
-
 caddy_blocks:
   - |
     {{ netbird.domain }} {

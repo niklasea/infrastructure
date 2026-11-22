@@ -112,30 +112,6 @@
 - name: Configure Netbird management server backup
   hosts: netbird
   tasks:
-    - name: Check for a resolvconf head file
-      ansible.builtin.stat:
-        path: /etc/resolvconf/resolv.conf.d/head
-      register: _netbird_resolvconf_head
-
-    - name: Prefer the NetBird resolver
-      become: true
-      when: _netbird_resolvconf_head.stat.exists
-      ansible.builtin.copy:
-        dest: /etc/resolvconf/resolv.conf.d/head
-        content: |
-          nameserver 127.0.0.1
-          nameserver 1.1.1.1
-        mode: '644'
-      register: _netbird_resolvconf_update
-
-    - name: Apply the resolver configuration
-      become: true
-      when:
-        - _netbird_resolvconf_head.stat.exists
-        - _netbird_resolvconf_update is changed
-      ansible.builtin.command:
-        cmd: /usr/sbin/resolvconf -u
-
     - name: Wait for the backup hostname to resolve
       ansible.builtin.command:
         cmd: getent hosts harkonnen.{{ local_domain }}
