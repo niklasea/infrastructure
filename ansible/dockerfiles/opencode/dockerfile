@@ -1,0 +1,14 @@
+ARG OPENCODE_VERSION=2.2.5
+FROM ghcr.io/anomalyco/opencode:${OPENCODE_VERSION}
+
+ARG APK_PACKAGES="git ca-certificates"
+
+RUN apk add --no-cache ${APK_PACKAGES} \
+  && git config --system user.name "OpenCode" \
+  && git config --system user.email "opencode@localhost" \
+  && git config --system credential.https://github.com.helper \
+    '!f() { test "$1" = get && printf "%s\n" "username=x-access-token" "password=${GH_TOKEN}"; }; f'
+
+USER root
+
+EXPOSE 49374

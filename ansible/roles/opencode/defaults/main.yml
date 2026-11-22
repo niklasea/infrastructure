@@ -1,0 +1,12 @@
+---
+opencode_compose_dir: "{{ docker_compose_dir }}/opencode"
+opencode_home_dir: "{{ opencode_compose_dir }}/home"
+opencode_workspace_dir: "{{ opencode_compose_dir }}/workspace"
+opencode_container_home: /home/opencode
+opencode_container_workspace: /workspace
+opencode_version: latest
+opencode_image: "ghcr.io/niklasea/opencode:{{ opencode_version }}"
+opencode_port: 49374
+opencode_netbird_interface: wt0
+opencode_memory_limit: 4G
+opencode_github_token: "{{ (vault_opencode | default({})).github_token | default('') }}"

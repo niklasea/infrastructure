@@ -45,6 +45,8 @@
         name: jellyfin
     - ansible.builtin.import_role:
         name: gitea
+    - ansible.builtin.import_role:
+        name: opencode
     - name: Mount Immich upload storage
       ansible.builtin.import_role:
         name: smb_mount
