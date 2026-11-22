@@ -5,6 +5,9 @@
 # the move mode argument. The dimming ramp uses the starting brightness and
 # repeat index so delayed state reports do not make it stutter. Selection
 # feedback is a single target dip rather than the bulb's built-in double flash.
+# The enable_flash input key is retained for existing automations; it now
+# controls the selection dip. The dip calls script.styrbar_target_dip, which is
+# deployed alongside this blueprint by the home_assistant role.
 blueprint:
   name: IKEA Styrbar (ZHA) - Smooth & Complete
   description: "ZHA Styrbar with absolute dimming, selection dip, and smooth transitions."
@@ -27,7 +30,7 @@ blueprint:
       selector:
         entity:
           domain: input_number
-    enable_selection_dip:
+    enable_flash:
       name: Enable Selection Dip
       default: true
       selector:
@@ -87,7 +90,7 @@ action:
   - variables:
       target_entities: !input targets
       helper: !input selected_target
-      dip_enabled: !input enable_selection_dip
+      dip_enabled: !input enable_flash
       force_br: !input force_brightness
       br_val: !input brightness_pct
       step_val: !input brightness_step_pct
@@ -145,7 +148,7 @@ action:
           - variables:
               is_up: "{{ command == 'move_with_on_off' }}"
               start_br: "{{ state_attr(active_entity, 'brightness') | int(0) }}"
-              step_raw: "{{ step_val | float * 2.55 }}"
+              step_raw: "{{ [step_val | float * 2.55, 1] | max }}"
           - variables:
               steps: >-
                 {% if is_up | bool %}

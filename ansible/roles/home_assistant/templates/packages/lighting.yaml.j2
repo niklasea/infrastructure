@@ -39,9 +39,9 @@ script:
           was_on: "{% raw %}{{ is_state(target_entity, 'on') }}{% endraw %}"
           old_brightness: "{% raw %}{{ state_attr(target_entity, 'brightness') | int(0) }}{% endraw %}"
       - variables:
-          restore_brightness: "{% raw %}{{ (old_brightness | int) if (old_brightness | int) > 0 else 255 }}{% endraw %}"
+          restore_brightness: "{% raw %}{{ old_brightness | int }}{% endraw %}"
       - choose:
-          - conditions: "{% raw %}{{ was_on | bool }}{% endraw %}"
+          - conditions: "{% raw %}{{ was_on | bool and (old_brightness | int) > 0 }}{% endraw %}"
             sequence:
               - variables:
                   dip_brightness: "{% raw %}{{ [(old_brightness | int) - 26, 1] | max }}{% endraw %}"
@@ -51,32 +51,33 @@ script:
                 data:
                   brightness: "{% raw %}{{ dip_brightness }}{% endraw %}"
                   transition: 0.1
-                continue_on_error: true
               - delay:
                   milliseconds: 150
+              - condition: state
+                entity_id: "{% raw %}{{ target_entity }}{% endraw %}"
+                state: "on"
               - service: light.turn_on
                 target:
                   entity_id: "{% raw %}{{ target_entity }}{% endraw %}"
                 data:
                   brightness: "{% raw %}{{ restore_brightness }}{% endraw %}"
                   transition: 0.2
-                continue_on_error: true
-        default:
-          - service: light.turn_on
-            target:
-              entity_id: "{% raw %}{{ target_entity }}{% endraw %}"
-            data:
-              brightness: 25
-              transition: 0.1
-            continue_on_error: true
-          - delay:
-              milliseconds: 150
-          - service: light.turn_off
-            target:
-              entity_id: "{% raw %}{{ target_entity }}{% endraw %}"
-            data:
-              transition: 0.2
-            continue_on_error: true
+
+          - conditions: "{% raw %}{{ not (was_on | bool) }}{% endraw %}"
+            sequence:
+              - service: light.turn_on
+                target:
+                  entity_id: "{% raw %}{{ target_entity }}{% endraw %}"
+                data:
+                  brightness: 25
+                  transition: 0.1
+              - delay:
+                  milliseconds: 150
+              - service: light.turn_off
+                target:
+                  entity_id: "{% raw %}{{ target_entity }}{% endraw %}"
+                data:
+                  transition: 0.2
 
 automation:
   - id: living_room_lights_on_door_open
@@ -116,6 +117,8 @@ automation:
         entity_id: {{ home_assistant_entity_ids.presence }}
         to: "0"
         for: "00:02:00"
+      - platform: homeassistant
+        event: start
     condition:
       - condition: numeric_state
         entity_id: {{ home_assistant_entity_ids.presence }}
@@ -130,7 +133,7 @@ automation:
           entity_id: {{ home_assistant_notify.mobile }}
         data:
           title: "Door left open"
-          message: "The front door has been open for 2 minutes while nobody is home."
+          message: "The front door is open while nobody is home."
 
   - id: living_room_lights_on_already_home
     alias: Living room lights on when already home (evening)
@@ -175,7 +178,7 @@ automation:
         switch_remote: {{ home_assistant_styrbar.device_id }}
         targets: {{ home_assistant_styrbar.targets | to_json }}
         selected_target: input_number.styrbar_target
-        enable_selection_dip: true
+        enable_flash: true
         force_brightness: false
         brightness_pct: 50
         repeat_delay: 200

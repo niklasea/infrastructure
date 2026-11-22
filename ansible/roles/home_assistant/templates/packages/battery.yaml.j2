@@ -36,17 +36,18 @@ automation:
         at: "09:00:00"
     action:
       - variables:
-          battery_device_entities: {{ home_assistant_battery_devices | map(attribute='entity') | list | to_json }}
+          battery_devices: {{ home_assistant_battery_devices | to_json }}
       - variables:
           low_battery_message: >-
             {% raw %}{% set ns = namespace(parts=[]) %}
-            {% for entity in battery_device_entities %}
-              {% set device = device_id(entity) %}
-              {% if device %}
-                {% set device_name = device_attr(device, 'name_by_user') or device_attr(device, 'name') %}
-                {% for battery in device_entities(device) | expand | selectattr('attributes.device_class', 'eq', 'battery') %}
+            {% for device in battery_devices %}
+              {% set device_registry_id = device_id(device.entity) %}
+              {% if device_registry_id %}
+                {% for battery in device_entities(device_registry_id) | expand
+                   | selectattr('domain', 'eq', 'sensor')
+                   | selectattr('attributes.device_class', 'eq', 'battery') %}
                   {% if battery.state | float(101) < 10 %}
-                    {% set ns.parts = ns.parts + [device_name ~ ' battery: ' ~ battery.state ~ '%'] %}
+                    {% set ns.parts = ns.parts + [device.name ~ ' battery: ' ~ battery.state ~ '%'] %}
                   {% endif %}
                 {% endfor %}
               {% endif %}
@@ -69,3 +70,41 @@ automation:
         data:
           title: "Battery low"
           message: "{% raw %}{{ low_battery_message | trim }}{% endraw %}"
+
+  - id: battery_device_unavailable_on_start
+    alias: Battery device unavailable at startup
+    mode: single
+    trigger:
+      - platform: homeassistant
+        event: start
+    action:
+      - delay:
+          minutes: 5
+      - variables:
+          battery_devices: {{ home_assistant_battery_devices | to_json }}
+      - variables:
+          unavailable_devices: >-
+            {% raw %}{% set ns = namespace(devices=[]) %}
+            {% for device in battery_devices %}
+              {% if is_state(device.entity, 'unavailable') %}
+                {% set ns.devices = ns.devices + [device.name] %}
+              {% endif %}
+            {% endfor %}
+            {{ ns.devices | join(', ') }}{% endraw %}
+
+      - condition: template
+        value_template: "{% raw %}{{ unavailable_devices | trim != '' }}{% endraw %}"
+      - service: notify.send_message
+        continue_on_error: true
+        target:
+          entity_id: {{ home_assistant_notify.email }}
+        data:
+          title: "Battery device unavailable after restart"
+          message: "{% raw %}{{ unavailable_devices | trim }}{% endraw %} unavailable after Home Assistant restarted."
+      - service: notify.send_message
+        continue_on_error: true
+        target:
+          entity_id: {{ home_assistant_notify.mobile }}
+        data:
+          title: "Battery device unavailable after restart"
+          message: "{% raw %}{{ unavailable_devices | trim }}{% endraw %} unavailable after Home Assistant restarted."
