@@ -3,6 +3,7 @@ FROM ghcr.io/anomalyco/opencode:${OPENCODE_VERSION}
 
 ARG APK_PACKAGES="git ca-certificates"
 
+# hadolint ignore=DL3018
 RUN apk add --no-cache ${APK_PACKAGES} \
   && git config --system user.name "OpenCode" \
   && git config --system user.email "opencode@localhost" \

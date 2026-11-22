@@ -45,8 +45,6 @@
         name: jellyfin
     - ansible.builtin.import_role:
         name: gitea
-    - ansible.builtin.import_role:
-        name: opencode
     - name: Mount Immich upload storage
       ansible.builtin.import_role:
         name: smb_mount
@@ -63,6 +61,8 @@
         name: omada
     - ansible.builtin.import_role:
         name: home_assistant
+    - ansible.builtin.import_role:
+        name: opencode
   post_tasks:
     - name: Schedule backup to network drive
       become: true

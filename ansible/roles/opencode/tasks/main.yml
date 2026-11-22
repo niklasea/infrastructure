@@ -5,6 +5,12 @@
     fail_msg: Set vault_opencode.github_token before deploying OpenCode.
     quiet: true
 
+- name: Ensure Docker is running
+  become: true
+  ansible.builtin.systemd:
+    name: docker
+    state: started
+
 - name: Configure firewall
   ansible.builtin.import_role:
     name: firewall
@@ -55,6 +61,16 @@
   ansible.builtin.stat:
     path: "{{ opencode_home_dir }}/.config/opencode/service.json"
   register: _opencode_service_configuration
+
+- name: Pull OpenCode image
+  become: true
+  ansible.builtin.command:
+    cmd: "docker pull {{ opencode_image }}"
+  register: _opencode_image_pull
+  changed_when: false
+  retries: 10
+  delay: 30
+  until: _opencode_image_pull.rc == 0
 
 - name: Seed service configuration
   become: true

@@ -10,6 +10,7 @@ services:
     init: true
     environment:
       HOME: "{{ opencode_container_home }}"
+      GIT_TERMINAL_PROMPT: "0"
     env_file:
       - .env
     volumes:
