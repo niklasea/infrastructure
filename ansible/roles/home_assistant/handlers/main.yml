@@ -1,6 +1,7 @@
 ---
 - name: Validate Home Assistant configuration
   become: true
+  listen: restart_home_assistant
   community.docker.docker_container_exec:
     container: homeassistant
     command: python -m homeassistant --script check_config -c /config
@@ -8,12 +9,14 @@
 
 - name: Restart Home Assistant
   become: true
+  listen: restart_home_assistant
   community.docker.docker_compose_v2:
     project_src: "{{ home_assistant_compose_dir }}"
     state: restarted
 
 - name: Wait for Home Assistant to accept connections
   become: true
+  listen: restart_home_assistant
   ansible.builtin.wait_for:
     host: 127.0.0.1
     port: 8123

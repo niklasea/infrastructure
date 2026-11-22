@@ -8,6 +8,14 @@ home_assistant_entity_ids:
   work_light: light.work_lamp
   bedside_light: light.bedside_table
 
+home_assistant_water_leak_sensors:
+  - binary_sensor.kitchen_ikea_badring_water_leakage_sensor
+  - binary_sensor.ikea_badring_water_leakage_sensor
+
+home_assistant_notify:
+  email: notify.niklas_home_assistant_niklas
+  mobile: notify.sm_s928b
+
 # Device registry ID; changes if the remote is removed and paired again.
 home_assistant_styrbar:
   device_id: 086baa3ced1dc43db09e24947c67dda2
@@ -23,6 +31,8 @@ home_assistant_config_files:
     dest: blueprints/automation/kiann/styrbar_zha.yaml
   - src: packages/lighting.yaml.j2
     dest: packages/lighting.yaml
+  - src: packages/water.yaml.j2
+    dest: packages/water.yaml
 
 home_assistant_version: stable
 
