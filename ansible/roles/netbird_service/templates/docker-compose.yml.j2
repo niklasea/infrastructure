@@ -1,7 +1,7 @@
 services:
   # UI dashboard
   netbird-dashboard:
-    image: netbirdio/dashboard:{{ netbird_service_version }}
+    image: netbirdio/dashboard:{{ netbird_service_dashboard_version }}
     restart: unless-stopped
     networks: [netbird]
     ports:
@@ -11,7 +11,7 @@ services:
 
   # Combined server (Management + Signal + Relay + STUN)
   netbird-server:
-    image: netbirdio/netbird-server:{{ netbird_service_version }}
+    image: netbirdio/netbird-server:{{ netbird_service_server_version }}
     restart: unless-stopped
     networks: [netbird]
     ports:

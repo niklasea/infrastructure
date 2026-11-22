@@ -21,5 +21,6 @@
   when: not ansible_check_mode
   ansible.builtin.dnf:
     name:
-      - netbird
+      - "netbird-{{ netbird_peer_version }}"
     state: present
+    update_cache: true

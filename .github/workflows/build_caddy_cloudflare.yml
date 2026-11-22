@@ -12,6 +12,7 @@ on:
     paths:
       - .github/workflows/build_caddy_cloudflare.yml
       - ansible/dockerfiles/caddy_cloudflare/**
+  workflow_dispatch:
 
 jobs:
   build:

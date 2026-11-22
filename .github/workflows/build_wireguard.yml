@@ -12,6 +12,7 @@ on:
     paths:
       - .github/workflows/build_wireguard.yml
       - ansible/dockerfiles/wireguard/**
+  workflow_dispatch:
 
 jobs:
   build:
