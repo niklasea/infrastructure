@@ -5,6 +5,12 @@
     fail_msg: Set vault_opencode.github_token before deploying OpenCode.
     quiet: true
 
+- name: Validate API key mapping
+  ansible.builtin.assert:
+    that: opencode_api_keys is mapping
+    fail_msg: opencode_api_keys must be a mapping of environment variable names to values.
+    quiet: true
+
 - name: Ensure Docker is running
   become: true
   ansible.builtin.systemd:
@@ -47,6 +53,19 @@
       mode: '700'
       owner: "{{ docker_remap_user }}"
       group: "{{ docker_remap_user }}"
+    - path: "{{ opencode_home_dir }}/.config/opencode"
+      mode: '700'
+      owner: "{{ docker_remap_user }}"
+      group: "{{ docker_remap_user }}"
+
+- name: Add OpenCode configuration
+  become: true
+  ansible.builtin.template:
+    src: opencode.json.j2
+    dest: "{{ opencode_home_dir }}/.config/opencode/opencode.json"
+    mode: '600'
+    owner: "{{ docker_remap_user }}"
+    group: "{{ docker_remap_user }}"
 
 - name: Add environment file
   become: true
