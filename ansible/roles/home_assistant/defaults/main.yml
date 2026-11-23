@@ -3,13 +3,14 @@ home_assistant_compose_dir: "{{ docker_compose_dir }}/home_assistant"
 home_assistant_config_dir: "{{ home_assistant_compose_dir }}/config"
 
 # Entity IDs survive the Zigbee2MQTT migration by renaming the MQTT-discovered
-# entities to these IDs in the HA UI after re-pairing; keep them in sync.
+# entities to these IDs in the HA UI after re-pairing; keep them in sync. The old
+# ZHA entities must be renamed or deleted first, as HA reserves their entity IDs.
 home_assistant_entity_ids:
   door_sensor: binary_sensor.ikea_parasoll_door_window_sensor
   living_room_light: light.ikea_tradfri_bulb_e27_ww_g95_cl_470lm
   work_light: light.work_lamp
   bedside_light: light.bedside_table
-  presence: zone.home
+  presence: binary_sensor.home_occupied
 
 home_assistant_water_leak_sensors:
   - binary_sensor.kitchen_ikea_badring_water_leakage_sensor
@@ -43,6 +44,8 @@ home_assistant_battery_devices:
 home_assistant_config_files:
   - src: blueprints/automation/jtosic/ikea_styrbar_z2m.yaml.blueprint
     dest: blueprints/automation/jtosic/ikea_styrbar_z2m.yaml
+  - src: packages/presence.yaml.j2
+    dest: packages/presence.yaml
   - src: packages/lighting.yaml.j2
     dest: packages/lighting.yaml
   - src: packages/battery.yaml.j2

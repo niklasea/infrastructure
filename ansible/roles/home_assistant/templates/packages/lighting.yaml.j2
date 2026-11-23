@@ -53,36 +53,6 @@ automation:
     action:
       - service: script.evening_lights
 
-  - id: door_open_while_away
-    alias: Door open while away
-    mode: single
-    trigger:
-      - platform: state
-        entity_id: {{ home_assistant_entity_ids.door_sensor }}
-        to: "on"
-        for: "00:02:00"
-      - platform: state
-        entity_id: {{ home_assistant_entity_ids.presence }}
-        to: "0"
-        for: "00:02:00"
-      - platform: homeassistant
-        event: start
-    condition:
-      - condition: numeric_state
-        entity_id: {{ home_assistant_entity_ids.presence }}
-        below: 1
-      - condition: state
-        entity_id: {{ home_assistant_entity_ids.door_sensor }}
-        state: "on"
-    action:
-      - service: notify.send_message
-        continue_on_error: true
-        target:
-          entity_id: {{ home_assistant_notify.mobile }}
-        data:
-          title: "Door left open"
-          message: "The front door is open while nobody is home."
-
   - id: living_room_lights_on_already_home
     alias: Living room lights on when already home (evening)
     mode: single
@@ -90,9 +60,9 @@ automation:
       - platform: time
         at: "18:00:00"
     condition:
-      - condition: numeric_state
+      - condition: state
         entity_id: {{ home_assistant_entity_ids.presence }}
-        above: 0
+        state: "on"
     action:
       - service: script.evening_lights
 
@@ -103,9 +73,9 @@ automation:
       - platform: time
         at: "22:00:00"
     condition:
-      - condition: numeric_state
+      - condition: state
         entity_id: {{ home_assistant_entity_ids.presence }}
-        above: 0
+        state: "on"
     action:
       - if:
           - condition: state

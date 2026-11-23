@@ -1,0 +1,137 @@
+---
+template:
+  - binary_sensor:
+      - name: Home occupied
+        unique_id: home_occupied
+        device_class: occupancy
+        delay_off: "00:10:00"
+        availability: >-
+          {% raw %}{{ states.person
+             | rejectattr('state', 'in', ['unknown', 'unavailable'])
+             | list | count > 0 }}{% endraw %}
+
+        state: >-
+          {% raw %}{{ states.person
+             | selectattr('state', 'eq', 'home')
+             | list | count > 0 }}{% endraw %}
+
+        attributes:
+          persons_home: >-
+            {% raw %}{{ states.person
+               | selectattr('state', 'eq', 'home')
+               | map(attribute='name')
+               | list | join(', ') }}{% endraw %}
+
+input_boolean:
+  door_open_alert_sent:
+    name: Door open alert sent
+    icon: mdi:door-open
+
+script:
+  notify_door_left_open:
+    alias: Notify door left open
+    mode: single
+    sequence:
+      - condition: state
+        entity_id: input_boolean.door_open_alert_sent
+        state: "off"
+      - variables:
+          door_entity: {{ home_assistant_entity_ids.door_sensor }}
+      - service: notify.send_message
+        target:
+          entity_id: {{ home_assistant_notify.mobile }}
+        data:
+          title: "Door left open"
+          message: >-
+            {% raw %}{% set door_state = states.get(door_entity) %}
+            {{ (door_state.name or door_entity) if door_state else door_entity }}
+            has been open since
+            {{ as_timestamp(door_state.last_changed) | timestamp_custom('%H:%M') if door_state else 'unknown' }}.
+            Occupancy: {{ states('binary_sensor.home_occupied') }}.
+            People home: {{ state_attr('binary_sensor.home_occupied', 'persons_home') or 'none' }}.{% endraw %}
+
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.door_open_alert_sent
+
+automation:
+  - id: door_open_while_away
+    alias: Door open while away
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: {{ home_assistant_entity_ids.door_sensor }}
+        from:
+          - "off"
+          - "unavailable"
+          - "unknown"
+        to: "on"
+        for: "00:05:00"
+      - platform: state
+        entity_id: {{ home_assistant_entity_ids.presence }}
+        to: "off"
+    condition:
+      - condition: state
+        entity_id: {{ home_assistant_entity_ids.presence }}
+        state: "off"
+      - condition: state
+        entity_id: {{ home_assistant_entity_ids.door_sensor }}
+        state: "on"
+      - condition: state
+        entity_id: input_boolean.door_open_alert_sent
+        state: "off"
+    action:
+      - service: script.notify_door_left_open
+
+  - id: door_open_while_away_on_start
+    alias: Door open while away at startup
+    mode: single
+    trigger:
+      - platform: homeassistant
+        event: start
+    action:
+      - delay: "00:10:00"
+      - variables:
+          occupancy_entity: {{ home_assistant_entity_ids.presence }}
+      - wait_template: >-
+          {% raw %}{{ states(occupancy_entity) in ['on', 'off'] }}{% endraw %}
+
+        timeout: "00:05:00"
+        continue_on_timeout: true
+      - condition: state
+        entity_id: {{ home_assistant_entity_ids.presence }}
+        state: "off"
+      - condition: state
+        entity_id: {{ home_assistant_entity_ids.door_sensor }}
+        state: "on"
+      - condition: state
+        entity_id: input_boolean.door_open_alert_sent
+        state: "off"
+      - service: script.notify_door_left_open
+
+  - id: door_open_alert_reset
+    alias: Reset door open alert
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: {{ home_assistant_entity_ids.door_sensor }}
+        to: "off"
+      - platform: state
+        entity_id: {{ home_assistant_entity_ids.presence }}
+        to: "on"
+        for: "00:05:00"
+      - platform: homeassistant
+        event: start
+    condition:
+      - condition: or
+        conditions:
+          - condition: state
+            entity_id: {{ home_assistant_entity_ids.door_sensor }}
+            state: "off"
+          - condition: state
+            entity_id: {{ home_assistant_entity_ids.presence }}
+            state: "on"
+    action:
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.door_open_alert_sent
