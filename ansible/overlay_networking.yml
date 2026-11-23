@@ -11,25 +11,12 @@
         firewall_rules_ipv6:
           - { chain: INPUT, rule: ACCEPT, port: 443, proto: tcp, comment: HTTPS }
           - { chain: INPUT, rule: ACCEPT, port: 80, proto: tcp, comment: HTTP }
+
     - ansible.builtin.import_role:
         name: inadyn
+
     - ansible.builtin.import_role:
         name: netbird_service
-  post_tasks:
-    - name: Schedule backup to network drive
-      become: true
-      ansible.builtin.cron:
-        name: "{{ item.name}}"
-        job: "{{ item.job }}"
-        hour: 4
-        minute: 0
-        state: present
-      loop:
-        - name: "Back up netbird to network drive"
-          job: |
-            docker compose -f {{ netbird_service_compose_dir }} down
-            docker compose -f {{ netbird_service_compose_dir }} cp -a netbird-server:/var/lib/netbird/ {{ smb_mounts.backup_netbird.local_path }}
-            docker compose -f {{ netbird_service_compose_dir }} up -d
 
 - name: Join DK VMs to overlay network
   hosts: proxmox_all_qemu,!role_netbird,!role_infrastructure_bootstrap
@@ -75,3 +62,47 @@
           6232653331663938310a396265643938343666616535653636376230326463343139366366366634
           61333230373035656336366239353763323739653033393431346464653965323435616436656135
           6332393338336132643563653637663731333339396162613830
+
+- name: Configure Hetzner DNS servers
+  hosts: hcloud,!role_netbird
+  tasks:
+    - name: Refresh network facts after the overlay joins
+      ansible.builtin.setup:
+        gather_subset: [network]
+
+    - ansible.builtin.import_role:
+        name: dns_server
+
+    - name: Install NetBird DNS boot service
+      become: true
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/netbird-dns.service
+        owner: root
+        group: root
+        mode: '644'
+        content: |
+          [Unit]
+          Description=Start blocky after the NetBird overlay
+          Wants=network-online.target docker.service netbird.service
+          After=network-online.target docker.service netbird.service
+          StartLimitIntervalSec=0
+
+          [Service]
+          Type=oneshot
+          RemainAfterExit=yes
+          ExecStartPre=/usr/bin/timeout 60 /bin/sh -c 'until /usr/bin/netbird status --check ready >/dev/null 2>&1; do sleep 2; done'
+          ExecStart=/usr/bin/docker compose -f {{ dns_server_compose_dir }}/docker-compose.yml up -d --wait
+          Restart=on-failure
+          RestartSec=5
+
+          [Install]
+          WantedBy=multi-user.target
+      register: _netbird_dns_service
+
+    - name: Enable NetBird DNS boot service
+      become: true
+      ansible.builtin.systemd:
+        name: netbird-dns
+        enabled: true
+        daemon_reload: true
+        state: "{{ 'restarted' if _netbird_dns_service is changed else 'started' }}"

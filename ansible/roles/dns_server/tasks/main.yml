@@ -25,32 +25,6 @@
       dest: "{{ dns_server_compose_dir }}/docker-compose.yml"
   register: _dns_server_configuration_files
 
-- name: Check if systemd-resolved is running
-  become: true
-  ansible.builtin.systemd_service:
-    name: systemd-resolved
-  register: _dns_server_stub_listener_active
-
-- name: Disable systemd-resolved stub resolver
-  become: true
-  when: _dns_server_stub_listener_active.status.ActiveState == 'active'
-  ansible.builtin.blockinfile:
-    path: /etc/systemd/resolved.conf.d/disable-stub.conf
-    state: present
-    create: true
-    block: |
-      [Resolve]
-      DNSStubListener=no
-    mode: '644'
-  register: _dns_server_stub_listener_config
-
-- name: Restart systemd-resolved
-  become: true
-  ansible.builtin.service:
-    name: systemd-resolved
-    state: restarted
-  when: _dns_server_stub_listener_config is changed
-
 - name: Start DNS server
   become: true
   community.docker.docker_compose_v2:

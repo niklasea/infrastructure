@@ -1,0 +1,11 @@
+---
+netbird_peer_disable_dns: false
+netbird_peer_dns_resolver_address: "127.0.0.1:53"
+dns_server_conditional_forwarding: []
+
+# Overlay clients are unknown to the home gateway; skip client-name lookup.
+dns_server_client_lookup_address: ""
+dns_server_listen_addresses: >-
+  {{ [ansible_facts['all_ipv4_addresses']
+     | ansible.utils.ipaddr('100.64.0.0/10')
+     | first] }}

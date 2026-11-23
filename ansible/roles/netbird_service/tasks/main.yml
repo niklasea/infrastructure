@@ -4,19 +4,22 @@
   ansible.builtin.file:
     path: "{{ netbird_service_compose_dir }}"
     state: directory
-    mode: '755'
+    mode: '0700'
 
 - name: Add configuration files
   become: true
   ansible.builtin.template:
-    src: "{{ item }}"
-    dest: "{{ netbird_service_compose_dir }}/{{ item | splitext | first }}"
-    # config.yml and dashboard.env contain secrets; keep the whole directory root-only.
-    mode: '0600'
+    src: "{{ item.src }}"
+    dest: "{{ netbird_service_compose_dir }}/{{ item.src | splitext | first }}"
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    # The server container runs as the remapped Docker root and must read
+    # config.yml; the directory stays root-only and the file stays 0600.
+    mode: "{{ item.mode }}"
   loop:
-    - docker-compose.yml.j2
-    - config.yml.j2
-    - dashboard.env.j2
+    - { src: docker-compose.yml.j2, mode: '0600', owner: root, group: root }
+    - { src: config.yml.j2, mode: '0600', owner: "{{ docker_remap_user | default('root') }}", group: "{{ docker_remap_user | default('root') }}" }
+    - { src: dashboard.env.j2, mode: '0600', owner: root, group: root }
   register: _netbird_service_configuration_files
 
 - name: Start container

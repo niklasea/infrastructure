@@ -5,6 +5,19 @@
     apply:
       become: true
 
+- name: Enable IP forwarding
+  become: true
+  ansible.posix.sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    sysctl_file: /etc/sysctl.d/99-netbird-forwarding.conf
+    sysctl_set: true
+    state: present
+    reload: true
+  loop:
+    - { name: net.ipv4.ip_forward, value: '1' }
+    - { name: net.ipv6.conf.all.forwarding, value: '1' }
+
 - name: Start Netbird
   become: true
   ansible.builtin.command:
@@ -12,7 +25,39 @@
       netbird up
       --setup-key {{ netbird_peer_setup_key }}
       --management-url {{ 'https://%s/' | ansible.builtin.format(netbird_peer_domain) | ansible.builtin.quote }}
-      {{ '--disable-dns' if netbird_peer_disable_dns else '' }}
+      --disable-dns={{ netbird_peer_disable_dns | lower }}
+      --dns-resolver-address {{ netbird_peer_dns_resolver_address | ansible.builtin.quote }}
   no_log: true
   register: _netbird_peer_start
   changed_when: "'Already connected' not in _netbird_peer_start.stdout"
+
+- name: Check for a resolvconf head file
+  ansible.builtin.stat:
+    path: /etc/resolvconf/resolv.conf.d/head
+  register: _netbird_peer_resolvconf_head
+
+- name: Point the host stub at NetBird
+  become: true
+  when:
+    - not netbird_peer_disable_dns
+    - _netbird_peer_resolvconf_head.stat.exists
+  ansible.builtin.copy:
+    dest: /etc/resolvconf/resolv.conf.d/head
+    # NetBird does not always update resolvconf itself; this makes the host use
+    # its local resolver while keeping a public fallback.
+    content: |
+      nameserver 127.0.0.1
+      nameserver 1.1.1.1
+    owner: root
+    group: root
+    mode: '0644'
+  register: _netbird_peer_resolvconf_update
+
+- name: Apply the resolver configuration
+  become: true
+  when:
+    - not netbird_peer_disable_dns
+    - _netbird_peer_resolvconf_head.stat.exists
+    - _netbird_peer_resolvconf_update is changed
+  ansible.builtin.command:
+    cmd: /usr/sbin/resolvconf -u
