@@ -19,7 +19,7 @@
         name: netbird_service
 
 - name: Join DK VMs to overlay network
-  hosts: proxmox_all_qemu,!role_infrastructure_bootstrap
+  hosts: proxmox_all_qemu,!role_netbird,!role_infrastructure_bootstrap
   tasks:
     - ansible.builtin.import_role:
         name: netbird_peer
@@ -34,7 +34,7 @@
           3733343566363563373262353738653961333939363665353366
 
 - name: Join SG VMs to overlay network
-  hosts: hcloud_location_sin
+  hosts: hcloud_location_sin,!role_netbird
   tasks:
     - ansible.builtin.import_role:
         name: netbird_peer
@@ -49,7 +49,7 @@
           6164656565323362393866303730623465346430356237393162
 
 - name: Join DE VMs to overlay network
-  hosts: hcloud_location_nbg1,hcloud_location_fsn1
+  hosts: hcloud_location_nbg1,hcloud_location_fsn1,!role_netbird
   tasks:
     - ansible.builtin.import_role:
         name: netbird_peer
@@ -64,7 +64,7 @@
           6332393338336132643563653637663731333339396162613830
 
 - name: Configure Hetzner DNS servers
-  hosts: hcloud
+  hosts: hcloud,!role_netbird
   tasks:
     - name: Refresh network facts after the overlay joins
       ansible.builtin.setup:
@@ -106,42 +106,3 @@
         enabled: true
         daemon_reload: true
         state: "{{ 'restarted' if _netbird_dns_service is changed else 'started' }}"
-
-# The backup mount requires the management server's overlay connection, which
-# is established by the location peer joins above.
-- name: Configure Netbird management server backup
-  hosts: netbird
-  tasks:
-    - name: Wait for the backup hostname to resolve
-      ansible.builtin.command:
-        cmd: getent hosts harkonnen.{{ local_domain }}
-      register: _netbird_backup_host
-      until: _netbird_backup_host.rc == 0
-      retries: 30
-      delay: 2
-      changed_when: false
-
-    - ansible.builtin.import_role:
-        name: smb_mount
-      vars:
-        smb_mounts: "{{ netbird_backup_smb_mounts }}"  # noqa: var-naming[no-role-prefix]
-
-  post_tasks:
-    - name: Schedule backup to network drive
-      become: true
-      ansible.builtin.cron:
-        name: "{{ item.name}}"
-        job: "{{ item.job }}"
-        hour: 4
-        minute: 0
-        state: present
-      loop:
-        - name: "Back up netbird to network drive"
-          job: >-
-            /usr/bin/mountpoint -q {{ netbird_backup_smb_mounts.backup_netbird.local_path }} ||
-            /usr/bin/mount {{ netbird_backup_smb_mounts.backup_netbird.local_path }};
-            /usr/bin/findmnt --raw -n -o FSTYPE --mountpoint {{ netbird_backup_smb_mounts.backup_netbird.local_path }} |
-            /usr/bin/grep -Fqx cifs || exit 1;
-            docker compose -f {{ netbird_service_compose_dir }} down;
-            docker compose -f {{ netbird_service_compose_dir }} cp -a netbird-server:/var/lib/netbird/ {{ netbird_backup_smb_mounts.backup_netbird.local_path }};
-            docker compose -f {{ netbird_service_compose_dir }} up -d
