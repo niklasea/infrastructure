@@ -1,0 +1,246 @@
+---
+- name: Require backup server configuration
+  ansible.builtin.assert:
+    that:
+      - restic_server_nfs_source is defined
+      - restic_server_nfs_source | length > 0
+      - "'CHANGEME' not in restic_server_nfs_source"
+      - restic_server_repositories | length > 0
+      - vault_restic_server_users | default({}) is mapping
+      - vault_restic_repo_passwords | default({}) is mapping
+      - restic_server_repositories | difference(vault_restic_server_users | default({}) | list) | length == 0
+      - restic_server_repositories | difference(vault_restic_repo_passwords | default({}) | list) | length == 0
+    fail_msg: >-
+      Set restic_server_nfs_source in host_vars/backup01.yml and add
+      vault_restic_server_users and vault_restic_repo_passwords entries for
+      every configured repository.
+    quiet: true
+
+- name: Install backup server packages
+  become: true
+  ansible.builtin.package:
+    name:
+      - bzip2
+      - ca-certificates
+      - curl
+      - jq
+      - nfs-common
+      - python3-bcrypt
+      - python3-passlib
+    state: present
+
+- name: Create restic group
+  become: true
+  ansible.builtin.group:
+    name: "{{ restic_server_group }}"
+    gid: "{{ restic_server_gid }}"
+    system: true
+
+- name: Create restic user
+  become: true
+  ansible.builtin.user:
+    name: "{{ restic_server_user }}"
+    uid: "{{ restic_server_uid }}"
+    group: "{{ restic_server_group }}"
+    system: true
+    create_home: true
+    home: "{{ restic_server_home }}"
+    shell: /usr/sbin/nologin
+
+- name: Create backup directories
+  become: true
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "{{ restic_server_repo_root }}", owner: "{{ restic_server_user }}", group: "{{ restic_server_group }}", mode: '0750' }
+    - { path: "{{ restic_server_home }}", owner: "{{ restic_server_user }}", group: "{{ restic_server_group }}", mode: '0700' }
+    - { path: "{{ restic_server_cache_dir }}", owner: "{{ restic_server_user }}", group: "{{ restic_server_group }}", mode: '0700' }
+    - { path: "{{ restic_server_password_dir }}", owner: "{{ restic_server_user }}", group: "{{ restic_server_group }}", mode: '0750' }
+    - { path: "{{ restic_server_htpasswd_file | dirname }}", owner: root, group: "{{ restic_server_group }}", mode: '0750' }
+
+- name: Mount restic repository dataset
+  become: true
+  ansible.posix.mount:
+    path: "{{ restic_server_repo_root }}"
+    src: "{{ restic_server_nfs_source }}"
+    fstype: "{{ restic_server_nfs_fstype }}"
+    opts: "{{ restic_server_nfs_options }}"
+    state: mounted
+    dump: '0'
+    passno: '0'
+
+- name: Check installed restic version
+  ansible.builtin.command:
+    cmd: /usr/local/bin/restic version
+  register: _restic_server_restic_version
+  changed_when: false
+  failed_when: false
+
+- name: Download restic
+  become: true
+  ansible.builtin.get_url:
+    url: "https://github.com/restic/restic/releases/download/v{{ restic_server_restic_version }}/restic_{{ restic_server_restic_version }}_linux_amd64.bz2"
+    dest: "/tmp/restic_{{ restic_server_restic_version }}_linux_amd64.bz2"
+    checksum: "sha256:{{ restic_server_restic_sha256 }}"
+    mode: '0644'
+  when: _restic_server_restic_version.rc != 0 or restic_server_restic_version not in _restic_server_restic_version.stdout
+
+- name: Install restic
+  become: true
+  ansible.builtin.shell:
+    cmd: "bzip2 -dc /tmp/restic_{{ restic_server_restic_version }}_linux_amd64.bz2 > /usr/local/bin/restic"
+  when: _restic_server_restic_version.rc != 0 or restic_server_restic_version not in _restic_server_restic_version.stdout
+  changed_when: true
+
+- name: Set restic permissions
+  become: true
+  ansible.builtin.file:
+    path: /usr/local/bin/restic
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Check installed rest-server version
+  ansible.builtin.command:
+    cmd: /usr/local/bin/rest-server --version
+  register: _restic_server_rest_server_version
+  changed_when: false
+  failed_when: false
+
+- name: Download rest-server
+  become: true
+  ansible.builtin.get_url:
+    url: "{{ restic_server_rest_server_url }}/{{ restic_server_rest_server_archive }}"
+    dest: "/tmp/{{ restic_server_rest_server_archive }}"
+    checksum: "sha256:{{ restic_server_rest_server_sha256 }}"
+    mode: '0644'
+  when: _restic_server_rest_server_version.rc != 0 or restic_server_rest_server_version not in _restic_server_rest_server_version.stdout
+
+- name: Extract rest-server
+  become: true
+  ansible.builtin.unarchive:
+    src: "/tmp/{{ restic_server_rest_server_archive }}"
+    dest: /tmp
+    remote_src: true
+    creates: "{{ restic_server_rest_server_extract_dir }}/rest-server"
+  when: _restic_server_rest_server_version.rc != 0 or restic_server_rest_server_version not in _restic_server_rest_server_version.stdout
+
+- name: Install rest-server
+  become: true
+  ansible.builtin.copy:
+    src: "{{ restic_server_rest_server_extract_dir }}/rest-server"
+    dest: /usr/local/bin/rest-server
+    remote_src: true
+    owner: root
+    group: root
+    mode: '0755'
+  when: _restic_server_rest_server_version.rc != 0 or restic_server_rest_server_version not in _restic_server_rest_server_version.stdout
+
+- name: Write repository passwords
+  become: true
+  ansible.builtin.copy:
+    content: "{{ vault_restic_repo_passwords[item] }}\n"
+    dest: "{{ restic_server_password_dir }}/{{ item }}.pass"
+    owner: "{{ restic_server_user }}"
+    group: "{{ restic_server_group }}"
+    mode: '0400'
+  loop: "{{ restic_server_repositories }}"
+  no_log: true
+
+- name: Create authentication entries
+  become: true
+  community.general.htpasswd:
+    path: "{{ restic_server_htpasswd_file }}"
+    name: "{{ item }}"
+    password: "{{ vault_restic_server_users[item] }}"
+    hash_scheme: bcrypt
+    owner: "{{ restic_server_user }}"
+    group: "{{ restic_server_group }}"
+    mode: '0640'
+  loop: "{{ restic_server_repositories }}"
+  no_log: true
+  notify: Restart rest-server
+
+- name: Initialize repositories
+  become: true
+  become_user: "{{ restic_server_user }}"
+  ansible.builtin.command:
+    cmd: "/usr/local/bin/restic -r {{ restic_server_repo_root }}/{{ item }} init"
+  args:
+    creates: "{{ restic_server_repo_root }}/{{ item }}/config"
+  environment:
+    HOME: "{{ restic_server_home }}"
+    RESTIC_CACHE_DIR: "{{ restic_server_cache_dir }}"
+    RESTIC_PASSWORD_FILE: "{{ restic_server_password_dir }}/{{ item }}.pass"
+  loop: "{{ restic_server_repositories }}"
+  no_log: true
+
+- name: Install maintenance scripts
+  become: true
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "/usr/local/sbin/{{ item.dest }}"
+    owner: root
+    group: "{{ restic_server_group }}"
+    mode: '0750'
+  loop:
+    - { src: restic-prune.sh.j2, dest: restic-prune }
+    - { src: restic-check.sh.j2, dest: restic-check }
+    - { src: restic-monitor.sh.j2, dest: restic-monitor }
+  no_log: true
+
+- name: Install rest-server service
+  become: true
+  ansible.builtin.template:
+    src: rest-server.service.j2
+    dest: /etc/systemd/system/rest-server.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart rest-server
+
+- name: Install maintenance services
+  become: true
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "/etc/systemd/system/{{ item.dest }}"
+    owner: root
+    group: root
+    mode: '0644'
+  loop:
+    - { src: restic-prune.service.j2, dest: restic-prune.service }
+    - { src: restic-prune.timer.j2, dest: restic-prune.timer }
+    - { src: restic-check.service.j2, dest: restic-check.service }
+    - { src: restic-check.timer.j2, dest: restic-check.timer }
+    - { src: restic-check-data.service.j2, dest: restic-check-data.service }
+    - { src: restic-check-data.timer.j2, dest: restic-check-data.timer }
+    - { src: restic-monitor.service.j2, dest: restic-monitor.service }
+    - { src: restic-monitor.timer.j2, dest: restic-monitor.timer }
+
+- name: Reload systemd
+  become: true
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Enable rest-server
+  become: true
+  ansible.builtin.systemd:
+    name: rest-server
+    enabled: true
+    state: started
+
+- name: Enable maintenance timers
+  become: true
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - restic-prune.timer
+    - restic-check.timer
+    - restic-check-data.timer
+    - restic-monitor.timer

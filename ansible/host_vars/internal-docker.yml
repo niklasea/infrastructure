@@ -26,38 +26,7 @@ wireguard_peers:
       - "{{ vpn_network_ipv4['network'] | ansible.utils.ipaddr('7') | ansible.utils.ipaddr('address') }}/32"
       - "{{ vpn_network_ipv4['peer_networks'] | join(', ') }}"
 
-smb_backup_dir: /mnt/backup
 smb_mounts:
-  backup_vaultwarden:
-    network_path: //harkonnen.{{ local_domain }}/ServerBackup/vaultwarden
-    local_path: "{{ smb_backup_dir }}/vaultwarden"
-    options: '_netdev,dir_mode=0555,file_mode=0444'
-    username: "{{ vault_smb_server_backup_credentials.username }}"
-    password: "{{ vault_smb_server_backup_credentials.password }}"
-  backup_jellyfin:
-    network_path: //harkonnen.{{ local_domain }}/ServerBackup/jellyfin
-    local_path: "{{ smb_backup_dir }}/jellyfin"
-    options: '_netdev,dir_mode=0555,file_mode=0444'
-    username: "{{ vault_smb_server_backup_credentials.username }}"
-    password: "{{ vault_smb_server_backup_credentials.password }}"
-  backup_gitea:
-    network_path: //harkonnen.{{ local_domain }}/ServerBackup/gitea
-    local_path: "{{ smb_backup_dir }}/gitea"
-    options: '_netdev,dir_mode=0555,file_mode=0444'
-    username: "{{ vault_smb_server_backup_credentials.username }}"
-    password: "{{ vault_smb_server_backup_credentials.password }}"
-  backup_home_assistant:
-    network_path: //harkonnen.{{ local_domain }}/ServerBackup/homeassistant
-    local_path: "{{ smb_backup_dir }}/homeassistant"
-    options: '_netdev,dir_mode=0555,file_mode=0444'
-    username: "{{ vault_smb_server_backup_credentials.username }}"
-    password: "{{ vault_smb_server_backup_credentials.password }}"
-  backup_immich:
-    network_path: //harkonnen.{{ local_domain }}/ServerBackup/immich
-    local_path: "{{ smb_backup_dir }}/immich"
-    options: '_netdev,dir_mode=0555,file_mode=0444'
-    username: "{{ vault_smb_server_backup_credentials.username }}"
-    password: "{{ vault_smb_server_backup_credentials.password }}"
   media:
     network_path: //harkonnen.{{ local_domain }}/Media
     local_path: "/mnt/media"
@@ -74,7 +43,6 @@ smb_mounts:
 jellyfin_media_dir: "{{ smb_mounts.media.local_path }}"
 
 immich_db_password: "{{ vault_immich.db_password }}"
-immich_backup_dir: "{{ smb_mounts.backup_immich.local_path }}"
 immich_upload_dir: /mnt/immich
 immich_uploads_smb:
   network_path: //harkonnen.{{ local_domain }}/Immich
@@ -177,3 +145,112 @@ caddy_blocks:
 
       reverse_proxy 127.0.0.1:8004
     }
+
+restic_client_jobs:
+  - name: compose
+    schedule: "*-*-* 02:00:00"
+    paths:
+      - "{{ docker_compose_dir }}"
+    exclude:
+      - "{{ docker_compose_dir }}/gitea/data"
+      - "{{ docker_compose_dir }}/vaultwarden/data"
+      - "{{ docker_compose_dir }}/vaultwarden/web-vault"
+      - "{{ docker_compose_dir }}/home_assistant/config"
+      - "{{ docker_compose_dir }}/jellyfin/config"
+      - "{{ docker_compose_dir }}/immich/library"
+      - "{{ docker_compose_dir }}/immich/postgres"
+
+  - name: gitea
+    schedule: "*-*-* 02:15:00"
+    paths:
+      - "{{ restic_client_staging_dir }}/gitea"
+    pre: |
+      staging="{{ restic_client_staging_dir }}/gitea"
+      compose="{{ docker_compose_dir }}/gitea/docker-compose.yml"
+      rm -rf "${staging}"
+      mkdir -p "${staging}"
+      docker compose -f "${compose}" exec -T gitea \
+        gitea dump -c /data/gitea/conf/app.ini --type tar.gz -f /tmp/gitea-dump.tar.gz
+      docker compose -f "${compose}" cp \
+        gitea:/tmp/gitea-dump.tar.gz "${staging}/gitea-dump.tar.gz"
+      docker compose -f "${compose}" exec -T gitea rm -f /tmp/gitea-dump.tar.gz
+
+  - name: vaultwarden
+    schedule: "*-*-* 02:30:00"
+    paths:
+      - "{{ restic_client_staging_dir }}/vaultwarden"
+      - "{{ docker_compose_dir }}/vaultwarden/data"
+    exclude:
+      - "{{ docker_compose_dir }}/vaultwarden/data/db.sqlite3*"
+      - "{{ docker_compose_dir }}/vaultwarden/data/backup.sqlite3"
+    pre: |
+      staging="{{ restic_client_staging_dir }}/vaultwarden"
+      rm -rf "${staging}"
+      mkdir -p "${staging}"
+      sqlite3 "{{ docker_compose_dir }}/vaultwarden/data/db.sqlite3" \
+        ".backup '${staging}/db.sqlite3'"
+
+  - name: home-assistant
+    schedule: "*-*-* 02:45:00"
+    paths:
+      - "{{ restic_client_staging_dir }}/home-assistant"
+      - "{{ docker_compose_dir }}/home_assistant/config"
+    exclude:
+      - "{{ docker_compose_dir }}/home_assistant/config/home-assistant_v2.db*"
+      - "{{ docker_compose_dir }}/home_assistant/config/home-assistant.log*"
+      - "{{ docker_compose_dir }}/home_assistant/config/deps"
+      - "{{ docker_compose_dir }}/home_assistant/config/tts"
+      - "{{ docker_compose_dir }}/home_assistant/config/tmp"
+      - "{{ docker_compose_dir }}/home_assistant/config/backups"
+      - "{{ docker_compose_dir }}/home_assistant/config/.cache"
+    pre: |
+      staging="{{ restic_client_staging_dir }}/home-assistant"
+      config="{{ docker_compose_dir }}/home_assistant/config"
+      rm -rf "${staging}"
+      mkdir -p "${staging}"
+      if [[ -f "${config}/home-assistant_v2.db" ]]; then
+        sqlite3 "${config}/home-assistant_v2.db" ".backup '${staging}/home-assistant_v2.db'"
+      fi
+
+  - name: jellyfin
+    schedule: "*-*-* 03:00:00"
+    paths:
+      - "{{ restic_client_staging_dir }}/jellyfin"
+      - "{{ docker_compose_dir }}/jellyfin/config"
+    exclude:
+      - "{{ docker_compose_dir }}/jellyfin/config/cache"
+      - "{{ docker_compose_dir }}/jellyfin/config/transcodes"
+      - "{{ docker_compose_dir }}/jellyfin/config/log"
+      - "{{ docker_compose_dir }}/jellyfin/config/data/jellyfin.db*"
+      - "{{ docker_compose_dir }}/jellyfin/config/data/library.db*"
+    pre: |
+      staging="{{ restic_client_staging_dir }}/jellyfin"
+      config="{{ docker_compose_dir }}/jellyfin/config"
+      rm -rf "${staging}"
+      mkdir -p "${staging}"
+      for database in jellyfin.db library.db; do
+        if [[ -f "${config}/data/${database}" ]]; then
+          sqlite3 "${config}/data/${database}" ".backup '${staging}/${database}'"
+        fi
+      done
+
+  - name: immich
+    schedule: "*-*-* 03:15:00"
+    paths:
+      - "{{ restic_client_staging_dir }}/immich"
+    pre: |
+      staging="{{ restic_client_staging_dir }}/immich"
+      compose="{{ docker_compose_dir }}/immich/docker-compose.yml"
+      rm -rf "${staging}"
+      mkdir -p "${staging}"
+      docker compose -f "${compose}" exec -T database \
+        pg_dump --clean --if-exists --dbname=immich --username=postgres \
+        > "${staging}/immich-db.sql"
+
+restic_client_legacy_cron_jobs:
+  - Back up Jellyfin to network drive
+  - Back up Gitea to network drive
+  - Back up vaultwarden to network drive
+  - Back up Immich to network drive
+  - Back up Home Assistant to network drive
+  - Dump vaultwarden sqlite3 database to backup file

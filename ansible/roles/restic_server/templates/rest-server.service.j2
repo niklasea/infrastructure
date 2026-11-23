@@ -1,0 +1,22 @@
+[Unit]
+Description=Restic REST server
+Wants=network-online.target
+After=network-online.target
+RequiresMountsFor={{ restic_server_repo_root }}
+
+[Service]
+Type=simple
+User={{ restic_server_user }}
+Group={{ restic_server_group }}
+Environment=HOME={{ restic_server_home }}
+ExecStart=/usr/local/bin/rest-server --append-only --private-repos --path {{ restic_server_repo_root }} --htpasswd-file {{ restic_server_htpasswd_file }} --listen {{ restic_server_listen_address }}
+Restart=on-failure
+RestartSec=5s
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths={{ restic_server_repo_root }}
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,13 @@
+[Unit]
+Description=Check age of restic snapshots
+Wants=network-online.target
+After=network-online.target
+RequiresMountsFor={{ restic_server_repo_root }}
+
+[Service]
+Type=oneshot
+User={{ restic_server_user }}
+Group={{ restic_server_group }}
+Environment=HOME={{ restic_server_home }}
+Environment=RESTIC_CACHE_DIR={{ restic_server_cache_dir }}
+ExecStart=/usr/local/sbin/restic-monitor

@@ -80,6 +80,11 @@ infrastructure_hosts:
       - jellyfin
       - omada
       - speedtest
+  backup01:
+    hardware_address: 'BC:24:11:7B:AC:01'
+    ipv4_address: "{{ internal_network_ipv4 | ansible.utils.ipaddr('40') | ansible.utils.ipaddr('address') }}"
+    alternate_hostnames:
+      - backup
   # PUBLIC SUBNET
   public-docker:
     hardware_address: 'CE:CC:FD:16:0E:BC'

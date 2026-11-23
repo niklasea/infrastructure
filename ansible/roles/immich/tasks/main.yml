@@ -64,14 +64,11 @@
       mode: '0600'
   register: _immich_configuration_files
 
-- name: Add backup script
+- name: Remove legacy backup script
   become: true
-  ansible.builtin.template:
-    src: backup.sh.j2
-    dest: "{{ immich_compose_dir }}/backup.sh"
-    owner: root
-    group: root
-    mode: '0750'
+  ansible.builtin.file:
+    path: "{{ immich_compose_dir }}/backup.sh"
+    state: absent
 
 - name: Start Immich
   become: true

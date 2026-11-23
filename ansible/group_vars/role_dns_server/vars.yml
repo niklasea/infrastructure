@@ -1,2 +1,8 @@
 ---
 netbird_peer_disable_dns: true
+
+restic_client_jobs:
+  - name: blocky
+    schedule: "*-*-* 04:00:00"
+    paths:
+      - "{{ docker_compose_dir }}/dns_server"

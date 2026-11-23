@@ -1,0 +1,12 @@
+[Unit]
+Description=Schedule restic repository pruning
+
+[Timer]
+OnCalendar=Sun *-*-* 05:30:00
+RandomizedDelaySec=15min
+Persistent=true
+AccuracySec=1m
+Unit=restic-prune.service
+
+[Install]
+WantedBy=timers.target

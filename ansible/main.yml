@@ -20,6 +20,23 @@
     - ansible.builtin.import_role:
         name: smb_mount
 
+- name: Backup server
+  hosts: role_backup
+  tasks:
+    - ansible.builtin.import_role:
+        name: firewall
+      vars:
+        firewall_rules:
+          - { chain: INPUT, rule: ACCEPT, src: "{{ internal_network_ipv4 }}", port: 443, proto: tcp, comment: Backup HTTPS from internal network }
+          - { chain: INPUT, rule: ACCEPT, src: "{{ infrastructure_hosts['public-docker']['ipv4_address'] }}", port: 443, proto: tcp, comment: Backup HTTPS from public docker }
+          - { chain: INPUT, rule: ACCEPT, src: "{{ internal_network_ipv4 }}", port: 80, proto: tcp, comment: Backup HTTP from internal network }
+    - ansible.builtin.import_role:
+        name: docker
+    - ansible.builtin.import_role:
+        name: caddy
+    - ansible.builtin.import_role:
+        name: restic_server
+
 - name: Configure overlay networking
   ansible.builtin.import_playbook: overlay_networking.yml
 
@@ -61,72 +78,12 @@
         name: omada
     - ansible.builtin.import_role:
         name: home_assistant
-  post_tasks:
-    - name: Schedule backup to network drive
-      become: true
-      ansible.builtin.cron:
-        name: "{{ item.name}}"
-        job: "{{ item.job }}"
-        hour: 4
-        minute: 0
-        state: present
-      loop:
-        - name: Back up Jellyfin to network drive
-          job: >
-            /usr/bin/tar -zcf
-            {{ smb_mounts.backup_jellyfin.local_path }}/jellyfin.tar.gz
-            {{ jellyfin_config_dir }}
-        - name: "Back up Gitea to network drive"
-          job: >
-            /usr/bin/tar -czf
-            {{ smb_mounts.backup_gitea.local_path }}/gitea-dump.zip
-            {{ gitea_data_dir }}
-        - name: "Back up vaultwarden to network drive"
-          job: >
-            /usr/bin/tar -zcf
-            {{ smb_mounts.backup_vaultwarden.local_path }}/data.tar.gz
-            {{ vaultwarden_data_dir }}
 
-    - name: Schedule Immich backup to network drive
-      become: true
-      ansible.builtin.cron:
-        name: "Back up Immich to network drive"
-        job: "{{ immich_compose_dir }}/backup.sh"
-        hour: 4
-        minute: 0
-        state: present
-
-    - name: Install sqlite for database backups
-      become: true
-      ansible.builtin.package:
-        name: sqlite3
-        state: present
-    - name: Schedule Home Assistant database and config backup
-      become: true
-      ansible.builtin.cron:
-        name: "Back up Home Assistant to network drive"
-        job: >
-          test ! -f {{ home_assistant_config_dir }}/home-assistant_v2.db ||
-          /usr/bin/sqlite3 {{ home_assistant_config_dir }}/home-assistant_v2.db
-          ".backup '{{ home_assistant_config_dir }}/home-assistant_v2.backup'" &&
-          /usr/bin/tar -zcf
-          {{ smb_mounts.backup_home_assistant.local_path }}/homeassistant.tar.gz
-          --exclude='home-assistant_v2.db*'
-          {{ home_assistant_config_dir }}
-        hour: 4
-        minute: 0
-        state: present
-    - name: Schedule vaultwarden database backup
-      become: true
-      ansible.builtin.cron:
-        name: "Dump vaultwarden sqlite3 database to backup file"
-        job: >
-          /usr/bin/sqlite3
-          {{ vaultwarden_data_dir }}/db.sqlite3
-          ".backup '{{ vaultwarden_data_dir }}/backup.sqlite3'"
-        hour: 3
-        minute: 0
-        state: present
+- name: Backup clients
+  hosts: internal-docker,public-docker,netbird,role_dns_server,!hcloud
+  tasks:
+    - ansible.builtin.import_role:
+        name: restic_client
 
 - name: Configure RetroPie
   hosts: retropie

@@ -1,0 +1,33 @@
+---
+restic_server_restic_version: "0.20.0"
+restic_server_restic_sha256: "0ccd9fa7885074a24603b051e01bf9bd8b5e45d6a1791e9d9887e9e9372107f7"
+
+restic_server_rest_server_version: "0.14.0"
+restic_server_rest_server_sha256: "4c9c95bc079a0334e81fad379b19dc5c3353c71c2c88d652cafce2081c2b1c66"
+restic_server_rest_server_url: "https://github.com/restic/rest-server/releases/download/v{{ restic_server_rest_server_version }}"
+restic_server_rest_server_archive: "rest-server_{{ restic_server_rest_server_version }}_linux_amd64.tar.gz"
+restic_server_rest_server_extract_dir: "/tmp/rest-server_{{ restic_server_rest_server_version }}_linux_amd64"
+
+restic_server_user: restic
+restic_server_group: restic
+restic_server_uid: 3000
+restic_server_gid: 3000
+restic_server_home: /var/lib/restic
+restic_server_cache_dir: /var/cache/restic
+restic_server_password_dir: /etc/restic
+restic_server_repo_root: /srv/restic
+restic_server_nfs_source: ""
+restic_server_nfs_fstype: nfs
+restic_server_nfs_options: "nfsvers=4.2,rw,sync,hard,_netdev"
+
+restic_server_listen_address: "127.0.0.1:8000"
+restic_server_htpasswd_file: /etc/rest-server/htpasswd
+restic_server_repositories: []
+restic_server_retention:
+  keep_daily: 14
+  keep_weekly: 8
+  keep_monthly: 24
+  keep_yearly: 3
+restic_server_healthcheck_url: ""
+restic_server_check_read_data_subset: "5%"
+restic_server_check_stale_after_seconds: 93600

@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -euo pipefail
+umask 077
+
+export HOME=/root
+export RESTIC_REPOSITORY={{ restic_client_repository | quote }}
+export RESTIC_PASSWORD_FILE={{ restic_client_password_file | quote }}
+export RESTIC_CACHE_DIR={{ restic_client_cache_dir | quote }}
+
+HC_URL={{ (job.healthcheck_url | default(restic_client_healthcheck_url)) | quote }}
+
+fail() {
+  local rc=$?
+  if [[ -n ${HC_URL} ]]; then
+    curl -fsS -m 10 --retry 3 "${HC_URL%/}/fail" >/dev/null 2>&1 || true
+  fi
+  exit "${rc}"
+}
+trap fail ERR
+
+exec 9>{{ restic_client_staging_dir }}/.{{ job.name }}.lock
+flock -n 9 || exit 0
+
+{% if job.pre is defined %}
+{{ job.pre | trim }}
+{% endif %}
+
+backup_args=(
+  backup
+  --host {{ inventory_hostname_short | quote }}
+  --tag {{ job.name | quote }}
+  --one-file-system
+  --exclude-caches
+  --exclude-file {{ restic_client_excludes_file | quote }}
+{% for pattern in job.exclude | default([]) %}
+  --exclude {{ pattern | quote }}
+{% endfor %}
+{% for path in job.paths %}
+  {{ path | quote }}
+{% endfor %}
+)
+
+/usr/local/bin/restic "${backup_args[@]}"
+
+if [[ -n ${HC_URL} ]]; then
+  curl -fsS -m 10 --retry 3 "${HC_URL}" >/dev/null
+fi

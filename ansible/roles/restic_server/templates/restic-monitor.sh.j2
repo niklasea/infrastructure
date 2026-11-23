@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -euo pipefail
+umask 077
+
+export HOME={{ restic_server_home | quote }}
+export RESTIC_CACHE_DIR={{ restic_server_cache_dir | quote }}
+
+HC_URL={{ restic_server_healthcheck_url | quote }}
+
+fail() {
+  local rc=$?
+  if [[ -n ${HC_URL} ]]; then
+    curl -fsS -m 10 --retry 3 "${HC_URL%/}/fail" >/dev/null 2>&1 || true
+  fi
+  exit "${rc}"
+}
+trap fail ERR
+
+now=$(date +%s)
+
+{% for repo in restic_server_repositories %}
+snapshots=$(/usr/local/bin/restic -r {{ (restic_server_repo_root ~ '/' ~ repo) | quote }} \
+  --password-file {{ (restic_server_password_dir ~ '/' ~ repo ~ '.pass') | quote }} \
+  snapshots --json)
+if [[ $(jq 'length' <<< "${snapshots}") -eq 0 ]]; then
+  echo "{{ repo }} has no snapshots"
+  false
+fi
+while read -r tag latest; do
+  age=$((now - $(date -d "${latest}" +%s)))
+  if ((age > {{ restic_server_check_stale_after_seconds }})); then
+    echo "{{ repo }}/${tag} latest snapshot is ${age} seconds old"
+    false
+  fi
+done < <(jq -r 'group_by(.tags[0] // "untagged")[] | "\(.[0].tags[0] // "untagged") \(max_by(.time).time)"' <<< "${snapshots}")
+{% endfor %}
+
+if [[ -n ${HC_URL} ]]; then
+  curl -fsS -m 10 --retry 3 "${HC_URL}" >/dev/null
+fi
