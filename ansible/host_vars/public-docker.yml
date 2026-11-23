@@ -38,3 +38,38 @@ linuxgsm_servers:
       servername="Hogs World"
       # Minimum password length is 5.
       serverpassword="{{ vault_valheim_server_password }}"
+
+restic_client_jobs:
+  - name: linuxgsm
+    schedule: "*-*-* 03:30:00"
+    paths:
+      - "{{ restic_client_staging_dir }}/linuxgsm"
+    pre: |
+      staging="{{ restic_client_staging_dir }}/linuxgsm"
+      rm -rf "${staging}"
+      mkdir -p "${staging}"
+      for instance in {{ docker_compose_dir }}/linuxgsm/*; do
+        [[ -d "${instance}" ]] || continue
+        name=$(basename "${instance}")
+        mkdir -p "${staging}/${name}"
+        cp -a "${instance}/docker-compose.yml" "${staging}/${name}/" 2>/dev/null || true
+        for path in \
+          "${instance}/data/config-lgsm" \
+          "${instance}/data/serverfiles/saves" \
+          "${instance}/data/serverfiles/csgo/cfg" \
+          "${instance}/data/serverfiles/csgo/addons" \
+          "${instance}/data/serverfiles/csgo/maps" \
+          "${instance}/data/serverfiles/adminlist.txt" \
+          "${instance}/data/serverfiles/bannedlist.txt" \
+          "${instance}/data/serverfiles/permittedlist.txt"; do
+          if [[ -e "${path}" ]]; then
+            rel="${path#${instance}/}"
+            mkdir -p "${staging}/${name}/$(dirname "${rel}")"
+            cp -a "${path}" "${staging}/${name}/$(dirname "${rel}")/"
+          fi
+        done
+      done
+      if [[ -z $(ls -A "${staging}") ]]; then
+        echo "No LinuxGSM data found under {{ docker_compose_dir }}/linuxgsm"
+        false
+      fi

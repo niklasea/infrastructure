@@ -30,3 +30,23 @@ inadyn_ddns_configurations:
         username: "{{ vault_home_domain }}"
         password: "{{ vault_cloudflare.zone_key }}"
         hostname: "netbird.{{ vault_home_domain }}"
+
+restic_client_jobs:
+  - name: netbird
+    schedule: "*-*-* 03:45:00"
+    paths:
+      - "{{ restic_client_staging_dir }}/netbird"
+      - "{{ docker_compose_dir }}/netbird_service"
+    pre: |
+      staging="{{ restic_client_staging_dir }}/netbird"
+      compose="{{ docker_compose_dir }}/netbird_service/docker-compose.yml"
+      rm -rf "${staging}"
+      mkdir -p "${staging}"
+      docker compose -f "${compose}" stop netbird-server
+      trap 'docker compose -f "${compose}" start netbird-server >/dev/null' EXIT
+      docker compose -f "${compose}" cp netbird-server:/var/lib/netbird/. "${staging}/"
+      docker compose -f "${compose}" start netbird-server >/dev/null
+      trap - EXIT
+
+restic_client_legacy_cron_jobs:
+  - Back up netbird to network drive

@@ -44,6 +44,12 @@ vyos_local_interfaces:
         set firewall name PUBLIC-IN-v4 rule 100 destination group address-group 'LOCAL-DNS'
         set firewall name PUBLIC-IN-v4 rule 100 protocol 'tcp_udp'
         set firewall name PUBLIC-IN-v4 rule 100 state new 'enable'
+        set firewall name PUBLIC-IN-v4 rule 110 action 'accept'
+        set firewall name PUBLIC-IN-v4 rule 110 description 'Allow public servers to use the backup server'
+        set firewall name PUBLIC-IN-v4 rule 110 destination address '{{ infrastructure_hosts['backup01']['ipv4_address'] }}'
+        set firewall name PUBLIC-IN-v4 rule 110 destination port '443'
+        set firewall name PUBLIC-IN-v4 rule 110 protocol 'tcp'
+        set firewall name PUBLIC-IN-v4 rule 110 state new 'enable'
       local: |
         set firewall name PUBLIC-LOCAL-v4 default-action 'reject'
         set firewall name PUBLIC-LOCAL-v4 enable-default-log

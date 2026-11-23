@@ -1,0 +1,20 @@
+---
+restic_server_nfs_source: "harkonnen.{{ local_domain }}:/mnt/CHANGEME/backup/restic"
+restic_server_repositories:
+  - dns01
+  - dns02
+  - internal-docker
+  - netbird
+  - public-docker
+restic_server_healthcheck_url: "{{ (vault_restic_healthcheck_urls | default({})).get('backup01', '') }}"
+
+caddy_blocks:
+  - |
+    backup.{{ local_domain }} {
+        tls {
+            dns cloudflare {{ caddy_cloudflare_api_token }}
+            resolvers 1.1.1.1 1.0.0.1
+        }
+
+        reverse_proxy 127.0.0.1:8000
+    }
