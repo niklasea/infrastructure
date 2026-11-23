@@ -1,0 +1,21 @@
+---
+restic_client_version: "0.20.0"
+restic_client_sha256: "0ccd9fa7885074a24603b051e01bf9bd8b5e45d6a1791e9d9887e9e9372107f7"
+
+restic_client_server_url: "https://backup.{{ local_domain }}"
+restic_client_repository: "rest:{{ restic_client_server_url }}/{{ inventory_hostname_short }}/"
+
+restic_client_config_dir: /etc/restic
+restic_client_password_file: "{{ restic_client_config_dir }}/password"
+restic_client_cache_dir: /var/cache/restic
+restic_client_staging_dir: /var/backups/restic-staging
+restic_client_excludes_file: "{{ restic_client_config_dir }}/excludes"
+restic_client_job_dir: /usr/local/lib/restic/jobs
+
+restic_client_jobs: []
+restic_client_excludes:
+  - "**/.cache"
+  - "**/node_modules"
+  - "**/*.tmp"
+restic_client_healthcheck_url: "{{ (vault_restic_healthcheck_urls | default({})).get(inventory_hostname_short, '') }}"
+restic_client_legacy_cron_jobs: []

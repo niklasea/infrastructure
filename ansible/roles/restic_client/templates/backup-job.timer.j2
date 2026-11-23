@@ -1,0 +1,12 @@
+[Unit]
+Description=Schedule restic backup {{ job.name }} on {{ inventory_hostname_short }}
+
+[Timer]
+OnCalendar={{ job.schedule | default('*-*-* 03:00:00') }}
+RandomizedDelaySec={{ job.randomized_delay_sec | default(1800) }}
+Persistent=true
+AccuracySec=1m
+Unit=restic-backup-{{ job.name }}.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,16 @@
+[Unit]
+Description=Restic backup {{ job.name }} on {{ inventory_hostname_short }}
+Wants=network-online.target
+After=network-online.target
+{% if job.requires_docker | default(true) %}
+Wants=docker.service
+After=docker.service
+{% endif %}
+
+[Service]
+Type=oneshot
+ExecStart={{ restic_client_job_dir }}/{{ job.name }}.sh
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec={{ job.timeout | default('12h') }}
+PrivateTmp=true
