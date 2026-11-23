@@ -1,0 +1,12 @@
+[Unit]
+Description=Schedule restic repository data checks
+
+[Timer]
+OnCalendar=*-*-01 07:00:00
+RandomizedDelaySec=15min
+Persistent=true
+AccuracySec=1m
+Unit=restic-check-data.service
+
+[Install]
+WantedBy=timers.target

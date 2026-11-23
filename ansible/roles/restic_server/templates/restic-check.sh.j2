@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+umask 077
+
+export HOME={{ restic_server_home | quote }}
+export RESTIC_CACHE_DIR={{ restic_server_cache_dir | quote }}
+
+read_data_subset="${1:-}"
+
+{% for repo in restic_server_repositories %}
+echo "Checking {{ repo }}"
+args=(check)
+if [[ -n ${read_data_subset} ]]; then
+  args+=(--read-data-subset "${read_data_subset}")
+fi
+/usr/local/bin/restic -r {{ (restic_server_repo_root ~ '/' ~ repo) | quote }} \
+  --password-file {{ (restic_server_password_dir ~ '/' ~ repo ~ '.pass') | quote }} \
+  "${args[@]}"
+{% endfor %}

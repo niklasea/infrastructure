@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+umask 077
+
+export HOME={{ restic_server_home | quote }}
+export RESTIC_CACHE_DIR={{ restic_server_cache_dir | quote }}
+
+exec 9>{{ restic_server_home | quote }}/prune.lock
+flock -n 9 || exit 0
+
+{% for repo in restic_server_repositories %}
+echo "Pruning {{ repo }}"
+/usr/local/bin/restic -r {{ (restic_server_repo_root ~ '/' ~ repo) | quote }} \
+  --password-file {{ (restic_server_password_dir ~ '/' ~ repo ~ '.pass') | quote }} \
+  forget \
+  --group-by host,tags \
+  --keep-daily {{ restic_server_retention.keep_daily }} \
+  --keep-weekly {{ restic_server_retention.keep_weekly }} \
+  --keep-monthly {{ restic_server_retention.keep_monthly }} \
+  --keep-yearly {{ restic_server_retention.keep_yearly }} \
+  --prune
+{% endfor %}
