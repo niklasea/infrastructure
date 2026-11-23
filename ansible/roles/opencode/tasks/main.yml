@@ -18,15 +18,15 @@
     firewall_rules:
       - chain: DOCKER-USER
         rule: RETURN
-        in_interface: "{{ opencode_netbird_interface }}"
+        src: "{{ opencode_allowed_network }}"
         port: "{{ opencode_port }}"
         proto: tcp
-        comment: OpenCode over NetBird
+        comment: OpenCode from the overlay network
       - chain: DOCKER-USER
         rule: DROP
         port: "{{ opencode_port }}"
         proto: tcp
-        comment: OpenCode outside NetBird
+        comment: OpenCode from outside the overlay network
 
 - name: Create directories
   become: true
