@@ -1,0 +1,35 @@
+---
+# Scripts only: the battery-powered frame deep-sleeps and cannot be woken
+# from Home Assistant until a Bluetooth proxy is in place, so scheduled
+# push automations would fail while it sleeps.
+script:
+  bloomin8_show_image:
+    alias: BLOOMIN8 show image
+    mode: single
+    fields:
+      image_path:
+        description: Image path on the Home Assistant media share
+        example: /media/local/photos/family.jpg
+    sequence:
+      - service: media_player.play_media
+        target:
+          entity_id: {{ home_assistant_bloomin8.media_player }}
+        data:
+          media_content_type: image/jpeg
+          media_content_id: "{% raw %}{{ image_path }}{% endraw %}"
+
+  bloomin8_show_next:
+    alias: BLOOMIN8 show next image
+    mode: single
+    sequence:
+      - service: bloomin8_eink_canvas.show_next
+        target:
+          entity_id: {{ home_assistant_bloomin8.media_player }}
+
+  bloomin8_sleep:
+    alias: BLOOMIN8 sleep
+    mode: single
+    sequence:
+      - service: bloomin8_eink_canvas.sleep
+        target:
+          entity_id: {{ home_assistant_bloomin8.media_player }}

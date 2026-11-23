@@ -34,6 +34,10 @@ home_assistant_battery_devices:
   - name: STYRBAR remote
     entity: sensor.ikea_remote_control_n2_battery
 
+# Entity IDs depend on the device name chosen in the BLOOMIN8 config flow.
+home_assistant_bloomin8:
+  media_player: media_player.bloomin8_canvas
+
 # Paths relative to files/ or templates/ and the config directory. Blueprint
 # sources keep a .blueprint suffix because their !input tags are not valid YAML,
 # and .j2 sources are rendered as templates.
@@ -48,6 +52,8 @@ home_assistant_config_files:
     dest: packages/battery.yaml
   - src: packages/water.yaml.j2
     dest: packages/water.yaml
+  - src: packages/bloomin8.yaml.j2
+    dest: packages/bloomin8.yaml
 
 home_assistant_version: stable
 
