@@ -52,7 +52,8 @@ wireguard_client_dns_servers: "{{ dhcp_dns_addresses }}"
 wifi_pass: "{{ vault_wifi_pass }}"
 
 opencode_github_token: "{{ (vault_opencode | default({})).github_token | default('') }}"
-opencode_deepseek_api_key: "{{ (vault_opencode | default({})).deepseek_api_key | default('') }}"
+opencode_api_keys:
+  DEEPSEEK_API_KEY: "{{ (vault_opencode | default({})).deepseek_api_key | default('') }}"
 
 infrastructure_hosts:
   # PRIVATE SUBNET

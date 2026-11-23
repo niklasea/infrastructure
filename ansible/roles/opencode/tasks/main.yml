@@ -5,15 +5,11 @@
     fail_msg: Set vault_opencode.github_token before deploying OpenCode.
     quiet: true
 
-- name: Require a DeepSeek API key
+- name: Validate API keys
   ansible.builtin.assert:
-    that: opencode_deepseek_api_key | length > 0
-    fail_msg: Set vault_opencode.deepseek_api_key before deploying OpenCode.
+    that: opencode_api_keys is mapping
+    fail_msg: opencode_api_keys must be a mapping of environment variable names to values.
     quiet: true
-  when: >-
-    opencode_default_model.startswith('deepseek/')
-    or opencode_build_model.startswith('deepseek/')
-    or opencode_plan_model.startswith('deepseek/')
 
 - name: Ensure Docker is running
   become: true

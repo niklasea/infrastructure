@@ -10,6 +10,9 @@ opencode_port: 49374
 opencode_allowed_network: 100.64.0.0/10
 opencode_memory_limit: 4G
 
+# Environment variables exposed to the container, such as provider API keys.
+# Empty values are omitted.
+opencode_api_keys: {}
+
 opencode_default_model: deepseek/deepseek-flash
 opencode_build_model: deepseek/deepseek-flash
-opencode_plan_model: opencode/deepseek-v4.1-flash-free
