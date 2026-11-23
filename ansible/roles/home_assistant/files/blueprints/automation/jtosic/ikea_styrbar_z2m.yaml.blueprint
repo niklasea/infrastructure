@@ -3,6 +3,8 @@
 # Version 1.4 (2026-09-11). Z2M-native replacement for the ZHA blueprint used
 # before the Zigbee2MQTT migration; requires an input_number target helper and
 # an input_boolean dimming-hold helper, both deployed by the home_assistant role.
+# The upstream system_log.write debug action is removed to avoid logging every
+# button press at info level.
 blueprint:
   name: IKEA Styrbar - control multiple Light/Switch Entities
   description: |
@@ -231,10 +233,6 @@ action:
       target_index: "{% if states(selected_target) | int(0) < 0 %}0{% elif states(selected_target) | int(0) >= expand(targets) | list | count %}{{ expand(targets) | list | count - 1 }}{% else %}{{ states(selected_target) | int(0) }}{% endif %}"
       target_entity_id: "{{ expand(targets)[target_index] | attr('entity_id') }}"
       target_entity_domain: "{{ target_entity_id.split('.')[0] }}"
-  - action: system_log.write
-    data:
-      level: info
-      message: "Blueprint Script - IKEA Styrbar - control multiple Lights/Switches: command = {{ trigger.id }}, selected_target = {{ states(selected_target) | int(0) }}, target_index = {{ target_index }}, target_entity_id = {{ target_entity_id }}, target_entity_domain = {{ target_entity_domain }}, target_status = {{ states(target_entity_id) }}"
   - choose:
       - conditions:
           - condition: template
