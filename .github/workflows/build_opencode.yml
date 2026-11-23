@@ -12,6 +12,7 @@ on:
     paths:
       - .github/workflows/build_opencode.yml
       - ansible/dockerfiles/opencode/**
+  workflow_dispatch:
 
 jobs:
   build:

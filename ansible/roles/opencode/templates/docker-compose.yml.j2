@@ -17,7 +17,7 @@ services:
       - "{{ opencode_home_dir }}:{{ opencode_container_home }}"
       - "{{ opencode_workspace_dir }}:{{ opencode_container_workspace }}"
     ports:
-      - "{{ opencode_port }}:{{ opencode_port }}"
+      - "0.0.0.0:{{ opencode_port }}:{{ opencode_port }}"
     cap_drop:
       - ALL
     security_opt:

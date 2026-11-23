@@ -44,7 +44,7 @@
       owner: "{{ docker_remap_user }}"
       group: "{{ docker_remap_user }}"
     - path: "{{ opencode_workspace_dir }}"
-      mode: '755'
+      mode: '700'
       owner: "{{ docker_remap_user }}"
       group: "{{ docker_remap_user }}"
 
@@ -62,6 +62,13 @@
     path: "{{ opencode_home_dir }}/.config/opencode/service.json"
   register: _opencode_service_configuration
 
+- name: Read service configuration
+  become: true
+  when: _opencode_service_configuration.stat.exists
+  ansible.builtin.slurp:
+    src: "{{ opencode_home_dir }}/.config/opencode/service.json"
+  register: _opencode_service_configuration_content
+
 - name: Pull OpenCode image
   become: true
   ansible.builtin.command:
@@ -74,7 +81,6 @@
 
 - name: Seed service configuration
   become: true
-  when: not _opencode_service_configuration.stat.exists
   ansible.builtin.command:
     argv:
       - docker
@@ -94,6 +100,13 @@
       value: 0.0.0.0
     - key: port
       value: "{{ opencode_port }}"
+  loop_control:
+    label: "{{ item.key }}"
+  when: >-
+    not _opencode_service_configuration.stat.exists
+    or ((_opencode_service_configuration_content.content | b64decode | from_json)[item.key] | default('')) | string
+    != item.value | string
+  register: _opencode_service_configuration_seed
   changed_when: true
 
 - name: Add Docker compose file
@@ -109,5 +122,5 @@
     project_src: "{{ opencode_compose_dir }}"
     state: "present"
     pull: "always"
-    recreate: "auto"
+    recreate: "{{ 'always' if _opencode_service_configuration_seed is changed else 'auto' }}"
     remove_orphans: true
