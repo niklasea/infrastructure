@@ -1,0 +1,28 @@
+---
+services:
+  opencode:
+    image: "{{ opencode_image }}"
+    restart: unless-stopped
+    command:
+      - serve
+      - --service
+    working_dir: "{{ opencode_container_workspace }}"
+    init: true
+    environment:
+      HOME: "{{ opencode_container_home }}"
+      GIT_TERMINAL_PROMPT: "0"
+    env_file:
+      - .env
+    volumes:
+      - "{{ opencode_home_dir }}:{{ opencode_container_home }}"
+      - "{{ opencode_workspace_dir }}:{{ opencode_container_workspace }}"
+    ports:
+      - "0.0.0.0:{{ opencode_port }}:{{ opencode_port }}"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: "{{ opencode_memory_limit }}"

@@ -1,0 +1,16 @@
+ARG OPENCODE_VERSION=2.2.5
+FROM ghcr.io/anomalyco/opencode:${OPENCODE_VERSION}
+
+ARG APK_PACKAGES="git ca-certificates"
+
+COPY --chmod=755 git-askpass.sh /usr/local/bin/git-askpass
+
+# hadolint ignore=DL3018
+RUN apk add --no-cache ${APK_PACKAGES} \
+  && git config --system user.name "OpenCode" \
+  && git config --system user.email "opencode@localhost" \
+  && git config --system core.askpass /usr/local/bin/git-askpass
+
+USER root
+
+EXPOSE 49374

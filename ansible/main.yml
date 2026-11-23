@@ -61,6 +61,8 @@
         name: omada
     - ansible.builtin.import_role:
         name: home_assistant
+    - ansible.builtin.import_role:
+        name: opencode
   post_tasks:
     - name: Schedule backup to network drive
       become: true
