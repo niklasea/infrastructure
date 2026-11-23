@@ -16,6 +16,13 @@ I am using separate read-only API tokens for the dynamic inventory that are encr
 
 To see the inventory, install the inventory plugins with `ansible-galaxy install -r requirements.yml` and run `ansible-inventory --graph --ask-vault-pass`.
 
+### Backups
+
+Application data is backed up with restic to an append-only repository on the
+`backup01` VM, stored on the TrueNAS dataset `backup/restic`. See
+[`ansible/backup-runbook.md`](ansible/backup-runbook.md) for the architecture,
+required vault values, restore procedures and migration notes.
+
 ### Bootstrapping the CI/CD environment
 
 Since I am deploying to my own hardware, I need some way to connect the CI/CD pipeline to my local hypervisor. I do so by setting up VMs on the local network running GitHub Actions and Terraform agents. Since these agent servers otherwise do not need ongoing management, I simply create these through Ansible and run the playbook ad hoc:
