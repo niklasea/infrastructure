@@ -18,6 +18,7 @@ home_assistant_notify:
   mobile: notify.sm_s928b
 
 # Device registry ID; changes if the remote is removed and paired again.
+# Must be updated to the Zigbee2MQTT device's registry ID after re-pairing.
 home_assistant_styrbar:
   device_id: 086baa3ced1dc43db09e24947c67dda2
   targets:
@@ -38,8 +39,8 @@ home_assistant_battery_devices:
 # sources keep a .blueprint suffix because their !input tags are not valid YAML,
 # and .j2 sources are rendered as templates.
 home_assistant_config_files:
-  - src: blueprints/automation/kiann/styrbar_zha.yaml.blueprint
-    dest: blueprints/automation/kiann/styrbar_zha.yaml
+  - src: blueprints/automation/jtosic/ikea_styrbar_z2m.yaml.blueprint
+    dest: blueprints/automation/jtosic/ikea_styrbar_z2m.yaml
   - src: packages/lighting.yaml.j2
     dest: packages/lighting.yaml
   - src: packages/battery.yaml.j2

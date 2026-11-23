@@ -22,3 +22,8 @@ services:
       - {{ device }}
 {% endfor %}
 {% endif %}
+    networks: [{{ mqtt_network_name }}]
+
+networks:
+  {{ mqtt_network_name }}:
+    external: true

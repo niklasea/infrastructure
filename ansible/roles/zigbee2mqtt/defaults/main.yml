@@ -1,0 +1,23 @@
+---
+zigbee2mqtt_compose_dir: "{{ docker_compose_dir }}/zigbee2mqtt"
+zigbee2mqtt_data_dir: "{{ zigbee2mqtt_compose_dir }}/data"
+zigbee2mqtt_mosquitto_dir: "{{ zigbee2mqtt_compose_dir }}/mosquitto"
+
+zigbee2mqtt_version: latest
+zigbee2mqtt_mosquitto_version: "2"
+
+zigbee2mqtt_mqtt_username: mqtt
+# zigbee2mqtt_mqtt_password is set from the vault in host_vars.
+
+# SLZB-MR1 TI CC2652P7 radio (SoC2). The Silicon Labs radio (SoC1, port 6638)
+# is left for Thread. Verify against the ZHA network settings before cutover.
+zigbee2mqtt_serial_port: tcp://192.168.50.49:7638
+zigbee2mqtt_serial_adapter: zstack
+zigbee2mqtt_serial_baudrate: 115200
+
+# Fresh network on cutover; devices are re-pairing from ZHA anyway. Keep the
+# channel clear of the Wi-Fi networks at the device site.
+zigbee2mqtt_channel: 25
+zigbee2mqtt_transmit_power: 20
+
+zigbee2mqtt_frontend_port: 8006

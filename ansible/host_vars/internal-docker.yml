@@ -88,6 +88,8 @@ immich_external_library_paths:
 
 vaultwarden_signups_allowed: false
 vaultwarden_admin_token: "{{ vault_vaultwarden.admin_token }}"
+
+zigbee2mqtt_mqtt_password: "{{ vault_mqtt.password }}"
 vaultwarden_domain: "https://bitwarden.{{ local_domain }}"
 vaultwarden_smtp:
   host: "{{ vault_vaultwarden.smtp.host }}"
@@ -176,4 +178,13 @@ caddy_blocks:
       }
 
       reverse_proxy 127.0.0.1:8004
+    }
+
+    zigbee2mqtt.{{ local_domain }} {
+      tls {
+          dns cloudflare {{ caddy_cloudflare_api_token }}
+          resolvers 1.1.1.1 1.0.0.1
+      }
+
+      reverse_proxy 127.0.0.1:8006
     }
