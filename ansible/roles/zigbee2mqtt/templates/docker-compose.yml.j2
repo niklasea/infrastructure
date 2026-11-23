@@ -37,3 +37,7 @@ services:
       - /etc/localtime:/etc/localtime:ro
     ports:
       - 127.0.0.1:{{ zigbee2mqtt_frontend_port }}:8080
+
+networks:
+  {{ mqtt_network_name }}:
+    external: true
