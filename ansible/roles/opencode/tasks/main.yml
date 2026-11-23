@@ -5,7 +5,7 @@
     fail_msg: Set vault_opencode.github_token before deploying OpenCode.
     quiet: true
 
-- name: Validate API keys
+- name: Validate API key mapping
   ansible.builtin.assert:
     that: opencode_api_keys is mapping
     fail_msg: opencode_api_keys must be a mapping of environment variable names to values.
