@@ -9,3 +9,7 @@ opencode_image: "ghcr.io/niklasea/opencode:{{ opencode_version }}"
 opencode_port: 49374
 opencode_allowed_network: 100.64.0.0/10
 opencode_memory_limit: 4G
+
+opencode_default_model: deepseek/deepseek-flash
+opencode_build_model: deepseek/deepseek-flash
+opencode_plan_model: opencode/deepseek-v4.1-flash-free

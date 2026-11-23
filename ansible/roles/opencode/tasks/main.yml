@@ -5,6 +5,16 @@
     fail_msg: Set vault_opencode.github_token before deploying OpenCode.
     quiet: true
 
+- name: Require a DeepSeek API key
+  ansible.builtin.assert:
+    that: opencode_deepseek_api_key | length > 0
+    fail_msg: Set vault_opencode.deepseek_api_key before deploying OpenCode.
+    quiet: true
+  when: >-
+    opencode_default_model.startswith('deepseek/')
+    or opencode_build_model.startswith('deepseek/')
+    or opencode_plan_model.startswith('deepseek/')
+
 - name: Ensure Docker is running
   become: true
   ansible.builtin.systemd:
@@ -47,6 +57,19 @@
       mode: '700'
       owner: "{{ docker_remap_user }}"
       group: "{{ docker_remap_user }}"
+    - path: "{{ opencode_home_dir }}/.config/opencode"
+      mode: '700'
+      owner: "{{ docker_remap_user }}"
+      group: "{{ docker_remap_user }}"
+
+- name: Add OpenCode configuration
+  become: true
+  ansible.builtin.template:
+    src: opencode.json.j2
+    dest: "{{ opencode_home_dir }}/.config/opencode/opencode.json"
+    mode: '600'
+    owner: "{{ docker_remap_user }}"
+    group: "{{ docker_remap_user }}"
 
 - name: Add environment file
   become: true
