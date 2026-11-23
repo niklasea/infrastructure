@@ -88,8 +88,6 @@ immich_external_library_paths:
 
 vaultwarden_signups_allowed: false
 vaultwarden_admin_token: "{{ vault_vaultwarden.admin_token }}"
-
-zigbee2mqtt_mqtt_password: "{{ vault_mqtt.password }}"
 vaultwarden_domain: "https://bitwarden.{{ local_domain }}"
 vaultwarden_smtp:
   host: "{{ vault_vaultwarden.smtp.host }}"
@@ -97,6 +95,8 @@ vaultwarden_smtp:
   credentials:
     username: "{{ vault_vaultwarden.smtp.username }}"
     password: "{{ vault_vaultwarden.smtp.password }}"
+
+zigbee2mqtt_mqtt_password: "{{ vault_mqtt.password }}"
 
 inadyn_period: 600
 inadyn_ddns_configurations:

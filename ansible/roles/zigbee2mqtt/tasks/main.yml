@@ -1,4 +1,12 @@
 ---
+- name: Validate MQTT password
+  ansible.builtin.assert:
+    that:
+      - zigbee2mqtt_mqtt_password is defined
+      - (zigbee2mqtt_mqtt_password | default('')) is match('^[A-Za-z0-9]+$')
+    fail_msg: "zigbee2mqtt_mqtt_password must contain only alphanumeric characters."
+    quiet: true
+
 - name: Create MQTT network
   become: true
   community.docker.docker_network:
@@ -18,12 +26,31 @@
     - path: "{{ zigbee2mqtt_data_dir }}"
       owner: "{{ docker_remap_user }}"
       group: "{{ docker_remap_user }}"
-    - path: "{{ zigbee2mqtt_mosquitto_dir }}/config"
-      owner: "{{ docker_remap_user }}"
-      group: "{{ docker_remap_user }}"
-    - path: "{{ zigbee2mqtt_mosquitto_dir }}/data"
-      owner: "{{ docker_remap_user }}"
-      group: "{{ docker_remap_user }}"
+
+# The broker entrypoint chowns its data directory to the mosquitto user on
+# startup. Re-owning an initialised directory would remove that user's write
+# access and break persistence.
+- name: Check Mosquitto directories
+  become: true
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ zigbee2mqtt_mosquitto_dir }}/config"
+    - "{{ zigbee2mqtt_mosquitto_dir }}/data"
+  register: _zigbee2mqtt_mosquitto_dirs
+
+- name: Create Mosquitto directories
+  become: true
+  when: not item.stat.exists
+  ansible.builtin.file:
+    path: "{{ item.item }}"
+    state: directory
+    mode: '755'
+    owner: "{{ docker_remap_user }}"
+    group: "{{ docker_remap_user }}"
+  loop: "{{ _zigbee2mqtt_mosquitto_dirs.results }}"
+  loop_control:
+    label: "{{ item.item }}"
 
 - name: Add Mosquitto configuration
   become: true
@@ -35,11 +62,59 @@
     mode: '644'
   notify: restart_zigbee2mqtt
 
-# Zigbee2MQTT rewrites configuration.yaml on startup (schema migration), so
-# this template is the source of truth and frontend edits to it do not persist.
+- name: Check Zigbee2MQTT configuration
+  become: true
+  ansible.builtin.stat:
+    path: "{{ zigbee2mqtt_data_dir }}/configuration.yaml"
+  register: _zigbee2mqtt_configuration_file
+
+- name: Read Zigbee2MQTT configuration
+  become: true
+  no_log: true
+  when: _zigbee2mqtt_configuration_file.stat.exists
+  ansible.builtin.slurp:
+    src: "{{ zigbee2mqtt_data_dir }}/configuration.yaml"
+  register: _zigbee2mqtt_configuration
+
+- name: Set existing Zigbee2MQTT configuration
+  no_log: true
+  ansible.builtin.set_fact:
+    _zigbee2mqtt_existing_config: >-
+      {{ ((_zigbee2mqtt_configuration.content | b64decode | from_yaml)
+          if _zigbee2mqtt_configuration_file.stat.exists else {}) | default({}, true) }}
+
+# Zigbee2MQTT resolves GENERATE on first start and writes the concrete values
+# back into configuration.yaml. Re-emitting GENERATE on later runs would
+# re-key the network and orphan every paired device, so preserve them.
+- name: Preserve generated network settings
+  no_log: true
+  ansible.builtin.set_fact:
+    _zigbee2mqtt_network:
+      pan_id: "{{ (_zigbee2mqtt_existing_config.advanced | default({})).pan_id | default('GENERATE') }}"
+      network_key: "{{ (_zigbee2mqtt_existing_config.advanced | default({})).network_key | default('GENERATE') }}"
+      ext_pan_id: "{{ (_zigbee2mqtt_existing_config.advanced | default({})).ext_pan_id | default('GENERATE') }}"
+
+- name: Render desired Zigbee2MQTT configuration
+  no_log: true
+  ansible.builtin.set_fact:
+    _zigbee2mqtt_desired_config: >-
+      {{ lookup('ansible.builtin.template', 'configuration.yaml.j2') | from_yaml }}
+
+# Zigbee2MQTT rewrites configuration.yaml itself (generated values, added
+# defaults), so a byte comparison would restart the network on every run.
+# Only write when a managed setting actually differs.
+- name: Check Zigbee2MQTT configuration drift
+  no_log: true
+  ansible.builtin.set_fact:
+    _zigbee2mqtt_config_drift: >-
+      {{ (_zigbee2mqtt_existing_config
+          | combine(_zigbee2mqtt_desired_config, recursive=True))
+         != _zigbee2mqtt_existing_config }}
+
 - name: Add Zigbee2MQTT configuration
   become: true
   no_log: true
+  when: _zigbee2mqtt_config_drift
   ansible.builtin.template:
     src: configuration.yaml.j2
     dest: "{{ zigbee2mqtt_data_dir }}/configuration.yaml"
@@ -62,7 +137,9 @@
   register: _zigbee2mqtt_passwd_file
 
 # Mosquitto refuses to start with a missing password file, so it must exist
-# before the stack starts. The broker entrypoint chowns it on startup. To
+# before the stack starts. mosquitto_passwd creates a root-owned 0600 file and
+# the broker drops to the mosquitto user (uid 1883) before reading it, so
+# ownership is fixed here rather than relying on the image entrypoint. To
 # rotate the password, delete the file and re-run the playbook.
 - name: Create Mosquitto password file
   become: true
@@ -72,9 +149,13 @@
     name: mosquitto_passwd_init
     image: eclipse-mosquitto:{{ zigbee2mqtt_mosquitto_version }}
     pull: true
-    command: >-
-      mosquitto_passwd -b -c /mosquitto/config/passwd
-      {{ zigbee2mqtt_mqtt_username }} {{ zigbee2mqtt_mqtt_password }}
+    command:
+      - sh
+      - -c
+      - mosquitto_passwd -b -c /mosquitto/config/passwd "$1" "$2" && chown 1883:1883 /mosquitto/config/passwd
+      - sh
+      - "{{ zigbee2mqtt_mqtt_username }}"
+      - "{{ zigbee2mqtt_mqtt_password }}"
     volumes:
       - "{{ zigbee2mqtt_mosquitto_dir }}/config:/mosquitto/config"
     detach: false
@@ -89,3 +170,6 @@
     pull: "always"
     recreate: "auto"
     remove_orphans: true
+
+- name: Apply Zigbee2MQTT configuration changes
+  ansible.builtin.meta: flush_handlers

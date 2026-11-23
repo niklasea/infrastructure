@@ -127,8 +127,13 @@
       ansible.builtin.cron:
         name: "Back up Zigbee2MQTT to network drive"
         job: >
+          test ! -f {{ zigbee2mqtt_data_dir }}/database.db ||
+          /usr/bin/sqlite3 {{ zigbee2mqtt_data_dir }}/database.db
+          ".backup '{{ zigbee2mqtt_data_dir }}/database.backup'" &&
           /usr/bin/tar -zcf
           {{ smb_mounts.backup_home_assistant.local_path }}/zigbee2mqtt.tar.gz
+          --warning=no-file-changed
+          --exclude='database.db*'
           {{ zigbee2mqtt_compose_dir }}
         hour: 4
         minute: 0

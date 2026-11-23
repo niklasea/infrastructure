@@ -2,6 +2,8 @@
 home_assistant_compose_dir: "{{ docker_compose_dir }}/home_assistant"
 home_assistant_config_dir: "{{ home_assistant_compose_dir }}/config"
 
+# Entity IDs survive the Zigbee2MQTT migration by renaming the MQTT-discovered
+# entities to these IDs in the HA UI after re-pairing; keep them in sync.
 home_assistant_entity_ids:
   door_sensor: binary_sensor.ikea_parasoll_door_window_sensor
   living_room_light: light.ikea_tradfri_bulb_e27_ww_g95_cl_470lm
