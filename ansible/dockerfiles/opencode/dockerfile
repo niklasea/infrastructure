@@ -1,7 +1,7 @@
 ARG OPENCODE_VERSION=2.2.5
 FROM ghcr.io/anomalyco/opencode:${OPENCODE_VERSION}
 
-ARG APK_PACKAGES="git ca-certificates"
+ARG APK_PACKAGES="git ca-certificates github-cli"
 
 COPY --chmod=755 git-askpass.sh /usr/local/bin/git-askpass
 
