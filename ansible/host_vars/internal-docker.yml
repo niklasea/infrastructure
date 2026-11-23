@@ -96,7 +96,7 @@ vaultwarden_smtp:
     username: "{{ vault_vaultwarden.smtp.username }}"
     password: "{{ vault_vaultwarden.smtp.password }}"
 
-zigbee2mqtt_mqtt_password: "{{ vault_mqtt.password }}"
+zigbee2mqtt_mqtt_password: "{{ (vault_mqtt | default({})).password | default('') }}"
 
 inadyn_period: 600
 inadyn_ddns_configurations:

@@ -136,15 +136,24 @@
     path: "{{ zigbee2mqtt_mosquitto_dir }}/config/passwd"
   register: _zigbee2mqtt_passwd_file
 
+# The broker only knows the hash it was started with, while the Zigbee2MQTT
+# config is rewritten when the vault value changes. Recreate the password file
+# on a change or the bridge fails authentication after the restart.
+- name: Check Mosquitto password drift
+  no_log: true
+  ansible.builtin.set_fact:
+    _zigbee2mqtt_mqtt_password_changed: >-
+      {{ ((_zigbee2mqtt_existing_config.mqtt | default({})).password | default('') | string)
+         != (zigbee2mqtt_mqtt_password | string) }}
+
 # Mosquitto refuses to start with a missing password file, so it must exist
 # before the stack starts. mosquitto_passwd creates a root-owned 0600 file and
 # the broker drops to the mosquitto user (uid 1883) before reading it, so
-# ownership is fixed here rather than relying on the image entrypoint. To
-# rotate the password, delete the file and re-run the playbook.
+# ownership is fixed here rather than relying on the image entrypoint.
 - name: Create Mosquitto password file
   become: true
   no_log: true
-  when: not _zigbee2mqtt_passwd_file.stat.exists
+  when: not _zigbee2mqtt_passwd_file.stat.exists or (_zigbee2mqtt_mqtt_password_changed | bool)
   community.docker.docker_container:
     name: mosquitto_passwd_init
     image: eclipse-mosquitto:{{ zigbee2mqtt_mosquitto_version }}
