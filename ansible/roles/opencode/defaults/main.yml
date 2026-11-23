@@ -15,4 +15,3 @@ opencode_memory_limit: 4G
 opencode_api_keys: {}
 
 opencode_default_model: deepseek/deepseek-flash
-opencode_build_model: deepseek/deepseek-flash
