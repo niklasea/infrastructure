@@ -2,27 +2,39 @@
 services:
   opencode:
     image: "{{ opencode_image }}"
+    container_name: opencode
     restart: unless-stopped
     command:
       - serve
       - --service
     working_dir: "{{ opencode_container_workspace }}"
     init: true
+    read_only: {{ opencode_read_only | bool | lower }}
+    stop_grace_period: "{{ opencode_stop_grace_period }}"
+    pids_limit: {{ opencode_pids_limit }}
+    cpus: "{{ opencode_cpu_limit }}"
+    mem_limit: "{{ opencode_memory_limit }}"
+    memswap_limit: "{{ opencode_memswap_limit }}"
     environment:
       HOME: "{{ opencode_container_home }}"
       GIT_TERMINAL_PROMPT: "0"
     env_file:
       - .env
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size={{ opencode_tmpfs_size }}
     volumes:
       - "{{ opencode_home_dir }}:{{ opencode_container_home }}"
       - "{{ opencode_workspace_dir }}:{{ opencode_container_workspace }}"
+      - "{{ opencode_managed_config_dir }}:/etc/opencode:ro"
     ports:
-      - "0.0.0.0:{{ opencode_port }}:{{ opencode_port }}"
+      - "{{ opencode_bind_address }}:{{ opencode_port }}:{{ opencode_port }}"
     cap_drop:
       - ALL
     security_opt:
       - no-new-privileges:true
-    deploy:
-      resources:
-        limits:
-          memory: "{{ opencode_memory_limit }}"
+    healthcheck:
+      test: ["CMD", "opencode", "api", "get", "/api/info"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s

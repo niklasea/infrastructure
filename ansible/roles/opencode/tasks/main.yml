@@ -57,15 +57,21 @@
       mode: '700'
       owner: "{{ docker_remap_user }}"
       group: "{{ docker_remap_user }}"
+    - path: "{{ opencode_managed_config_dir }}"
+      mode: '755'
 
-- name: Add OpenCode configuration
+- name: Add managed OpenCode configuration
   become: true
   ansible.builtin.template:
     src: opencode.json.j2
-    dest: "{{ opencode_home_dir }}/.config/opencode/opencode.json"
-    mode: '600'
-    owner: "{{ docker_remap_user }}"
-    group: "{{ docker_remap_user }}"
+    dest: "{{ opencode_managed_config_dir }}/opencode.json"
+    mode: '644'
+
+- name: Remove legacy home OpenCode configuration
+  become: true
+  ansible.builtin.file:
+    path: "{{ opencode_home_dir }}/.config/opencode/opencode.json"
+    state: absent
 
 - name: Add environment file
   become: true
@@ -87,6 +93,7 @@
   ansible.builtin.slurp:
     src: "{{ opencode_home_dir }}/.config/opencode/service.json"
   register: _opencode_service_configuration_content
+  no_log: true
 
 - name: Pull OpenCode image
   become: true
@@ -107,6 +114,8 @@
       - --rm
       - --env
       - "HOME={{ opencode_container_home }}"
+      - --workdir
+      - "{{ opencode_container_workspace }}"
       - --volume
       - "{{ opencode_home_dir }}:{{ opencode_container_home }}"
       - "{{ opencode_image }}"
@@ -143,3 +152,5 @@
     pull: "always"
     recreate: "{{ 'always' if _opencode_service_configuration_seed is changed else 'auto' }}"
     remove_orphans: true
+    wait: true
+    wait_timeout: 120
