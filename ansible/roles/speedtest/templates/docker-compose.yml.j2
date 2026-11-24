@@ -18,8 +18,8 @@ services:
     environment:
       MODE: standalone
 
-  iperf3:
-    image: ghcr.io/niklasea/iperf3:{{ speedtest_iperf3_version }}
+  fireperf:
+    image: ghcr.io/niklasea/fireperf:{{ speedtest_fireperf_version }}
     restart: unless-stopped
     deploy:
       resources:
@@ -30,4 +30,8 @@ services:
     security_opt:
       - no-new-privileges:true
     ports:
-      - {{ speedtest_iperf3_port }}:5201
+      - {{ speedtest_fireperf_port }}:5001
+    ulimits:
+      nofile:
+        soft: 1048576
+        hard: 1048576
