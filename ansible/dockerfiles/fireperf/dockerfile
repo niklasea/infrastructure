@@ -1,0 +1,23 @@
+ARG DEBIAN_VERSION=stable
+FROM debian:${DEBIAN_VERSION}-slim
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+  && curl -fsSL -o /usr/share/keyrings/fireperf.asc \
+    https://repo.ipfire.org/debian/fireperf/stable/fireperf.asc \
+  && echo "deb [signed-by=/usr/share/keyrings/fireperf.asc] https://repo.ipfire.org/debian/fireperf/stable $(. /etc/os-release && echo "${VERSION_CODENAME}") main" \
+    > /etc/apt/sources.list.d/fireperf.list \
+  && apt-get update \
+  && apt-get install -y --no-install-recommends \
+    fireperf \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN useradd application
+USER application
+
+EXPOSE 5001
+
+ENTRYPOINT [ "fireperf" ]
+CMD [ "--server", "--quiet", "--port", "5001" ]

@@ -1,0 +1,27 @@
+---
+name: Build fireperf image
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build_fireperf.yml
+      - ansible/dockerfiles/fireperf/**
+  pull_request:
+    paths:
+      - .github/workflows/build_fireperf.yml
+      - ansible/dockerfiles/fireperf/**
+  workflow_dispatch:
+
+jobs:
+  build:
+    permissions:
+      contents: read
+      packages: write
+
+    uses: ./.github/workflows/push_docker_image.yml
+    with:
+      context: ansible/dockerfiles/fireperf
+      file: ansible/dockerfiles/fireperf/dockerfile
+      image_name: ghcr.io/niklasea/fireperf
