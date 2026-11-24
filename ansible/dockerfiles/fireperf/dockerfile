@@ -6,8 +6,8 @@ RUN apt-get update \
     ca-certificates \
     curl \
   && curl -fsSL -o /usr/share/keyrings/fireperf.asc \
-    https://repo.ipfire.org/debian/fireperf/master/fireperf.asc \
-  && echo "deb [signed-by=/usr/share/keyrings/fireperf.asc] https://repo.ipfire.org/debian/fireperf/master $(. /etc/os-release && echo "${VERSION_CODENAME}") main" \
+    https://repo.ipfire.org/debian/fireperf/stable/fireperf.asc \
+  && echo "deb [signed-by=/usr/share/keyrings/fireperf.asc] https://repo.ipfire.org/debian/fireperf/stable $(. /etc/os-release && echo "${VERSION_CODENAME}") main" \
     > /etc/apt/sources.list.d/fireperf.list \
   && apt-get update \
   && apt-get install -y --no-install-recommends \
