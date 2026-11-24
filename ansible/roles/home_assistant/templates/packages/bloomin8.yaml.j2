@@ -1,0 +1,53 @@
+---
+# The frame deep-sleeps on battery, so pushes fail while it sleeps until a
+# Bluetooth proxy enables BLE wake from Home Assistant.
+script:
+  bloomin8_show_image:
+    alias: BLOOMIN8 show image
+    mode: single
+    fields:
+      image_path:
+        description: Image path on the Home Assistant media share
+        example: /media/local/photos/family.jpg
+    sequence:
+      - service: media_player.play_media
+        target:
+          entity_id: {{ home_assistant_bloomin8.media_player }}
+        data:
+          media_content_type: image/jpeg
+          media_content_id: "{% raw %}{{ image_path }}{% endraw %}"
+
+  bloomin8_show_next:
+    alias: BLOOMIN8 show next image
+    mode: single
+    sequence:
+      - service: bloomin8_eink_canvas.show_next
+        target:
+          entity_id: {{ home_assistant_bloomin8.media_player }}
+
+  bloomin8_sleep:
+    alias: BLOOMIN8 sleep
+    mode: single
+    sequence:
+      - service: bloomin8_eink_canvas.sleep
+        target:
+          entity_id: {{ home_assistant_bloomin8.media_player }}
+
+automation:
+  - id: bloomin8_morning_image
+    alias: BLOOMIN8 morning image
+    mode: single
+    trigger:
+      - platform: time
+        at: "07:00:00"
+    action:
+      - service: script.bloomin8_show_next
+
+  - id: bloomin8_nightly_sleep
+    alias: BLOOMIN8 nightly sleep
+    mode: single
+    trigger:
+      - platform: time
+        at: "22:00:00"
+    action:
+      - service: script.bloomin8_sleep
