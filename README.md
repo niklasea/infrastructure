@@ -21,3 +21,7 @@ To see the inventory, install the inventory plugins with `ansible-galaxy install
 Since I am deploying to my own hardware, I need some way to connect the CI/CD pipeline to my local hypervisor. I do so by setting up VMs on the local network running GitHub Actions and Terraform agents. Since these agent servers otherwise do not need ongoing management, I simply create these through Ansible and run the playbook ad hoc:
 
 `ansible-playbook infrastructure_bootstrap.yml --ask-vault-pass`
+
+## Documentation
+
+- [Xiaomi robot vacuum over WireGuard](docs/xiaomi-vacuum.md)

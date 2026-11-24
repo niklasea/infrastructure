@@ -1,0 +1,88 @@
+#!/bin/sh
+# SNAT traffic destined for the vacuum before it leaves the LAN interface.
+#
+# The Asus is the WireGuard client; the Home Assistant site is the server.
+# Xiaomi vacuums ignore miIO requests whose source address is outside their
+# own subnet, so tunnel traffic is masqueraded to this router's LAN address
+# before it reaches the vacuum.
+#
+# The source can be the Home Assistant LAN (172.21.1.0/24) or the WireGuard
+# tunnel address (172.21.0.1), depending on Docker's outbound NAT. Matching the
+# destination keeps the rule correct in both cases and still limits it to the
+# vacuum.
+#
+# Install as /jffs/scripts/nat-start. Asuswrt-Merlin runs that script at boot
+# and whenever the firewall is reloaded, so no cron job is needed.
+
+set -u
+
+# EDIT: DHCP reservation for the Xiaomi Robot Vacuum X20+.
+VACUUM_IP="192.168.50.50"
+
+# EDIT: interface facing the vacuum. Read it from `ip route get <VACUUM_IP>`.
+LAN_IF="br0"
+
+TAG="ha-vacuum-snat"
+
+log() {
+  logger -t "$TAG" "$*"
+}
+
+remove_rules() {
+  while iptables -t nat -C POSTROUTING \
+    -d "$VACUUM_IP" -o "$LAN_IF" -j MASQUERADE 2>/dev/null; do
+    iptables -t nat -D POSTROUTING \
+      -d "$VACUUM_IP" -o "$LAN_IF" -j MASQUERADE
+  done
+
+  while iptables -C FORWARD \
+    -d "$VACUUM_IP" -p tcp --dport 54321 -j ACCEPT 2>/dev/null; do
+    iptables -D FORWARD \
+      -d "$VACUUM_IP" -p tcp --dport 54321 -j ACCEPT
+  done
+
+  while iptables -C FORWARD \
+    -d "$VACUUM_IP" -p udp --dport 54321 -j ACCEPT 2>/dev/null; do
+    iptables -D FORWARD \
+      -d "$VACUUM_IP" -p udp --dport 54321 -j ACCEPT
+  done
+}
+
+add_rules() {
+  if iptables -t nat -C POSTROUTING \
+    -d "$VACUUM_IP" -o "$LAN_IF" -j MASQUERADE 2>/dev/null; then
+    log "SNAT already present for $VACUUM_IP"
+  else
+    iptables -t nat -I POSTROUTING 1 \
+      -d "$VACUUM_IP" -o "$LAN_IF" -j MASQUERADE
+    log "SNAT installed for $VACUUM_IP via $LAN_IF"
+  fi
+
+  # Return traffic is covered by conntrack. These accepts only matter when
+  # the router's FORWARD policy rejects tunnel-to-LAN traffic.
+  if ! iptables -C FORWARD \
+    -d "$VACUUM_IP" -p tcp --dport 54321 -j ACCEPT 2>/dev/null; then
+    iptables -I FORWARD 1 \
+      -d "$VACUUM_IP" -p tcp --dport 54321 -j ACCEPT
+  fi
+
+  if ! iptables -C FORWARD \
+    -d "$VACUUM_IP" -p udp --dport 54321 -j ACCEPT 2>/dev/null; then
+    iptables -I FORWARD 1 \
+      -d "$VACUUM_IP" -p udp --dport 54321 -j ACCEPT
+  fi
+}
+
+case "${1:-start}" in
+  start)
+    add_rules
+    ;;
+  remove)
+    remove_rules
+    log "SNAT rules removed"
+    ;;
+  *)
+    echo "usage: $0 [start|remove]" >&2
+    exit 2
+    ;;
+esac
