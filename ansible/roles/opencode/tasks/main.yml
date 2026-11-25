@@ -60,20 +60,26 @@
     - path: "{{ opencode_managed_config_dir }}"
       mode: '755'
 
-- name: Add managed OpenCode configuration
+- name: Add OpenCode configuration files
   become: true
   ansible.builtin.template:
-    src: opencode.json.j2
-    dest: "{{ opencode_managed_config_dir }}/opencode.json"
-    mode: '644'
-
-- name: Add environment file
-  become: true
-  ansible.builtin.template:
-    src: env.j2
-    dest: "{{ opencode_compose_dir }}/.env"
-    mode: '600'
-  no_log: true
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - src: opencode.json.j2
+      dest: "{{ opencode_managed_config_dir }}/opencode.json"
+      mode: '644'
+    - src: env.j2
+      dest: "{{ opencode_compose_dir }}/.env"
+      mode: '600'
+      no_log: true
+    - src: docker-compose.yml.j2
+      dest: "{{ opencode_compose_dir }}/docker-compose.yml"
+      mode: '640'
+  loop_control:
+    label: "{{ item.dest }}"
+  no_log: "{{ item.no_log | default(false) }}"
 
 - name: Check service configuration
   become: true
@@ -88,13 +94,6 @@
     src: "{{ opencode_home_dir }}/.config/opencode/service.json"
   register: _opencode_service_configuration_content
   no_log: true
-
-- name: Add Docker compose file
-  become: true
-  ansible.builtin.template:
-    src: docker-compose.yml.j2
-    dest: "{{ opencode_compose_dir }}/docker-compose.yml"
-    mode: '640'
 
 - name: Pull OpenCode image
   become: true
