@@ -24,12 +24,14 @@
     # Run commands and say yes to any prompts.
     - name: Run script
       ansible.builtin.raw: |
-        set -o pipefail
-        yes | ./{{ vyos_script_remote_path }}
+        # root:root nodes break later deploys; config nodes must be group vyattacfg.
+        sg vyattacfg -c 'umask 0002; yes | ./{{ vyos_script_remote_path }}'
       args:
         executable: /bin/vbash
       register: _vyos_commands_result
-      failed_when: "'Commit failed' in _vyos_commands_result.stdout"
+      failed_when: >-
+        _vyos_commands_result.rc != 0 or
+        'Commit failed' in _vyos_commands_result.stdout
 
     - name: Save changes
       ansible.builtin.raw: |
