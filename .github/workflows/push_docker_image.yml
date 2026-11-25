@@ -19,10 +19,6 @@ on:
       build-args:
         required: false
         type: string
-      push_latest:
-        required: false
-        type: boolean
-        default: true
 
 jobs:
   build:
@@ -45,7 +41,7 @@ jobs:
           images: |
             ${{ inputs.image_name }}
           tags: |
-            type=raw,value=latest,enable=${{ inputs.push_latest && github.ref == 'refs/heads/main' }}
+            type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value=${{ inputs.custom_tag }},enable=${{ inputs.custom_tag != '' }}
             type=ref,event=branch
             type=ref,event=pr
