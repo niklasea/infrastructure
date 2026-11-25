@@ -1,6 +1,6 @@
-# Track the latest stable upstream image. Pin this ARG for reproducible builds.
-ARG OPENCODE_VERSION=latest
-FROM ghcr.io/anomalyco/opencode:${OPENCODE_VERSION}
+# Pin the upstream V2 base; upstream :latest still points at v1.
+ARG OPENCODE_BASE_VERSION=2.4.1
+FROM ghcr.io/anomalyco/opencode:${OPENCODE_BASE_VERSION}
 
 ARG APK_PACKAGES="git ca-certificates github-cli"
 

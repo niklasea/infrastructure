@@ -13,14 +13,14 @@ on:
       - .github/workflows/build_opencode.yml
       - ansible/dockerfiles/opencode/**
   schedule:
-    # Weekly rebuild to pick up the latest stable OpenCode base image.
+    # Weekly rebuild from the pinned V2 base to pick up package updates.
     - cron: "17 4 * * 1"
   workflow_dispatch:
     inputs:
-      opencode_version:
-        description: "OpenCode base image tag (for example latest or 2.2.5)"
+      opencode_base_tag:
+        description: "OpenCode V2 base image tag (defaults to 2.4.1)"
         required: false
-        default: latest
+        default: ""
         type: string
 
 jobs:
@@ -34,14 +34,14 @@ jobs:
       image_name: ghcr.io/niklasea/opencode
       context: ansible/dockerfiles/opencode
       file: ansible/dockerfiles/opencode/dockerfile
-      build-args: "OPENCODE_VERSION=${{ inputs.opencode_version || 'latest' }}"
-      push_latest: "${{ github.event_name != 'workflow_dispatch' || inputs.opencode_version == 'latest' }}"
+      build-args: "OPENCODE_BASE_VERSION=${{ inputs.opencode_base_tag || '2.4.1' }}"
+      push_latest: "${{ github.event_name != 'workflow_dispatch' || inputs.opencode_base_tag == '' }}"
 
   tag-version:
     name: Tag image with upstream version
     if: >-
       github.ref == 'refs/heads/main'
-      && (github.event_name != 'workflow_dispatch' || inputs.opencode_version == 'latest')
+      && (github.event_name != 'workflow_dispatch' || inputs.opencode_base_tag == '')
     needs: build
     runs-on: ubuntu-latest
     permissions:

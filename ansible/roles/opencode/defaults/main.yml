@@ -6,8 +6,8 @@ opencode_managed_config_dir: "{{ opencode_compose_dir }}/etc-opencode"
 opencode_container_home: /home/opencode
 opencode_container_workspace: /workspace
 
-# Track the latest stable build. Override with a SHA tag from the image
-# registry (for example sha-072bee1) to pin a specific build.
+# Tag of the custom OpenCode image to pull. Override with a SHA tag from the
+# custom image registry (for example sha-072bee1) to pin a specific build.
 opencode_version: latest
 opencode_port: 49374
 opencode_allowed_network: 100.64.0.0/10
