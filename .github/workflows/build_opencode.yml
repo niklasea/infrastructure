@@ -13,7 +13,7 @@ on:
       - .github/workflows/build_opencode.yml
       - ansible/dockerfiles/opencode/**
   schedule:
-    # Weekly rebuild from the pinned V2 base to pick up package updates.
+    # Weekly rebuild from the latest OpenCode V2 release.
     - cron: "17 4 * * 1"
   workflow_dispatch:
     inputs:
@@ -24,7 +24,32 @@ on:
         type: string
 
 jobs:
+  resolve:
+    name: Resolve OpenCode V2 base
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Resolve version
+        id: version
+        env:
+          OPENCODE_BASE_TAG: ${{ inputs.opencode_base_tag }}
+        run: |
+          version="${OPENCODE_BASE_TAG}"
+          if [ -z "$version" ]; then
+            version="$(python3 .github/scripts/resolve-opencode-version.py)"
+          fi
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
   build:
+    needs: resolve
     permissions:
       contents: read
       packages: write
@@ -34,7 +59,7 @@ jobs:
       image_name: ghcr.io/niklasea/opencode
       context: ansible/dockerfiles/opencode
       file: ansible/dockerfiles/opencode/dockerfile
-      build-args: "OPENCODE_BASE_VERSION=${{ inputs.opencode_base_tag || '2.4.1' }}"
+      build-args: "OPENCODE_BASE_VERSION=${{ needs.resolve.outputs.version }}"
       push_latest: "${{ github.event_name != 'workflow_dispatch' || inputs.opencode_base_tag == '' }}"
 
   tag-version:
