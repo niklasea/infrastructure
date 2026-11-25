@@ -67,12 +67,6 @@
     dest: "{{ opencode_managed_config_dir }}/opencode.json"
     mode: '644'
 
-- name: Remove legacy home OpenCode configuration
-  become: true
-  ansible.builtin.file:
-    path: "{{ opencode_home_dir }}/.config/opencode/opencode.json"
-    state: absent
-
 - name: Add environment file
   become: true
   ansible.builtin.template:
