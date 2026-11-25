@@ -6,9 +6,9 @@ opencode_managed_config_dir: "{{ opencode_compose_dir }}/etc-opencode"
 opencode_container_home: /home/opencode
 opencode_container_workspace: /workspace
 
-# Pinned to the current ghcr.io/niklasea/opencode build (same digest as :latest).
-# Update deliberately when rebuilding the image.
-opencode_version: "sha-072bee1"
+# Track the latest stable build. Override with a SHA tag from the image
+# registry (for example sha-072bee1) to pin a specific build.
+opencode_version: latest
 opencode_image: "ghcr.io/niklasea/opencode:{{ opencode_version }}"
 opencode_port: 49374
 opencode_bind_address: >-

@@ -12,6 +12,9 @@ on:
     paths:
       - .github/workflows/build_opencode.yml
       - ansible/dockerfiles/opencode/**
+  schedule:
+    # Weekly rebuild to pick up the latest stable OpenCode base image.
+    - cron: "17 4 * * 1"
   workflow_dispatch:
 
 jobs:
