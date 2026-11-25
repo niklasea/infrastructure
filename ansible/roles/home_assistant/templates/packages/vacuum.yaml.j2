@@ -1,4 +1,12 @@
 ---
+# One timestamp for all consumables prevents a notification per percentage
+# point; only the first low consumable in each week alerts.
+input_datetime:
+  vacuum_consumable_notified:
+    name: Vacuum consumable notified
+    has_date: true
+    has_time: true
+
 script:
   vacuum_start:
     alias: Start vacuum
@@ -28,28 +36,30 @@ automation:
       - platform: time
         at: "{{ home_assistant_vacuum.schedule }}"
     condition:
+{% if home_assistant_vacuum.presence_entity %}
       - condition: state
-        entity_id: {{ home_assistant_entity_ids.presence }}
+        entity_id: {{ home_assistant_vacuum.presence_entity }}
         state: "off"
+{% endif %}
       - condition: state
         entity_id: {{ home_assistant_vacuum.entity }}
         state: "docked"
       - condition: numeric_state
-        entity_id: {{ home_assistant_vacuum.entity }}
-        attribute: battery_level
+        entity_id: {{ home_assistant_vacuum.battery_entity }}
         above: {{ home_assistant_vacuum.min_battery }}
     action:
       - service: script.vacuum_start
 
-  # Disabled by default. Enable it in the UI once the scheduled run has been
-  # verified, if cleaning when the last person leaves is desirable.
+{% if home_assistant_vacuum.presence_entity %}
+  # Disabled at every Home Assistant start. Remove initial_state once the
+  # scheduled run has been verified if the enabled state should persist.
   - id: vacuum_presence_clean
     alias: Vacuum clean when everyone leaves
     mode: single
     initial_state: false
     trigger:
       - platform: state
-        entity_id: {{ home_assistant_entity_ids.presence }}
+        entity_id: {{ home_assistant_vacuum.presence_entity }}
         from: "on"
         to: "off"
     condition:
@@ -57,11 +67,11 @@ automation:
         entity_id: {{ home_assistant_vacuum.entity }}
         state: "docked"
       - condition: numeric_state
-        entity_id: {{ home_assistant_vacuum.entity }}
-        attribute: battery_level
+        entity_id: {{ home_assistant_vacuum.battery_entity }}
         above: {{ home_assistant_vacuum.min_battery }}
     action:
       - service: script.vacuum_start
+{% endif %}
 
   - id: vacuum_task_completed
     alias: Vacuum task completed
@@ -85,8 +95,7 @@ automation:
         data:
           title: "Vacuum finished"
           message: >-
-            {% raw %}Cleaned {{ trigger.event.data.cleaned_area | default('an unknown area') }} m²
-            in {{ trigger.event.data.cleaning_time | default('an unknown time') }} minutes.{% endraw %}
+            {% raw %}Cleaning finished.{% if trigger.event.data.cleaned_area is defined and trigger.event.data.cleaned_area is not none %} Cleaned {{ trigger.event.data.cleaned_area }} m².{% endif %}{% if trigger.event.data.cleaning_time is defined and trigger.event.data.cleaning_time is not none %} Took {{ trigger.event.data.cleaning_time }} minutes.{% endif %}{% endraw %}
 
       - service: notify.send_message
         continue_on_error: true
@@ -95,8 +104,7 @@ automation:
         data:
           title: "Vacuum finished"
           message: >-
-            {% raw %}Cleaned {{ trigger.event.data.cleaned_area | default('an unknown area') }} m²
-            in {{ trigger.event.data.cleaning_time | default('an unknown time') }} minutes.{% endraw %}
+            {% raw %}Cleaning finished.{% if trigger.event.data.cleaned_area is defined and trigger.event.data.cleaned_area is not none %} Cleaned {{ trigger.event.data.cleaned_area }} m².{% endif %}{% if trigger.event.data.cleaning_time is defined and trigger.event.data.cleaning_time is not none %} Took {{ trigger.event.data.cleaning_time }} minutes.{% endif %}{% endraw %}
 
   - id: vacuum_error
     alias: Vacuum error
@@ -167,6 +175,11 @@ automation:
         event_type: dreame_vacuum_consumable
         event_data:
           entity_id: {{ home_assistant_vacuum.entity }}
+    condition:
+      - condition: template
+        value_template: >-
+          {% raw %}{{ (as_timestamp(now()) - (states('input_datetime.vacuum_consumable_notified') | as_timestamp(0))) > 604800 }}{% endraw %}
+
     action:
       - service: notify.send_message
         continue_on_error: true
@@ -189,6 +202,12 @@ automation:
             {% raw %}{% set names = {'main_brush': 'Main brush', 'side_brush': 'Side brush', 'filter': 'Filter', 'sensor': 'Sensors', 'mop_pad': 'Mop pad'} %}
             {{ names.get(trigger.event.data.consumable, trigger.event.data.consumable) }}
             is at {{ trigger.event.data.life_left }}%. Replace or clean it and reset the counter.{% endraw %}
+
+      - service: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.vacuum_consumable_notified
+        data:
+          datetime: "{% raw %}{{ now().strftime('%Y-%m-%d %H:%M:%S') }}{% endraw %}"
 
   - id: vacuum_offline
     alias: Vacuum offline

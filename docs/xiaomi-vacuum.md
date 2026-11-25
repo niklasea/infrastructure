@@ -16,9 +16,10 @@ Home Assistant (internal-docker)
 Control and state are local over the tunnel. The Xiaomi cloud is still used to
 fetch the map and to sign in.
 
-The router rule matches the vacuum's destination address, not Home Assistant's
-source address: Docker may masquerade the HA container's traffic to the
-WireGuard interface address (`172.21.0.1`) rather than the LAN address.
+The NAT rule matches both the Home Assistant LAN and tunnel subnets against
+the vacuum destination, because Docker may masquerade the HA container's
+traffic to either address. The forward rules are scoped to the WireGuard
+client interface.
 
 ## Prerequisites
 
@@ -31,10 +32,11 @@ WireGuard interface address (`172.21.0.1`) rather than the LAN address.
 Follow [router/asus-merlin](../router/asus-merlin/README.md). The short version:
 
 1. Enable JFFS custom scripts on the Asus.
-2. Set `VACUUM_IP` and `LAN_IF` in `router/asus-merlin/nat-start`.
+2. Set `VACUUM_IP`, `LAN_IF`, and `WG_IF` in `router/asus-merlin/nat-start`
+   (adjust `HA_NET` only if the site subnets differ).
 3. Install it as `/jffs/scripts/nat-start` and run it.
-4. Make sure the WireGuard client's Allowed IPs include `172.21.1.0/24`, and
-   leave the client's own "Enable NAT" off.
+4. Make sure the WireGuard client's Allowed IPs include `172.21.0.0/24` and
+   `172.21.1.0/24`, and leave the client's own "Enable NAT" off.
 
 ## 2. Install the integration
 
@@ -63,25 +65,32 @@ The package defaults to:
 | Entity    | ID                                          |
 | --------- | ------------------------------------------- |
 | Vacuum    | `vacuum.xiaomi_robot_vacuum_x20`            |
+| Battery   | `sensor.xiaomi_robot_vacuum_x20_battery_level` |
 | Map       | `camera.xiaomi_robot_vacuum_x20_map`        |
 
 If the generated IDs differ, either rename them under **Settings → Entities**
 or override the values in `ansible/group_vars/all/vars.yml`:
 
 ```yaml
+# Override the whole mapping; partial overrides are not merged.
 home_assistant_vacuum:
   entity: vacuum.your_vacuum
-  map_entity: camera.your_vacuum_map
+  battery_entity: sensor.your_vacuum_battery_level
+  presence_entity: binary_sensor.your_site_occupied
   schedule: "09:30:00"
   min_battery: 30
 ```
 
-## 4. Room segments
+`presence_entity` must track the vacuum's site; leave it empty to clean on
+schedule regardless of occupancy. The schedule uses Home Assistant's timezone.
+
+## 4. Room IDs
 
 1. Let the vacuum complete a mapping run.
 2. Open **Developer Tools → States**, select the vacuum entity, and read the
-   `segments` attribute (or use the map card's room configurator).
-3. Map room names to segment IDs in `home_assistant_vacuum_rooms`:
+   `rooms` attribute. Each room has an `id` and a `name` (or use the map card's
+   room configurator).
+3. Map room names to room IDs in `home_assistant_vacuum_rooms`:
 
 ```yaml
 home_assistant_vacuum_rooms:
@@ -91,7 +100,7 @@ home_assistant_vacuum_rooms:
 ```
 
 Each entry produces a `script.vacuum_clean_<room>` script. Add a button for it
-to the dashboard. Leave the mapping empty until the segment IDs are known.
+to the dashboard. Leave the mapping empty until the IDs are known.
 
 ## 5. Deploy the Home Assistant package
 
@@ -111,12 +120,12 @@ CI/CD deploy.
 
 | Automation                | Behaviour                                                        |
 | ------------------------- | ---------------------------------------------------------------- |
-| `vacuum_scheduled_clean`  | Starts a whole-home clean at `home_assistant_vacuum.schedule` when nobody is home, the vacuum is docked, and the battery is above the threshold |
-| `vacuum_presence_clean`   | Disabled by default; cleans when the last person leaves           |
+| `vacuum_scheduled_clean`  | Starts at `home_assistant_vacuum.schedule` when the vacuum is docked and the battery is above the threshold; also requires an unoccupied site when `presence_entity` is set |
+| `vacuum_presence_clean`   | Created only when `presence_entity` is set; disabled at every Home Assistant start |
 | `vacuum_task_completed`   | Mobile and email notification with cleaned area and duration      |
 | `vacuum_error`            | Notification with the fault text and code                         |
 | `vacuum_warning`          | Notification for dismissible warnings                             |
-| `vacuum_consumable`       | Notification when a brush, filter, sensor, or mop pad is low      |
+| `vacuum_consumable`       | At most one maintenance notification per week across all consumables |
 | `vacuum_offline`          | Notification if the vacuum is unavailable for 15 minutes          |
 
 The completion, error, warning, and consumable automations use the
@@ -148,13 +157,14 @@ Add buttons for `script.vacuum_start` and any generated
 ## 7. Verify
 
 ```sh
-# From the Home Assistant container
-nc -vz <VACUUM_IP> 54321
-
 # On the Asus
-iptables -t nat -L POSTROUTING -vn | grep <VACUUM_IP>
+iptables -t nat -L POSTROUTING -vn | grep ha-vacuum-snat
 cat /proc/net/nf_conntrack | grep 54321
 ```
+
+The conntrack entry should show the source translated to the router's LAN
+address. The integration's local connection is the definitive test; TCP may be
+closed even when miIO over UDP works.
 
 In Home Assistant:
 
@@ -167,9 +177,10 @@ In Home Assistant:
 
 | Symptom                              | Likely cause                                                     |
 | ------------------------------------ | ---------------------------------------------------------------- |
-| Integration setup cannot reach device | SNAT missing, WireGuard client down, or Allowed IPs missing `172.21.1.0/24` |
+| Integration setup cannot reach device | SNAT missing, WireGuard client down, or Allowed IPs missing `172.21.0.0/24` or `172.21.1.0/24` |
 | Commands work but map is empty        | The map is cloud-fetched; check internet access and re-authenticate |
-| Room script cleans the wrong room     | Segment IDs changed after remapping; update `home_assistant_vacuum_rooms` |
+| Room script cleans the wrong room     | Room IDs changed after remapping; update `home_assistant_vacuum_rooms` |
+| Scheduled run never starts            | `presence_entity`, `battery_entity`, or `min_battery` is wrong |
 | `vacuum_offline` fires repeatedly     | Tunnel or Singapore site down; check the Asus and its WAN          |
 | Notifications missing                 | `home_assistant_notify.email` / `.mobile` services changed         |
 
@@ -177,6 +188,6 @@ In Home Assistant:
 
 1. Remove the `packages/vacuum.yaml.j2` entry from
    `home_assistant_config_files` and redeploy, then delete
-   `packages/vacuum.yaml` from the config directory.
+   `packages/vacuum.yaml` from the config directory and restart Home Assistant.
 2. Remove the integration under **Settings → Devices & services**.
 3. Run `/jffs/scripts/nat-start remove` on the Asus and delete the script.

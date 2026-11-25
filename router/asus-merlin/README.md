@@ -26,25 +26,29 @@ workaround documented by python-miio.
 
 ## Install
 
-Find the LAN interface that routes to the vacuum:
+Find the LAN interface that routes to the vacuum and the WireGuard client
+interface:
 
 ```sh
 ip route get 192.168.50.50
 # ... dev br0 ...
+wg show interfaces
+# wg11 ...
 ```
 
-Edit the two variables at the top of `nat-start`:
+Edit the variables at the top of `nat-start`:
 
 | Variable     | Value                                                     |
 | ------------ | --------------------------------------------------------- |
 | `VACUUM_IP`  | The vacuum's DHCP reservation                             |
 | `LAN_IF`     | `br0` for the main LAN, or the `dev` printed above        |
+| `WG_IF`      | The WireGuard client interface printed above              |
+| `HA_NET`     | Home Assistant and tunnel subnets (`172.21.0.0/23`)       |
 
-The rule matches the **destination** rather than Home Assistant's source
-address. Docker may masquerade the HA container's traffic to the WireGuard
-interface address (`172.21.0.1`) instead of the LAN address, so a source match
-would miss it. Matching the vacuum IP still keeps the rule scoped to the
-vacuum.
+The NAT rule matches both possible source subnets and the vacuum destination.
+Docker may masquerade the HA container's traffic to the tunnel address instead
+of the LAN address, so a single source match would miss one of them. The
+forward rules are additionally scoped to the WireGuard client interface.
 
 Copy it to the router and run it:
 
@@ -55,28 +59,24 @@ chmod 755 /jffs/scripts/nat-start
 /jffs/scripts/nat-start
 ```
 
-`nat-start` runs at boot and after each firewall reload, so the rule is
+`nat-start` runs at boot and after each firewall reload, so the rules are
 persistent. Running it twice is safe: existing rules are detected with
-`iptables -C`.
+`iptables -C`. Run `nat-start remove` before changing `VACUUM_IP`, `WG_IF`, or
+`HA_NET` so rules for the old values are deleted.
 
 ## Verify
 
 On the router:
 
 ```sh
-iptables -t nat -L POSTROUTING -vn | grep 192.168.50.50
-iptables -L FORWARD -vn | grep 54321
+iptables -t nat -L POSTROUTING -vn | grep ha-vacuum-snat
+iptables -L FORWARD -vn | grep ha-vacuum-snat
 cat /proc/net/nf_conntrack | grep 54321
 ```
 
-From the Home Assistant container:
-
-```sh
-nc -vz 192.168.50.50 54321
-```
-
 The conntrack entry should show the source translated to the router's LAN
-address. That is the signal the vacuum will accept the miIO session.
+address. The integration's local connection is the definitive test; TCP 54321
+may be closed even when miIO over UDP works.
 
 ## WireGuard client settings
 
@@ -100,9 +100,9 @@ rm /jffs/scripts/nat-start
 
 | Symptom                                  | Check                                                       |
 | ---------------------------------------- | ----------------------------------------------------------- |
-| No rule in `POSTROUTING`                 | Script not executable, JFFS scripts disabled, or not run    |
-| Rule present, no conntrack entry         | WireGuard client down, or Allowed IPs missing `172.21.1.0/24` |
-| Conntrack entry, `nc` still times out    | Router FORWARD policy, or the server-side route             |
+| No rule tagged `ha-vacuum-snat`          | Script not executable, JFFS scripts disabled, or not run    |
+| Rule present, no conntrack entry         | WireGuard client down, or Allowed IPs missing `172.21.0.0/24` or `172.21.1.0/24` |
+| Conntrack entry, integration cannot connect | Router FORWARD policy, or the server-side route          |
 | Works, then breaks after reboot          | `nat-start` not in `/jffs/scripts` or not executable         |
 
 Do not enable global NAT on the client as a shortcut. It makes the vacuum work

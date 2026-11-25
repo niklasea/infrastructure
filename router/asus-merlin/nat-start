@@ -1,5 +1,6 @@
 #!/bin/sh
-# SNAT traffic destined for the vacuum before it leaves the LAN interface.
+# SNAT traffic from the WireGuard tunnel to the vacuum before it leaves the
+# LAN interface.
 #
 # The Asus is the WireGuard client; the Home Assistant site is the server.
 # Xiaomi vacuums ignore miIO requests whose source address is outside their
@@ -7,8 +8,8 @@
 # before it reaches the vacuum.
 #
 # Docker may rewrite the source to the tunnel address rather than the LAN
-# address, so match the destination; that keeps the rule correct either way
-# and still limits it to the vacuum.
+# address, so the NAT rule matches both subnets. The forward rules are scoped
+# to the WireGuard client interface.
 #
 # Install as /jffs/scripts/nat-start. Asuswrt-Merlin runs that script at boot
 # and whenever the firewall is reloaded, so no cron job is needed.
@@ -21,6 +22,12 @@ VACUUM_IP="192.168.50.50"
 # EDIT: interface facing the vacuum. Read it from `ip route get <VACUUM_IP>`.
 LAN_IF="br0"
 
+# EDIT: WireGuard client interface. Read it from `wg show interfaces`.
+WG_IF="wg11"
+
+# Home Assistant LAN and the WireGuard tunnel subnet.
+HA_NET="172.21.0.0/23"
+
 TAG="ha-vacuum-snat"
 
 log() {
@@ -29,47 +36,59 @@ log() {
 
 remove_rules() {
   while iptables -t nat -C POSTROUTING \
-    -d "$VACUUM_IP" -o "$LAN_IF" -j MASQUERADE 2>/dev/null; do
+    -m comment --comment "$TAG" -j MASQUERADE 2>/dev/null; do
     iptables -t nat -D POSTROUTING \
-      -d "$VACUUM_IP" -o "$LAN_IF" -j MASQUERADE
+      -m comment --comment "$TAG" -j MASQUERADE || break
   done
 
   while iptables -C FORWARD \
-    -d "$VACUUM_IP" -p tcp --dport 54321 -j ACCEPT 2>/dev/null; do
+    -m comment --comment "$TAG" -p tcp -j ACCEPT 2>/dev/null; do
     iptables -D FORWARD \
-      -d "$VACUUM_IP" -p tcp --dport 54321 -j ACCEPT
+      -m comment --comment "$TAG" -p tcp -j ACCEPT || break
   done
 
   while iptables -C FORWARD \
-    -d "$VACUUM_IP" -p udp --dport 54321 -j ACCEPT 2>/dev/null; do
+    -m comment --comment "$TAG" -p udp -j ACCEPT 2>/dev/null; do
     iptables -D FORWARD \
-      -d "$VACUUM_IP" -p udp --dport 54321 -j ACCEPT
+      -m comment --comment "$TAG" -p udp -j ACCEPT || break
   done
 }
 
 add_rules() {
-  if iptables -t nat -C POSTROUTING \
-    -d "$VACUUM_IP" -o "$LAN_IF" -j MASQUERADE 2>/dev/null; then
-    log "SNAT already present for $VACUUM_IP"
-  else
+  if ! iptables -t nat -C POSTROUTING \
+    -s "$HA_NET" -d "$VACUUM_IP" -o "$LAN_IF" \
+    -m comment --comment "$TAG" -j MASQUERADE 2>/dev/null; then
     iptables -t nat -I POSTROUTING 1 \
-      -d "$VACUUM_IP" -o "$LAN_IF" -j MASQUERADE
-    log "SNAT installed for $VACUUM_IP via $LAN_IF"
-  fi
-
-  # Return traffic is covered by conntrack. These accepts only matter when
-  # the router's FORWARD policy rejects tunnel-to-LAN traffic.
-  if ! iptables -C FORWARD \
-    -d "$VACUUM_IP" -p tcp --dport 54321 -j ACCEPT 2>/dev/null; then
-    iptables -I FORWARD 1 \
-      -d "$VACUUM_IP" -p tcp --dport 54321 -j ACCEPT
+      -s "$HA_NET" -d "$VACUUM_IP" -o "$LAN_IF" \
+      -m comment --comment "$TAG" -j MASQUERADE || {
+      log "failed to install the SNAT rule"
+      exit 1
+    }
   fi
 
   if ! iptables -C FORWARD \
-    -d "$VACUUM_IP" -p udp --dport 54321 -j ACCEPT 2>/dev/null; then
+    -i "$WG_IF" -o "$LAN_IF" -d "$VACUUM_IP" -p tcp --dport 54321 \
+    -m comment --comment "$TAG" -j ACCEPT 2>/dev/null; then
     iptables -I FORWARD 1 \
-      -d "$VACUUM_IP" -p udp --dport 54321 -j ACCEPT
+      -i "$WG_IF" -o "$LAN_IF" -d "$VACUUM_IP" -p tcp --dport 54321 \
+      -m comment --comment "$TAG" -j ACCEPT || {
+      log "failed to install the TCP forward rule"
+      exit 1
+    }
   fi
+
+  if ! iptables -C FORWARD \
+    -i "$WG_IF" -o "$LAN_IF" -d "$VACUUM_IP" -p udp --dport 54321 \
+    -m comment --comment "$TAG" -j ACCEPT 2>/dev/null; then
+    iptables -I FORWARD 1 \
+      -i "$WG_IF" -o "$LAN_IF" -d "$VACUUM_IP" -p udp --dport 54321 \
+      -m comment --comment "$TAG" -j ACCEPT || {
+      log "failed to install the UDP forward rule"
+      exit 1
+    }
+  fi
+
+  log "SNAT and forward rules ensured for $VACUUM_IP via $LAN_IF on $WG_IF"
 }
 
 case "${1:-start}" in
@@ -78,7 +97,7 @@ case "${1:-start}" in
     ;;
   remove)
     remove_rules
-    log "SNAT rules removed"
+    log "SNAT and forward rules removed"
     ;;
   *)
     echo "usage: $0 [start|remove]" >&2

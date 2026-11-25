@@ -12,16 +12,19 @@ home_assistant_entity_ids:
 # Xiaomi Robot Vacuum X20+ at the Singapore site. The integration polls the
 # vacuum locally over the site-to-site WireGuard tunnel, so the Asus router
 # must SNAT Home Assistant traffic into the vacuum's LAN (see
-# router/asus-merlin). Rename the generated entity IDs in the UI or override
-# these values if they differ.
+# router/asus-merlin). Override the whole mapping; partial overrides are not
+# merged.
 home_assistant_vacuum:
   entity: vacuum.xiaomi_robot_vacuum_x20
-  map_entity: camera.xiaomi_robot_vacuum_x20_map
+  battery_entity: sensor.xiaomi_robot_vacuum_x20_battery_level
+  # Presence sensor for the vacuum's site. Leave empty to clean on schedule
+  # regardless of occupancy.
+  presence_entity: ""
   schedule: "09:30:00"
   min_battery: 30
 
-# Room name to Dreame Vacuum segment ID. Populate after the first map is
-# available; see docs/xiaomi-vacuum.md for how to read the segment IDs.
+# Room name to Dreame Vacuum room ID. Populate after the first map is
+# available; see docs/xiaomi-vacuum.md for how to read the IDs.
 home_assistant_vacuum_rooms: {}
 
 home_assistant_water_leak_sensors:
