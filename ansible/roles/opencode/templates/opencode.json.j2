@@ -1,6 +1,24 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "{{ opencode_default_model }}",
+  "model": "{{ opencode_default_model_alias }}",
+  "providers": {
+    "deepseek": {
+      "models": {
+        "deepseek-flash-{{ opencode_default_effort }}": {
+          "modelID": "deepseek-flash",
+          "name": "DeepSeek V4.1 Flash ({{ opencode_default_effort | capitalize }})",
+          "settings": {
+            "reasoningEffort": "{{ opencode_default_effort }}"
+          },
+          "body": {
+            "thinking": {
+              "type": "enabled"
+            }
+          }
+        }
+      }
+    }
+  },
   "default_agent": "{{ opencode_default_agent }}",
   "update": "disable",
   "websearch": {
@@ -35,9 +53,11 @@
       "model": "{{ opencode_default_model }}"
     },
     "build": {
+      "model": "{{ opencode_default_model_alias }}",
       "steps": 50
     },
     "plan": {
+      "model": "{{ opencode_default_model_alias }}",
       "steps": 30,
       "permissions": [
         {
@@ -53,6 +73,7 @@
       ]
     },
     "general": {
+      "model": "{{ opencode_default_model_alias }}",
       "steps": 40,
       "permissions": [
         {
@@ -63,6 +84,7 @@
       ]
     },
     "explore": {
+      "model": "{{ opencode_default_model_alias }}",
       "steps": 20,
       "permissions": [
         {

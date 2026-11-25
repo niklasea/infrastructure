@@ -31,6 +31,10 @@ opencode_stop_grace_period: "30s"
 opencode_api_keys: {}
 
 opencode_default_model: deepseek/deepseek-flash
+# Root `model` does not retain a #variant, so this alias encodes the effort in a
+# custom model entry. Use low, high, or max for the DeepSeek provider.
+opencode_default_effort: high
+opencode_default_model_alias: "{{ opencode_default_model }}-{{ opencode_default_effort }}"
 opencode_default_agent: plan
 opencode_websearch_provider: parallel
 
