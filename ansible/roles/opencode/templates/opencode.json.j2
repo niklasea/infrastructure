@@ -171,6 +171,11 @@
       "effect": "deny"
     },
     {
+      "action": "read",
+      "resource": "/proc/*/environ",
+      "effect": "deny"
+    },
+    {
       "action": "edit",
       "resource": "*.env",
       "effect": "deny"
@@ -313,6 +318,21 @@
       "effect": "deny"
     },
     {
+      "action": "plugin.use",
+      "resource": "*",
+      "effect": "deny"
+    },
+    {
+      "action": "plugin.use",
+      "resource": "opencode.config.policy",
+      "effect": "allow"
+    },
+    {
+      "action": "plugin.use",
+      "resource": "opencode.websearch.{{ opencode_websearch_provider }}",
+      "effect": "allow"
+    },
+    {
       "action": "websearch.use",
       "resource": "*",
       "effect": "deny"
@@ -360,6 +380,11 @@
     {
       "action": "tool.use",
       "resource": "read:*service.json",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "read:/proc/*/environ",
       "effect": "deny"
     },
     {

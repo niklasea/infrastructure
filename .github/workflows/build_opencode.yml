@@ -20,7 +20,7 @@ on:
   workflow_dispatch:
     inputs:
       opencode_base_tag:
-        description: "OpenCode V2 base image tag (defaults to the latest 2.x)"
+        description: "OpenCode V2 base image tag (2.x.y; defaults to the latest 2.x)"
         required: false
         default: ""
         type: string
@@ -47,7 +47,10 @@ jobs:
           if [ -z "$version" ]; then
             version="$(python3 .github/scripts/resolve-opencode-version.py)"
           fi
-          test -n "$version"
+          if [[ ! "$version" =~ ^2\.[0-9]+\.[0-9]+$ ]]; then
+            echo "invalid OpenCode base tag: $version" >&2
+            exit 1
+          fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
   build:

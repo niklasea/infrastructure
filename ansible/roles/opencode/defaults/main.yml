@@ -7,7 +7,8 @@ opencode_container_home: /home/opencode
 opencode_container_workspace: /workspace
 
 # Moving tag of the custom OpenCode image built from the latest V2 release.
-# Override with a version or SHA tag from the custom registry to pin.
+# Override with a version or SHA tag from the custom registry to pin, but only
+# tags built from OpenCode >= 2.2.6 include the websearch.use policy.
 opencode_version: v2
 opencode_port: 49374
 opencode_allowed_network: 100.64.0.0/10
@@ -42,8 +43,7 @@ opencode_websearch_provider: parallel
 opencode_snapshots: true
 opencode_tool_output_max_lines: 1500
 opencode_tool_output_max_bytes: 32768
-# 2.2.5 ignores compaction.background; false keeps cost priority and is
-# forward-compatible with versions that implement background summaries.
+# Requires >= 2.3.1. Older images ignore the field and use their own default.
 opencode_compaction_background: false
 opencode_compaction_keep_tokens: 10000
 opencode_compaction_buffer: "15%"

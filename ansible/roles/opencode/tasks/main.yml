@@ -108,7 +108,7 @@
     policy: always
   register: _opencode_image_pull
   changed_when: false
-  retries: 10
+  retries: 20
   delay: 30
   until: _opencode_image_pull is success
 
