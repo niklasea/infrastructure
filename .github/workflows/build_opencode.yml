@@ -35,7 +35,7 @@ jobs:
       context: ansible/dockerfiles/opencode
       file: ansible/dockerfiles/opencode/dockerfile
       build-args: "OPENCODE_VERSION=${{ inputs.opencode_version || 'latest' }}"
-      latest: "${{ github.event_name != 'workflow_dispatch' || inputs.opencode_version == 'latest' }}"
+      push_latest: "${{ github.event_name != 'workflow_dispatch' || inputs.opencode_version == 'latest' }}"
 
   tag-version:
     name: Tag image with upstream version
