@@ -28,3 +28,29 @@ jobs:
       image_name: ghcr.io/niklasea/opencode
       context: ansible/dockerfiles/opencode
       file: ansible/dockerfiles/opencode/dockerfile
+
+  tag-version:
+    name: Tag image with upstream version
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag the latest image with the OpenCode version
+        run: |
+          image=ghcr.io/niklasea/opencode:latest
+          docker pull "$image"
+          version="$(docker run --rm --entrypoint opencode "$image" --version \
+            | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1)"
+          test -n "$version"
+          docker tag "$image" "ghcr.io/niklasea/opencode:${version}"
+          docker push "ghcr.io/niklasea/opencode:${version}"
