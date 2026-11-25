@@ -88,6 +88,8 @@ vaultwarden_smtp:
     username: "{{ vault_vaultwarden.smtp.username }}"
     password: "{{ vault_vaultwarden.smtp.password }}"
 
+zigbee2mqtt_mqtt_password: "{{ (vault_mqtt | default({})).password | default('') }}"
+
 inadyn_period: 600
 inadyn_ddns_configurations:
   provider:
@@ -168,4 +170,13 @@ caddy_blocks:
       }
 
       reverse_proxy 127.0.0.1:8004
+    }
+
+    zigbee2mqtt.{{ local_domain }} {
+      tls {
+          dns cloudflare {{ caddy_cloudflare_api_token }}
+          resolvers 1.1.1.1 1.0.0.1
+      }
+
+      reverse_proxy 127.0.0.1:8006
     }

@@ -54,6 +54,14 @@
     label: "{{ item.dest }}"
   notify: restart_home_assistant
 
+# The kiann ZHA blueprint was replaced by the jtosic Zigbee2MQTT blueprint.
+- name: Remove obsolete ZHA STYRBAR blueprint
+  become: true
+  ansible.builtin.file:
+    path: "{{ home_assistant_config_dir }}/blueprints/automation/kiann/styrbar_zha.yaml"
+    state: absent
+  notify: restart_home_assistant
+
 - name: Add Docker compose file
   become: true
   ansible.builtin.template:

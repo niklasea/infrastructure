@@ -1,0 +1,21 @@
+---
+mqtt:
+  server: mqtt://mosquitto:1883
+  user: {{ zigbee2mqtt_mqtt_username | to_json }}
+  password: {{ zigbee2mqtt_mqtt_password | to_json }}
+serial:
+  port: {{ zigbee2mqtt_serial_port | to_json }}
+  adapter: {{ zigbee2mqtt_serial_adapter | to_json }}
+  baudrate: {{ zigbee2mqtt_serial_baudrate }}
+  rtscts: false
+advanced:
+  channel: {{ zigbee2mqtt_channel }}
+  pan_id: {{ _zigbee2mqtt_network.pan_id | to_json }}
+  network_key: {{ _zigbee2mqtt_network.network_key | to_json }}
+  ext_pan_id: {{ _zigbee2mqtt_network.ext_pan_id | to_json }}
+  transmit_power: {{ zigbee2mqtt_transmit_power }}
+homeassistant:
+  enabled: true
+frontend:
+  enabled: true
+  port: 8080

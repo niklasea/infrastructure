@@ -1,0 +1,43 @@
+---
+name: zigbee2mqtt
+
+services:
+  mosquitto:
+    container_name: mosquitto
+    image: eclipse-mosquitto:{{ zigbee2mqtt_mosquitto_version }}
+    restart: unless-stopped
+    networks: [{{ mqtt_network_name }}]
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - SETGID
+      - SETUID
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - {{ zigbee2mqtt_mosquitto_dir }}/config:/mosquitto/config
+      - {{ zigbee2mqtt_mosquitto_dir }}/data:/mosquitto/data
+      - /etc/localtime:/etc/localtime:ro
+
+  zigbee2mqtt:
+    container_name: zigbee2mqtt
+    image: koenkk/zigbee2mqtt:{{ zigbee2mqtt_version }}
+    restart: unless-stopped
+    networks: [{{ mqtt_network_name }}]
+    depends_on:
+      - mosquitto
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - {{ zigbee2mqtt_data_dir }}:/app/data
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - 127.0.0.1:{{ zigbee2mqtt_frontend_port }}:8080
+
+networks:
+  {{ mqtt_network_name }}:
+    external: true

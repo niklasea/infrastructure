@@ -59,6 +59,10 @@
         name: speedtest
     - ansible.builtin.import_role:
         name: omada
+    # Runs before home_assistant because the HA compose project joins the
+    # external MQTT network this role creates.
+    - ansible.builtin.import_role:
+        name: zigbee2mqtt
     - ansible.builtin.import_role:
         name: home_assistant
     - ansible.builtin.import_role:
@@ -115,6 +119,22 @@
           {{ smb_mounts.backup_home_assistant.local_path }}/homeassistant.tar.gz
           --exclude='home-assistant_v2.db*'
           {{ home_assistant_config_dir }}
+        hour: 4
+        minute: 0
+        state: present
+    - name: Schedule Zigbee2MQTT backup to network drive
+      become: true
+      ansible.builtin.cron:
+        name: "Back up Zigbee2MQTT to network drive"
+        job: >
+          test ! -f {{ zigbee2mqtt_data_dir }}/database.db ||
+          /usr/bin/sqlite3 {{ zigbee2mqtt_data_dir }}/database.db
+          ".backup '{{ zigbee2mqtt_data_dir }}/database.backup'" &&
+          /usr/bin/tar -zcf
+          {{ smb_mounts.backup_home_assistant.local_path }}/zigbee2mqtt.tar.gz
+          --warning=no-file-changed
+          --exclude='database.db*'
+          {{ zigbee2mqtt_compose_dir }}
         hour: 4
         minute: 0
         state: present

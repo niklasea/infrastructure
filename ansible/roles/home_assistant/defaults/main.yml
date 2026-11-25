@@ -2,6 +2,9 @@
 home_assistant_compose_dir: "{{ docker_compose_dir }}/home_assistant"
 home_assistant_config_dir: "{{ home_assistant_compose_dir }}/config"
 
+# Entity IDs survive the Zigbee2MQTT migration by renaming the MQTT-discovered
+# entities to these IDs in the HA UI after re-pairing; keep them in sync. The old
+# ZHA entities must be renamed or deleted first, as HA reserves their entity IDs.
 home_assistant_entity_ids:
   door_sensor: binary_sensor.ikea_parasoll_door_window_sensor
   living_room_light: light.ikea_tradfri_bulb_e27_ww_g95_cl_470lm
@@ -18,6 +21,7 @@ home_assistant_notify:
   mobile: notify.sm_s928b
 
 # Device registry ID; changes if the remote is removed and paired again.
+# Must be updated to the Zigbee2MQTT device's registry ID after re-pairing.
 home_assistant_styrbar:
   device_id: 086baa3ced1dc43db09e24947c67dda2
   targets:
@@ -38,8 +42,8 @@ home_assistant_battery_devices:
 # sources keep a .blueprint suffix because their !input tags are not valid YAML,
 # and .j2 sources are rendered as templates.
 home_assistant_config_files:
-  - src: blueprints/automation/kiann/styrbar_zha.yaml.blueprint
-    dest: blueprints/automation/kiann/styrbar_zha.yaml
+  - src: blueprints/automation/jtosic/ikea_styrbar_z2m.yaml.blueprint
+    dest: blueprints/automation/jtosic/ikea_styrbar_z2m.yaml
   - src: packages/presence.yaml.j2
     dest: packages/presence.yaml
   - src: packages/lighting.yaml.j2

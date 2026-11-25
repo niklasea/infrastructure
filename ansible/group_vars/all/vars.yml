@@ -37,6 +37,10 @@ create_vm_hetzner_api_credentials:
 
 docker_compose_dir: /etc/compose
 
+# Shared between the Home Assistant and Zigbee2MQTT compose projects so HA can
+# reach the Mosquitto broker without publishing it on the host.
+mqtt_network_name: mqtt
+
 caddy_notification_email: "{{ vault_notification_email }}"
 caddy_cloudflare_api_token: "{{ vault_cloudflare.zone_key }}"
 
@@ -84,6 +88,7 @@ infrastructure_hosts:
       - jellyfin
       - omada
       - speedtest
+      - zigbee2mqtt
   # PUBLIC SUBNET
   public-docker:
     hardware_address: 'CE:CC:FD:16:0E:BC'
