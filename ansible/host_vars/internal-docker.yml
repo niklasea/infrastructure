@@ -12,7 +12,7 @@ wireguard_peers:
   NinosWorkLaptop:
     PublicKey: '4mjMzPorMHAjNpK29Z3FkcNy5dOKxj4H/V4Ie0csIlo='
     AllowedIPs: "{{ vpn_network_ipv4['network'] | ansible.utils.ipaddr('6') | ansible.utils.ipaddr('address') }}/32"
-  AsusSingapore:
+  AsusSingapore:  # Singapore site; the router SNATs Home Assistant to the vacuum.
     PublicKey: 'ru4nKI499VFdKoS0YMHEZuq5wrgnDBDD3dovsHtDYnU='
     AllowedIPs:
       - "{{ vpn_network_ipv4['network'] | ansible.utils.ipaddr('7') | ansible.utils.ipaddr('address') }}/32"

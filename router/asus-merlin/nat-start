@@ -1,0 +1,106 @@
+#!/bin/sh
+# SNAT traffic from the WireGuard tunnel to the vacuum before it leaves the
+# LAN interface.
+#
+# The Asus is the WireGuard client; the Home Assistant site is the server.
+# Xiaomi vacuums ignore miIO requests whose source address is outside their
+# own subnet, so tunnel traffic is masqueraded to this router's LAN address
+# before it reaches the vacuum.
+#
+# Docker may rewrite the source to the tunnel address rather than the LAN
+# address, so the NAT rule matches both subnets. The forward rules are scoped
+# to the WireGuard client interface.
+#
+# Install as /jffs/scripts/nat-start. Asuswrt-Merlin runs that script at boot
+# and whenever the firewall is reloaded, so no cron job is needed.
+
+set -u
+
+# EDIT: DHCP reservation for the Xiaomi Robot Vacuum X20+.
+VACUUM_IP="192.168.50.50"
+
+# EDIT: interface facing the vacuum. Read it from `ip route get <VACUUM_IP>`.
+LAN_IF="br0"
+
+# EDIT: WireGuard client interface. Read it from `wg show interfaces`.
+WG_IF="wg11"
+
+# Home Assistant LAN and the WireGuard tunnel subnet.
+HA_NET="172.21.0.0/23"
+
+TAG="ha-vacuum-snat"
+
+log() {
+  logger -t "$TAG" "$*"
+}
+
+remove_rules() {
+  while iptables -t nat -C POSTROUTING \
+    -m comment --comment "$TAG" -j MASQUERADE 2>/dev/null; do
+    iptables -t nat -D POSTROUTING \
+      -m comment --comment "$TAG" -j MASQUERADE || break
+  done
+
+  while iptables -C FORWARD \
+    -m comment --comment "$TAG" -p tcp -j ACCEPT 2>/dev/null; do
+    iptables -D FORWARD \
+      -m comment --comment "$TAG" -p tcp -j ACCEPT || break
+  done
+
+  while iptables -C FORWARD \
+    -m comment --comment "$TAG" -p udp -j ACCEPT 2>/dev/null; do
+    iptables -D FORWARD \
+      -m comment --comment "$TAG" -p udp -j ACCEPT || break
+  done
+}
+
+add_rules() {
+  if ! iptables -t nat -C POSTROUTING \
+    -s "$HA_NET" -d "$VACUUM_IP" -o "$LAN_IF" \
+    -m comment --comment "$TAG" -j MASQUERADE 2>/dev/null; then
+    iptables -t nat -I POSTROUTING 1 \
+      -s "$HA_NET" -d "$VACUUM_IP" -o "$LAN_IF" \
+      -m comment --comment "$TAG" -j MASQUERADE || {
+      log "failed to install the SNAT rule"
+      exit 1
+    }
+  fi
+
+  if ! iptables -C FORWARD \
+    -i "$WG_IF" -o "$LAN_IF" -d "$VACUUM_IP" -p tcp --dport 54321 \
+    -m comment --comment "$TAG" -j ACCEPT 2>/dev/null; then
+    iptables -I FORWARD 1 \
+      -i "$WG_IF" -o "$LAN_IF" -d "$VACUUM_IP" -p tcp --dport 54321 \
+      -m comment --comment "$TAG" -j ACCEPT || {
+      log "failed to install the TCP forward rule"
+      exit 1
+    }
+  fi
+
+  if ! iptables -C FORWARD \
+    -i "$WG_IF" -o "$LAN_IF" -d "$VACUUM_IP" -p udp --dport 54321 \
+    -m comment --comment "$TAG" -j ACCEPT 2>/dev/null; then
+    iptables -I FORWARD 1 \
+      -i "$WG_IF" -o "$LAN_IF" -d "$VACUUM_IP" -p udp --dport 54321 \
+      -m comment --comment "$TAG" -j ACCEPT || {
+      log "failed to install the UDP forward rule"
+      exit 1
+    }
+  fi
+
+  log "SNAT and forward rules ensured for $VACUUM_IP via $LAN_IF on $WG_IF"
+}
+
+case "${1:-start}" in
+  start)
+    add_rules
+    ;;
+  remove)
+    remove_rules
+    log "SNAT and forward rules removed"
+    ;;
+  *)
+    echo "usage: $0 [start|remove]" >&2
+    exit 2
+    ;;
+esac

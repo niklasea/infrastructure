@@ -1,0 +1,238 @@
+---
+# One timestamp for all consumables prevents a notification per percentage
+# point; only the first low consumable in each week alerts.
+input_datetime:
+  vacuum_consumable_notified:
+    name: Vacuum consumable notified
+    has_date: true
+    has_time: true
+
+script:
+  vacuum_start:
+    alias: Start vacuum
+    mode: single
+    sequence:
+      - service: vacuum.start
+        target:
+          entity_id: {{ home_assistant_vacuum.entity }}
+{% for room, segment in home_assistant_vacuum_rooms.items() %}
+  vacuum_clean_{{ room }}:
+    alias: "Vacuum clean {{ room | replace('_', ' ') | title }}"
+    mode: single
+    sequence:
+      - service: dreame_vacuum.vacuum_clean_segment
+        target:
+          entity_id: {{ home_assistant_vacuum.entity }}
+        data:
+          segments:
+            - {{ segment }}
+{% endfor %}
+
+automation:
+  - id: vacuum_scheduled_clean
+    alias: Vacuum scheduled clean
+    mode: single
+    trigger:
+      - platform: time
+        at: "{{ home_assistant_vacuum.schedule }}"
+    condition:
+{% if home_assistant_vacuum.presence_entity %}
+      - condition: state
+        entity_id: {{ home_assistant_vacuum.presence_entity }}
+        state: "off"
+{% endif %}
+      - condition: state
+        entity_id: {{ home_assistant_vacuum.entity }}
+        state: "docked"
+      - condition: numeric_state
+        entity_id: {{ home_assistant_vacuum.battery_entity }}
+        above: {{ home_assistant_vacuum.min_battery }}
+    action:
+      - service: script.vacuum_start
+
+{% if home_assistant_vacuum.presence_entity %}
+  # Disabled at every Home Assistant start. Remove initial_state once the
+  # scheduled run has been verified if the enabled state should persist.
+  - id: vacuum_presence_clean
+    alias: Vacuum clean when everyone leaves
+    mode: single
+    initial_state: false
+    trigger:
+      - platform: state
+        entity_id: {{ home_assistant_vacuum.presence_entity }}
+        from: "on"
+        to: "off"
+    condition:
+      - condition: state
+        entity_id: {{ home_assistant_vacuum.entity }}
+        state: "docked"
+      - condition: numeric_state
+        entity_id: {{ home_assistant_vacuum.battery_entity }}
+        above: {{ home_assistant_vacuum.min_battery }}
+    action:
+      - service: script.vacuum_start
+{% endif %}
+
+  - id: vacuum_task_completed
+    alias: Vacuum task completed
+    mode: queued
+    max: 10
+    trigger:
+      - platform: event
+        event_type: dreame_vacuum_task_status
+        event_data:
+          entity_id: {{ home_assistant_vacuum.entity }}
+    condition:
+      - condition: template
+        value_template: >-
+          {% raw %}{{ trigger.event.data.completed | default(false) }}{% endraw %}
+
+    action:
+      - service: notify.send_message
+        continue_on_error: true
+        target:
+          entity_id: {{ home_assistant_notify.email }}
+        data:
+          title: "Vacuum finished"
+          message: >-
+            {% raw %}Cleaning finished.{% if trigger.event.data.cleaned_area is defined and trigger.event.data.cleaned_area is not none %} Cleaned {{ trigger.event.data.cleaned_area }} m².{% endif %}{% if trigger.event.data.cleaning_time is defined and trigger.event.data.cleaning_time is not none %} Took {{ trigger.event.data.cleaning_time }} minutes.{% endif %}{% endraw %}
+
+      - service: notify.send_message
+        continue_on_error: true
+        target:
+          entity_id: {{ home_assistant_notify.mobile }}
+        data:
+          title: "Vacuum finished"
+          message: >-
+            {% raw %}Cleaning finished.{% if trigger.event.data.cleaned_area is defined and trigger.event.data.cleaned_area is not none %} Cleaned {{ trigger.event.data.cleaned_area }} m².{% endif %}{% if trigger.event.data.cleaning_time is defined and trigger.event.data.cleaning_time is not none %} Took {{ trigger.event.data.cleaning_time }} minutes.{% endif %}{% endraw %}
+
+  - id: vacuum_error
+    alias: Vacuum error
+    mode: queued
+    max: 10
+    trigger:
+      - platform: event
+        event_type: dreame_vacuum_error
+        event_data:
+          entity_id: {{ home_assistant_vacuum.entity }}
+    action:
+      - service: notify.send_message
+        continue_on_error: true
+        target:
+          entity_id: {{ home_assistant_notify.email }}
+        data:
+          title: "Vacuum error"
+          message: >-
+            {% raw %}{{ trigger.event.data.error | default('Unknown error') }}
+            (code {{ trigger.event.data.code | default('unknown') }}).{% endraw %}
+
+      - service: notify.send_message
+        continue_on_error: true
+        target:
+          entity_id: {{ home_assistant_notify.mobile }}
+        data:
+          title: "Vacuum error"
+          message: >-
+            {% raw %}{{ trigger.event.data.error | default('Unknown error') }}
+            (code {{ trigger.event.data.code | default('unknown') }}).{% endraw %}
+
+  - id: vacuum_warning
+    alias: Vacuum warning
+    mode: queued
+    max: 10
+    trigger:
+      - platform: event
+        event_type: dreame_vacuum_warning
+        event_data:
+          entity_id: {{ home_assistant_vacuum.entity }}
+    action:
+      - service: notify.send_message
+        continue_on_error: true
+        target:
+          entity_id: {{ home_assistant_notify.email }}
+        data:
+          title: "Vacuum warning"
+          message: >-
+            {% raw %}{{ trigger.event.data.warning | default('Unknown warning') }}
+            (code {{ trigger.event.data.code | default('unknown') }}).{% endraw %}
+
+      - service: notify.send_message
+        continue_on_error: true
+        target:
+          entity_id: {{ home_assistant_notify.mobile }}
+        data:
+          title: "Vacuum warning"
+          message: >-
+            {% raw %}{{ trigger.event.data.warning | default('Unknown warning') }}
+            (code {{ trigger.event.data.code | default('unknown') }}).{% endraw %}
+
+  - id: vacuum_consumable
+    alias: Vacuum consumable
+    mode: queued
+    max: 10
+    trigger:
+      - platform: event
+        event_type: dreame_vacuum_consumable
+        event_data:
+          entity_id: {{ home_assistant_vacuum.entity }}
+    condition:
+      - condition: template
+        value_template: >-
+          {% raw %}{{ (as_timestamp(now()) - (states('input_datetime.vacuum_consumable_notified') | as_timestamp(0))) > 604800 }}{% endraw %}
+
+    action:
+      - service: notify.send_message
+        continue_on_error: true
+        target:
+          entity_id: {{ home_assistant_notify.email }}
+        data:
+          title: "Vacuum maintenance"
+          message: >-
+            {% raw %}{% set names = {'main_brush': 'Main brush', 'side_brush': 'Side brush', 'filter': 'Filter', 'sensor': 'Sensors', 'mop_pad': 'Mop pad'} %}
+            {{ names.get(trigger.event.data.consumable, trigger.event.data.consumable) }}
+            is at {{ trigger.event.data.life_left }}%. Replace or clean it and reset the counter.{% endraw %}
+
+      - service: notify.send_message
+        continue_on_error: true
+        target:
+          entity_id: {{ home_assistant_notify.mobile }}
+        data:
+          title: "Vacuum maintenance"
+          message: >-
+            {% raw %}{% set names = {'main_brush': 'Main brush', 'side_brush': 'Side brush', 'filter': 'Filter', 'sensor': 'Sensors', 'mop_pad': 'Mop pad'} %}
+            {{ names.get(trigger.event.data.consumable, trigger.event.data.consumable) }}
+            is at {{ trigger.event.data.life_left }}%. Replace or clean it and reset the counter.{% endraw %}
+
+      - service: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.vacuum_consumable_notified
+        data:
+          datetime: "{% raw %}{{ now().strftime('%Y-%m-%d %H:%M:%S') }}{% endraw %}"
+
+  - id: vacuum_offline
+    alias: Vacuum offline
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: {{ home_assistant_vacuum.entity }}
+        to: "unavailable"
+        for: "00:15:00"
+    action:
+      - service: notify.send_message
+        continue_on_error: true
+        target:
+          entity_id: {{ home_assistant_notify.email }}
+        data:
+          title: "Vacuum offline"
+          message: >-
+            The vacuum has been unavailable for 15 minutes. Check the Singapore
+            site, the Asus WireGuard client, and the SNAT rule.
+      - service: notify.send_message
+        continue_on_error: true
+        target:
+          entity_id: {{ home_assistant_notify.mobile }}
+        data:
+          title: "Vacuum offline"
+          message: >-
+            The vacuum has been unavailable for 15 minutes. Check the Singapore
+            site, the Asus WireGuard client, and the SNAT rule.
