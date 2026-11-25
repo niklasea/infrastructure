@@ -6,10 +6,9 @@
 # own subnet, so tunnel traffic is masqueraded to this router's LAN address
 # before it reaches the vacuum.
 #
-# The source can be the Home Assistant LAN (172.21.1.0/24) or the WireGuard
-# tunnel address (172.21.0.1), depending on Docker's outbound NAT. Matching the
-# destination keeps the rule correct in both cases and still limits it to the
-# vacuum.
+# Docker may rewrite the source to the tunnel address rather than the LAN
+# address, so match the destination; that keeps the rule correct either way
+# and still limits it to the vacuum.
 #
 # Install as /jffs/scripts/nat-start. Asuswrt-Merlin runs that script at boot
 # and whenever the firewall is reloaded, so no cron job is needed.
