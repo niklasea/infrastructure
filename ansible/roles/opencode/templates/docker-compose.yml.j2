@@ -12,7 +12,7 @@ services:
     read_only: {{ opencode_read_only | bool | lower }}
     stop_grace_period: 30s
     pids_limit: 1024
-    cpus: "4.0"
+    cpus: "{{ [ ((ansible_facts['processor_vcpus'] | default(2) | int) * 0.75), 1.0 ] | max | round(1) }}"
     mem_limit: "{{ opencode_memory_limit }}"
     memswap_limit: "{{ opencode_memory_limit }}"
     environment:
