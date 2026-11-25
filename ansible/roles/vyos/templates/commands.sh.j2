@@ -2,18 +2,20 @@
 source /opt/vyatta/etc/functions/script-template
 configure
 
-# "already exists" is benign on re-runs; any other set failure aborts.
+# Set failures must abort the deploy; re-applying an existing node is benign.
 set_cfg() {
-    local out
-    if ! out=$(set "$@" 2>&1); then
-        grep -q 'already exists' <<<"$out" ||
-            { printf '%s\n' "$out" >&2; exit 1; }
+    local out rc
+    out=$(set "$@" 2>&1); rc=$?
+    if [[ $out == *'Set failed'* ]] ||
+        { (( rc != 0 )) && [[ $out != *'already exists'* ]]; }; then
+        printf '%s\n' "$out" >&2
+        exit 1
     fi
 }
 
 # Load defaults to clear existing configuration
 
-load /opt/vyatta/etc/config.boot.default
+load /opt/vyatta/etc/config.boot.default || exit 1
 
 # Configure the local system
 
