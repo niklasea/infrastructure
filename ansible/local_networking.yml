@@ -1,5 +1,13 @@
 #!/usr/bin/env ansible-playbook
 ---
+- name: VyOS router config
+  hosts: vyos
+  # VyOS runs Python 3.7, which ansible-core no longer supports on targets.
+  gather_facts: false
+  tasks:
+    - ansible.builtin.include_role:
+        name: vyos
+
 - name: Create DNS servers if they don't exist
   hosts: localhost
   connection: local
