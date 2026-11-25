@@ -47,10 +47,12 @@ jobs:
 
       - name: Tag the latest image with the OpenCode version
         run: |
+          set -euo pipefail
           image=ghcr.io/niklasea/opencode:latest
           docker pull "$image"
-          version="$(docker run --rm --entrypoint opencode "$image" --version \
+          version="$(docker run --rm --network none --entrypoint opencode "$image" --version \
             | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1)"
           test -n "$version"
-          docker tag "$image" "ghcr.io/niklasea/opencode:${version}"
-          docker push "ghcr.io/niklasea/opencode:${version}"
+          docker buildx imagetools create \
+            --tag "ghcr.io/niklasea/opencode:${version}" \
+            "$image"
