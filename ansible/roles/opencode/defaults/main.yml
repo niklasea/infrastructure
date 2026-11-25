@@ -18,12 +18,7 @@ opencode_bind_address: >-
 opencode_allowed_network: 100.64.0.0/10
 
 opencode_read_only: true
-opencode_tmpfs_size: "256m"
 opencode_memory_limit: "4G"
-opencode_memswap_limit: "4G"
-opencode_cpu_limit: "2.0"
-opencode_pids_limit: 512
-opencode_stop_grace_period: "30s"
 
 # Environment variables exposed to the container, such as provider API keys.
 # Empty values are omitted.
