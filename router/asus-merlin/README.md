@@ -38,12 +38,12 @@ wg show interfaces
 
 Edit the variables at the top of `nat-start`:
 
-| Variable     | Value                                                     |
-| ------------ | --------------------------------------------------------- |
-| `VACUUM_IP`  | The vacuum's DHCP reservation                             |
-| `LAN_IF`     | `br0` for the main LAN, or the `dev` printed above        |
-| `WG_IF`      | The WireGuard client interface printed above              |
-| `HA_NET`     | Home Assistant and tunnel subnets (`172.21.0.0/23`)       |
+| Variable    | Value                                               |
+| ----------- | --------------------------------------------------- |
+| `VACUUM_IP` | The vacuum's DHCP reservation                       |
+| `LAN_IF`    | `br0` for the main LAN, or the `dev` printed above  |
+| `WG_IF`     | The WireGuard client interface printed above        |
+| `HA_NET`    | Home Assistant and tunnel subnets (`172.21.0.0/23`) |
 
 The NAT rule matches both possible source subnets and the vacuum destination.
 Docker may masquerade the HA container's traffic to the tunnel address instead
@@ -98,12 +98,12 @@ rm /jffs/scripts/nat-start
 
 ## Troubleshooting
 
-| Symptom                                  | Check                                                       |
-| ---------------------------------------- | ----------------------------------------------------------- |
-| No rule tagged `ha-vacuum-snat`          | Script not executable, JFFS scripts disabled, or not run    |
-| Rule present, no conntrack entry         | WireGuard client down, or Allowed IPs missing `172.21.0.0/24` or `172.21.1.0/24` |
-| Conntrack entry, integration cannot connect | Router FORWARD policy, or the server-side route          |
-| Works, then breaks after reboot          | `nat-start` not in `/jffs/scripts` or not executable         |
+| Symptom                                     | Check                                                                            |
+| ------------------------------------------- | -------------------------------------------------------------------------------- |
+| No rule tagged `ha-vacuum-snat`             | Script not executable, JFFS scripts disabled, or not run                         |
+| Rule present, no conntrack entry            | WireGuard client down, or Allowed IPs missing `172.21.0.0/24` or `172.21.1.0/24` |
+| Conntrack entry, integration cannot connect | Router FORWARD policy, or the server-side route                                  |
+| Works, then breaks after reboot             | `nat-start` not in `/jffs/scripts` or not executable                             |
 
 Do not enable global NAT on the client as a shortcut. It makes the vacuum work
 but changes the source address for all tunnel traffic and can break the

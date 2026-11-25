@@ -62,11 +62,11 @@ before falling back to cloud mode.
 
 The package defaults to:
 
-| Entity    | ID                                          |
-| --------- | ------------------------------------------- |
-| Vacuum    | `vacuum.xiaomi_robot_vacuum_x20`            |
-| Battery   | `sensor.xiaomi_robot_vacuum_x20_battery_level` |
-| Map       | `camera.xiaomi_robot_vacuum_x20_map`        |
+| Entity  | ID                                             |
+| ------- | ---------------------------------------------- |
+| Vacuum  | `vacuum.xiaomi_robot_vacuum_x20`               |
+| Battery | `sensor.xiaomi_robot_vacuum_x20_battery_level` |
+| Map     | `camera.xiaomi_robot_vacuum_x20_map`           |
 
 If the generated IDs differ, either rename them under **Settings → Entities**
 or override the values in `ansible/group_vars/all/vars.yml`:
@@ -118,15 +118,15 @@ CI/CD deploy.
 
 ### What the package does
 
-| Automation                | Behaviour                                                        |
-| ------------------------- | ---------------------------------------------------------------- |
-| `vacuum_scheduled_clean`  | Starts at `home_assistant_vacuum.schedule` when the vacuum is docked and the battery is above the threshold; also requires an unoccupied site when `presence_entity` is set |
-| `vacuum_presence_clean`   | Created only when `presence_entity` is set; disabled at every Home Assistant start |
-| `vacuum_task_completed`   | Mobile and email notification with cleaned area and duration      |
-| `vacuum_error`            | Notification with the fault text and code                         |
-| `vacuum_warning`          | Notification for dismissible warnings                             |
-| `vacuum_consumable`       | At most one maintenance notification per week across all consumables |
-| `vacuum_offline`          | Notification if the vacuum is unavailable for 15 minutes          |
+| Automation               | Behaviour                                                                                                                                                                   |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `vacuum_scheduled_clean` | Starts at `home_assistant_vacuum.schedule` when the vacuum is docked and the battery is above the threshold; also requires an unoccupied site when `presence_entity` is set |
+| `vacuum_presence_clean`  | Created only when `presence_entity` is set; disabled at every Home Assistant start                                                                                          |
+| `vacuum_task_completed`  | Mobile and email notification with cleaned area and duration                                                                                                                |
+| `vacuum_error`           | Notification with the fault text and code                                                                                                                                   |
+| `vacuum_warning`         | Notification for dismissible warnings                                                                                                                                       |
+| `vacuum_consumable`      | At most one maintenance notification per week across all consumables                                                                                                        |
+| `vacuum_offline`         | Notification if the vacuum is unavailable for 15 minutes                                                                                                                    |
 
 The completion, error, warning, and consumable automations use the
 integration's events (`dreame_vacuum_task_status`, `dreame_vacuum_error`,
@@ -175,14 +175,14 @@ In Home Assistant:
 
 ## Troubleshooting
 
-| Symptom                              | Likely cause                                                     |
-| ------------------------------------ | ---------------------------------------------------------------- |
+| Symptom                               | Likely cause                                                                                   |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | Integration setup cannot reach device | SNAT missing, WireGuard client down, or Allowed IPs missing `172.21.0.0/24` or `172.21.1.0/24` |
-| Commands work but map is empty        | The map is cloud-fetched; check internet access and re-authenticate |
-| Room script cleans the wrong room     | Room IDs changed after remapping; update `home_assistant_vacuum_rooms` |
-| Scheduled run never starts            | `presence_entity`, `battery_entity`, or `min_battery` is wrong |
-| `vacuum_offline` fires repeatedly     | Tunnel or Singapore site down; check the Asus and its WAN          |
-| Notifications missing                 | `home_assistant_notify.email` / `.mobile` services changed         |
+| Commands work but map is empty        | The map is cloud-fetched; check internet access and re-authenticate                            |
+| Room script cleans the wrong room     | Room IDs changed after remapping; update `home_assistant_vacuum_rooms`                         |
+| Scheduled run never starts            | `presence_entity`, `battery_entity`, or `min_battery` is wrong                                 |
+| `vacuum_offline` fires repeatedly     | Tunnel or Singapore site down; check the Asus and its WAN                                      |
+| Notifications missing                 | `home_assistant_notify.email` / `.mobile` services changed                                     |
 
 ## Rollback
 
