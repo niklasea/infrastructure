@@ -48,6 +48,19 @@ home_assistant_config_files:
     dest: packages/battery.yaml
   - src: packages/water.yaml.j2
     dest: packages/water.yaml
+  - src: dashboards/home.yaml.j2
+    dest: dashboards/home.yaml
+  - src: www/community/auto-entities.js
+    dest: www/community/auto-entities.js
+
+home_assistant_dashboard_slug: home-dashboard
+home_assistant_dashboard_title: Home
+
+# Extra Lovelace resources appended to the managed YAML resource list.
+home_assistant_lovelace_resources: []
+
+# Cache-busting query for the vendored auto-entities bundle.
+home_assistant_auto_entities_version: "1.16.1"
 
 home_assistant_version: stable
 

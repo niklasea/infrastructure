@@ -173,5 +173,87 @@
         packages: !include_dir_named packages
   notify: restart_home_assistant
 
+- name: Check for storage-managed Lovelace resources
+  become: true
+  ansible.builtin.stat:
+    path: "{{ home_assistant_config_dir }}/.storage/lovelace_resources"
+  register: _home_assistant_lovelace_resources_file
+
+- name: Read storage-managed Lovelace resources
+  become: true
+  when: _home_assistant_lovelace_resources_file.stat.exists
+  ansible.builtin.slurp:
+    src: "{{ home_assistant_config_dir }}/.storage/lovelace_resources"
+  register: _home_assistant_lovelace_resources
+
+- name: Fail on dashboard resources managed in storage
+  ansible.builtin.fail:
+    msg: >-
+      Home Assistant has dashboard resources managed in storage; move them
+      into home_assistant_lovelace_resources before the role enables YAML
+      resources.
+  when:
+    - _home_assistant_configuration_file.stat.exists
+    - _home_assistant_lovelace_resources_file.stat.exists
+    - >-
+      (_home_assistant_lovelace_resources.content | b64decode | from_json).get('data', {}).get('items', []) | length > 0
+    - >-
+      _home_assistant_configuration_text
+      is not search('(?m)^# BEGIN ANSIBLE MANAGED LOVELACE')
+
+- name: Fail on existing lovelace configuration
+  ansible.builtin.fail:
+    msg: >-
+      configuration.yaml defines lovelace without the managed block; merge
+      the dashboard configuration from the home_assistant role by hand.
+  when:
+    - _home_assistant_configuration_file.stat.exists
+    - _home_assistant_configuration_text is search('(?m)^lovelace\s*:')
+    - >-
+      _home_assistant_configuration_text
+      is not search('(?m)^# BEGIN ANSIBLE MANAGED LOVELACE')
+
+- name: Fail on duplicate lovelace configuration
+  ansible.builtin.fail:
+    msg: >-
+      configuration.yaml defines more than one lovelace block; keep only the
+      managed block.
+  when:
+    - _home_assistant_configuration_file.stat.exists
+    - >-
+      _home_assistant_configuration_text
+      is search('(?m)^# BEGIN ANSIBLE MANAGED LOVELACE')
+    - >-
+      _home_assistant_configuration_text
+      | regex_findall('(?m)^lovelace\s*:') | length > 1
+
+- name: Add lovelace dashboard configuration
+  become: true
+  when: _home_assistant_configuration_file.stat.exists
+  ansible.builtin.blockinfile:
+    path: "{{ home_assistant_config_dir }}/configuration.yaml"
+    insertafter: EOF
+    marker: "# {mark} ANSIBLE MANAGED LOVELACE"
+    backup: true
+    block: |
+      lovelace:
+        mode: storage
+        resource_mode: yaml
+        resources:
+          - url: /local/community/auto-entities.js?v={{ home_assistant_auto_entities_version }}
+            type: module
+      {% for resource in home_assistant_lovelace_resources %}
+          - url: {{ resource.url | to_json }}
+            type: {{ resource.type | default('module') | to_json }}
+      {% endfor %}
+        dashboards:
+          {{ home_assistant_dashboard_slug | to_json }}:
+            mode: yaml
+            filename: dashboards/home.yaml
+            title: {{ home_assistant_dashboard_title | to_json }}
+            icon: mdi:home
+            show_in_sidebar: true
+  notify: restart_home_assistant
+
 - name: Apply Home Assistant configuration changes
   ansible.builtin.meta: flush_handlers
