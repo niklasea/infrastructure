@@ -4,14 +4,23 @@ configure
 
 # Set failures must abort before commit; "already exists" is benign.
 log=/tmp/vyos-config.log
-: > "$log"
-exec 3>&1 4>&2
-exec > "$log" 2>&1
+
+# Capture the config output so a failed command can abort before commit.
+start_capture() {
+    exec {terminal_stdout}>&1 {terminal_stderr}>&2
+    exec >"$log" 2>&1
+}
+
+stop_capture() {
+    exec >&"$terminal_stdout" 2>&"$terminal_stderr"
+}
+
+start_capture
 
 # Load defaults to clear existing configuration
 
 load /opt/vyatta/etc/config.boot.default || {
-    exec >&3 2>&4
+    stop_capture
     cat "$log" >&2
     exit 1
 }
@@ -307,12 +316,12 @@ set interfaces ethernet {{ interface.device }} vif {{ interface.vlan }} firewall
 {% endfor %}
 
 if grep -q 'Set failed' "$log"; then
-    exec >&3 2>&4
+    stop_capture
     cat "$log" >&2
     exit 1
 fi
 
-exec >&3 2>&4
+stop_capture
 cat "$log"
 
 # Commit changes and wait for confirmation
