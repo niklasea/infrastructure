@@ -1,4 +1,14 @@
 ---
+template:
+  - binary_sensor:
+      - name: Any lights on
+        unique_id: any_lights_on
+        state: >-
+          {% raw %}{{ states.light
+             | rejectattr('attributes.entity_id', 'defined')
+             | selectattr('state', 'eq', 'on')
+             | list | count > 0 }}{% endraw %}
+
 script:
   evening_lights:
     alias: Evening lights
@@ -26,6 +36,29 @@ script:
             data:
               brightness_pct: 75
               transition: 5
+
+  toggle_all_lights:
+    alias: Toggle all lights
+    mode: queued
+    icon: mdi:lightbulb-group
+    sequence:
+      - choose:
+          - conditions:
+              - condition: state
+                entity_id: binary_sensor.any_lights_on
+                state: "on"
+            sequence:
+              - service: light.turn_off
+                target:
+                  entity_id: all
+          - conditions:
+              - condition: state
+                entity_id: binary_sensor.any_lights_on
+                state: "off"
+            sequence:
+              - service: light.turn_on
+                target:
+                  entity_id: all
 
   styrbar_target_dip:
     alias: STYRBAR target dip
