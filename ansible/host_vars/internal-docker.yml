@@ -4,7 +4,7 @@ wireguard_server_keys:
   public: "{{ vault_wireguard_home_keys.public }}"
 wireguard_addresses:
   - "{{ vpn_network_ipv4['network'] | ansible.utils.ipaddr('1') }}"
-wireguard_listenport: 51821
+wireguard_listenport: 51819
 wireguard_peers:
   orangepizero:
     PublicKey: 'HcqY+vyuCP00we+DWbv0GL5oeupHrhVE7GnAbDKuvn8='
