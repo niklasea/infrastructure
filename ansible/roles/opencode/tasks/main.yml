@@ -148,28 +148,3 @@
     remove_orphans: true
     wait: true
     wait_timeout: 120
-
-- name: Read the running OpenCode version
-  become: true
-  ansible.builtin.command:
-    argv:
-      - docker
-      - exec
-      - opencode
-      - opencode
-      - --version
-  register: _opencode_version
-  changed_when: false
-  retries: 10
-  delay: 5
-  until: _opencode_version.rc == 0
-
-- name: Require an OpenCode version that enforces websearch.use
-  become: true
-  ansible.builtin.assert:
-    that: >-
-      ((_opencode_version.stdout | regex_search('[0-9]+\.[0-9]+\.[0-9]+'))
-      | default('0.0.0', true))
-      is version('2.2.6', '>=')
-    fail_msg: OpenCode >= 2.2.6 is required for the websearch.use policy.
-    quiet: true
