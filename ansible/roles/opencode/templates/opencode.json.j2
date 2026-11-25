@@ -2,11 +2,11 @@
   "$schema": "https://opencode.ai/config.json",
   "model": "{{ opencode_default_model_alias }}",
   "providers": {
-    "deepseek": {
+    "{{ opencode_default_provider }}": {
       "models": {
-        "deepseek-flash-{{ opencode_default_effort }}": {
-          "modelID": "deepseek-flash",
-          "name": "DeepSeek V4.1 Flash ({{ opencode_default_effort | capitalize }})",
+        "{{ opencode_default_model_id }}-{{ opencode_default_effort }}": {
+          "modelID": "{{ opencode_default_model_id }}",
+          "name": "{{ opencode_default_model_name }} ({{ opencode_default_effort | capitalize }})",
           "settings": {
             "reasoningEffort": "{{ opencode_default_effort }}"
           },
@@ -14,6 +14,15 @@
             "thinking": {
               "type": "enabled"
             }
+          },
+          "capabilities": {
+            "tools": true,
+            "input": ["text", "image"],
+            "output": ["text"]
+          },
+          "limit": {
+            "context": {{ opencode_default_model_context }},
+            "output": {{ opencode_default_model_output }}
           }
         }
       }
@@ -295,7 +304,7 @@
     },
     {
       "action": "provider.use",
-      "resource": "deepseek",
+      "resource": "{{ opencode_default_provider }}",
       "effect": "allow"
     },
     {
@@ -310,7 +319,7 @@
     },
     {
       "action": "websearch.use",
-      "resource": "parallel",
+      "resource": "{{ opencode_websearch_provider }}",
       "effect": "allow"
     },
     {

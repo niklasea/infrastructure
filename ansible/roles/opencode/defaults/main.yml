@@ -10,12 +10,12 @@ opencode_container_workspace: /workspace
 # registry (for example sha-072bee1) to pin a specific build.
 opencode_version: latest
 opencode_port: 49374
+opencode_allowed_network: 100.64.0.0/10
 opencode_bind_address: >-
   {{ (ansible_facts['all_ipv4_addresses'] | default([]))
-     | ansible.utils.ipaddr('100.64.0.0/10')
+     | ansible.utils.ipaddr(opencode_allowed_network)
      | first
-     | default('0.0.0.0', true) }}
-opencode_allowed_network: 100.64.0.0/10
+     | default('', true) }}
 
 opencode_read_only: true
 opencode_memory_limit: "4G"
@@ -26,10 +26,17 @@ opencode_api_keys: {}
 
 opencode_default_model: deepseek/deepseek-flash
 # Root `model` does not retain a #variant, so this alias encodes the effort in a
-# custom model entry. Use low, high, or max for the DeepSeek provider.
+# custom model entry. The alias metadata mirrors the DeepSeek V4.1 Flash
+# catalog entry; update it if you change the default model.
+opencode_default_model_name: "DeepSeek V4.1 Flash"
+opencode_default_provider: "{{ opencode_default_model.split('/')[0] }}"
+opencode_default_model_id: "{{ opencode_default_model.split('/', 1)[1] }}"
 opencode_default_effort: high
-opencode_default_model_alias: "{{ opencode_default_model }}-{{ opencode_default_effort }}"
+opencode_default_model_alias: "{{ opencode_default_provider }}/{{ opencode_default_model_id }}-{{ opencode_default_effort }}"
+opencode_default_model_context: 1048576
+opencode_default_model_output: 393216
 opencode_default_agent: plan
+# OpenCode's Parallel provider uses keyless mode when no key is configured.
 opencode_websearch_provider: parallel
 
 opencode_snapshots: true
