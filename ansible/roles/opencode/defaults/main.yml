@@ -9,7 +9,6 @@ opencode_container_workspace: /workspace
 # Track the latest stable build. Override with a SHA tag from the image
 # registry (for example sha-072bee1) to pin a specific build.
 opencode_version: latest
-opencode_image: "ghcr.io/niklasea/opencode:{{ opencode_version }}"
 opencode_port: 49374
 opencode_bind_address: >-
   {{ (ansible_facts['all_ipv4_addresses'] | default([]))

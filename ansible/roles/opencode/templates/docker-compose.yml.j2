@@ -1,7 +1,7 @@
 ---
 services:
   opencode:
-    image: "{{ opencode_image }}"
+    image: "ghcr.io/niklasea/opencode:{{ opencode_version }}"
     container_name: opencode
     restart: unless-stopped
     command:

@@ -95,34 +95,35 @@
   register: _opencode_service_configuration_content
   no_log: true
 
+- name: Add Docker compose file
+  become: true
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ opencode_compose_dir }}/docker-compose.yml"
+    mode: '640'
+
 - name: Pull OpenCode image
   become: true
-  ansible.builtin.command:
-    cmd: "docker pull {{ opencode_image }}"
+  community.docker.docker_compose_v2_pull:
+    project_src: "{{ opencode_compose_dir }}"
+    policy: always
   register: _opencode_image_pull
-  changed_when: false
   retries: 10
   delay: 30
-  until: _opencode_image_pull.rc == 0
+  until: _opencode_image_pull is success
 
 - name: Seed service configuration
   become: true
-  ansible.builtin.command:
+  community.docker.docker_compose_v2_run:
+    project_src: "{{ opencode_compose_dir }}"
+    service: opencode
     argv:
-      - docker
-      - run
-      - --rm
-      - --env
-      - "HOME={{ opencode_container_home }}"
-      - --workdir
-      - "{{ opencode_container_workspace }}"
-      - --volume
-      - "{{ opencode_home_dir }}:{{ opencode_container_home }}"
-      - "{{ opencode_image }}"
       - service
       - set
       - "{{ item.key }}"
       - "{{ item.value }}"
+    cleanup: true
+    interactive: false
   loop:
     - key: hostname
       value: 0.0.0.0
@@ -137,19 +138,12 @@
   register: _opencode_service_configuration_seed
   changed_when: true
 
-- name: Add Docker compose file
-  become: true
-  ansible.builtin.template:
-    src: docker-compose.yml.j2
-    dest: "{{ opencode_compose_dir }}/docker-compose.yml"
-    mode: '640'
-
 - name: Start OpenCode
   become: true
   community.docker.docker_compose_v2:
     project_src: "{{ opencode_compose_dir }}"
     state: "present"
-    pull: "always"
+    pull: "missing"
     recreate: "{{ 'always' if _opencode_service_configuration_seed is changed else 'auto' }}"
     remove_orphans: true
     wait: true
