@@ -74,7 +74,8 @@ services:
     shm_size: "512m"
     environment:
       HOME: /home/rea
-      REA_LOG_LEVEL: INFO
+      # REA validates this at startup and only accepts lowercase levels.
+      REA_LOG_LEVEL: info
       REA_ANALYSIS_PROVIDER: ghidra
       REA_MCP_OUTPUT_SCHEMA_PROFILE: "{{ opencode_rea_schema_profile }}"
       TMPDIR: /home/rea/tmp
