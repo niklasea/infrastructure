@@ -583,16 +583,6 @@
   ],
   "policies": [
     {
-      "action": "provider.use",
-      "resource": "*",
-      "effect": "deny"
-    },
-    {
-      "action": "provider.use",
-      "resource": "{{ opencode_default_provider }}",
-      "effect": "allow"
-    },
-    {
       "action": "mcp.use",
       "resource": "*",
       "effect": "deny"
@@ -610,16 +600,6 @@
     {
       "action": "plugin.use",
       "resource": "opencode.websearch.{{ opencode_websearch_provider }}",
-      "effect": "allow"
-    },
-    {
-      "action": "websearch.use",
-      "resource": "*",
-      "effect": "deny"
-    },
-    {
-      "action": "websearch.use",
-      "resource": "{{ opencode_websearch_provider }}",
       "effect": "allow"
     },
     {
