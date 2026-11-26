@@ -19,7 +19,7 @@
         name: netbird_service
 
 - name: Join DK public VMs to overlay network
-  hosts: role_zone_public,!role_netbird,!role_infrastructure_bootstrap
+  hosts: proxmox_all_qemu:&role_zone_public:!role_netbird:!role_infrastructure_bootstrap
   tasks:
     - ansible.builtin.import_role:
         name: netbird_peer
@@ -34,7 +34,7 @@
           3733343566363563373262353738653961333939363665353366
 
 - name: Join DK private VMs to overlay network
-  hosts: role_zone_private,!role_netbird,!role_infrastructure_bootstrap
+  hosts: proxmox_all_qemu:&role_zone_private:!role_netbird:!role_infrastructure_bootstrap
   tasks:
     - ansible.builtin.import_role:
         name: netbird_peer

@@ -27,18 +27,19 @@ resource "proxmox_download_file" "cloud_image" {
 
 locals {
   network_zone_tags = {
-    10 = "zone_private"
-    20 = "zone_public"
-    90 = "zone_guest"
+    "10" = "zone_private"
+    "20" = "zone_public"
+    "90" = "zone_guest"
   }
 }
 
 resource "proxmox_virtual_environment_vm" "virtual_machines" {
   for_each = var.proxmox_vms
   name     = each.key
-  tags = distinct(concat(each.value.tags, [
-    lookup(local.network_zone_tags, tostring(each.value.vlan_id), "zone_private")
-  ]))
+  tags = distinct(concat(
+    [for tag in each.value.tags : tag if !startswith(tag, "zone_")],
+    [lookup(local.network_zone_tags, tostring(each.value.vlan_id), "zone_private")]
+  ))
 
   node_name = var.proxmox_node_name
   on_boot   = true

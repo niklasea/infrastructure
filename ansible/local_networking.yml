@@ -21,6 +21,7 @@
           net0: "virtio={{ infrastructure_hosts[proxmox_vm_name]['hardware_address'] }},bridge=vmbr0,tag=10"
         proxmox_vm_tags:
           - dns_server
+          - zone_private
       register: _proxmox_vm_dns_servers
       loop:
         - dns01
