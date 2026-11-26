@@ -15,7 +15,7 @@ RUN npm pack --silent "rea-agents@${REA_AGENTS_VERSION}" \
 
 FROM ghcr.io/anomalyco/opencode:${OPENCODE_BASE_VERSION}
 
-ARG APK_PACKAGES="git ca-certificates github-cli"
+ARG APK_PACKAGES="git ca-certificates github-cli python3"
 
 COPY --chmod=755 git-askpass.sh /usr/local/bin/git-askpass
 COPY --from=rea-skill /out/reverse-engineer-anything /usr/local/share/opencode/skills/reverse-engineer-anything
@@ -24,7 +24,8 @@ COPY --from=rea-skill /out/reverse-engineer-anything /usr/local/share/opencode/s
 RUN apk add --no-cache ${APK_PACKAGES} \
   && git config --system user.name "OpenCode" \
   && git config --system user.email "opencode@localhost" \
-  && git config --system core.askpass /usr/local/bin/git-askpass
+  && git config --system core.askpass /usr/local/bin/git-askpass \
+  && python3 --version
 
 USER root
 
