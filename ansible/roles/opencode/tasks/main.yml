@@ -65,6 +65,26 @@
       group: "{{ docker_remap_user }}"
     - path: "{{ opencode_managed_config_dir }}"
       mode: '755'
+    - path: "{{ opencode_skills_source_dir }}"
+      mode: '755'
+
+- name: Install skills source
+  become: true
+  ansible.builtin.git:
+    repo: "{{ opencode_skills_repo }}"
+    dest: "{{ opencode_skills_source_dir }}"
+    version: "{{ opencode_skills_version }}"
+    update: true
+  register: _opencode_skills_source
+
+- name: Ensure the global instructions mountpoint exists
+  become: true
+  ansible.builtin.file:
+    path: "{{ opencode_home_dir }}/.config/opencode/AGENTS.md"
+    state: touch
+    mode: '0644'
+    owner: "{{ docker_remap_user }}"
+    group: "{{ docker_remap_user }}"
 
 - name: Add OpenCode configuration files
   become: true
@@ -163,7 +183,7 @@
     project_src: "{{ opencode_compose_dir }}"
     state: "present"
     pull: "missing"
-    recreate: "{{ 'always' if _opencode_service_configuration_seed is changed else 'auto' }}"
+    recreate: "{{ 'always' if (_opencode_service_configuration_seed is changed or _opencode_skills_source is changed) else 'auto' }}"
     remove_orphans: true
     wait: true
     wait_timeout: 120

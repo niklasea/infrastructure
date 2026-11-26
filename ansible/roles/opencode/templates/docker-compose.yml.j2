@@ -26,6 +26,9 @@ services:
       - "{{ opencode_home_dir }}:{{ opencode_container_home }}"
       - "{{ opencode_workspace_dir }}:{{ opencode_container_workspace }}"
       - "{{ opencode_managed_config_dir }}:/etc/opencode:ro"
+      - "{{ opencode_skills_source_dir }}:{{ opencode_container_home }}/.config/opencode/skills:ro"
+      - "{{ opencode_skills_source_dir }}/agents:{{ opencode_container_home }}/.config/opencode/agents:ro"
+      - "{{ opencode_skills_source_dir }}/global/AGENTS.md:{{ opencode_container_home }}/.config/opencode/AGENTS.md:ro"
     ports:
       - "{{ opencode_bind_address }}:{{ opencode_port }}:{{ opencode_port }}"
     cap_drop:

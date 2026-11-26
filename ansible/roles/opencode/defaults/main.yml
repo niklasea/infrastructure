@@ -6,6 +6,13 @@ opencode_managed_config_dir: "{{ opencode_compose_dir }}/etc-opencode"
 opencode_container_home: /home/opencode
 opencode_container_workspace: /workspace
 
+# Host checkout of the skills repository. The checkout is mounted read-only
+# over the global skills, agents, and AGENTS.md paths, so updating it and
+# reloading OpenCode is the install step.
+opencode_skills_repo: https://github.com/niklasea/skills.git
+opencode_skills_version: main
+opencode_skills_source_dir: "{{ opencode_compose_dir }}/skills-src"
+
 # Moving tag of the custom OpenCode image built from the latest V2 release.
 # Override with a version or SHA tag from the custom registry to pin, but only
 # tags built from OpenCode >= 2.2.6 include the websearch.use policy.
