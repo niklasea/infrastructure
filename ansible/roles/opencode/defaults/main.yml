@@ -5,7 +5,7 @@ opencode_compose_dir: "{{ docker_compose_dir }}/opencode"
 # quota. Increase opencode_data_size and resize the filesystem manually.
 opencode_data_dir: "{{ opencode_compose_dir }}/data"
 opencode_data_image: "{{ opencode_compose_dir }}/data.img"
-opencode_data_size: 10G
+opencode_data_size: 20G
 opencode_home_dir: "{{ opencode_data_dir }}/home"
 opencode_workspace_dir: "{{ opencode_data_dir }}/workspace"
 # Pre-quota locations, used only for the one-time migration.
