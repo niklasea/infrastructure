@@ -40,6 +40,135 @@
         proto: tcp
         comment: OpenCode from outside the allowed network
 
+- name: Create the OpenCode compose directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ opencode_compose_dir }}"
+    state: directory
+    mode: '755'
+
+- name: Create the data filesystem image
+  become: true
+  ansible.builtin.command:
+    cmd: "truncate -s {{ opencode_data_size }} {{ opencode_data_image }}"
+    creates: "{{ opencode_data_image }}"
+  register: _opencode_data_image_create
+
+- name: Restrict the data image permissions
+  become: true
+  ansible.builtin.file:
+    path: "{{ opencode_data_image }}"
+    mode: '0600'
+
+- name: Inspect the data filesystem
+  become: true
+  ansible.builtin.command:
+    cmd: "blkid -o value -s TYPE {{ opencode_data_image }}"
+  register: _opencode_data_filesystem
+  changed_when: false
+  failed_when: false
+
+- name: Check whether the data filesystem is mounted
+  become: true
+  ansible.builtin.command:
+    cmd: "mountpoint -q {{ opencode_data_dir }}"
+  register: _opencode_data_mounted
+  changed_when: false
+  failed_when: false
+
+- name: Format the data filesystem
+  become: true
+  ansible.builtin.command:
+    cmd: "mkfs.ext4 -F -L opencode-data {{ opencode_data_image }}"
+  when:
+    - _opencode_data_mounted.rc != 0
+    - (_opencode_data_image_create is changed) or (_opencode_data_filesystem.stdout | trim != 'ext4')
+
+- name: Create the data mountpoint
+  become: true
+  ansible.builtin.file:
+    path: "{{ opencode_data_dir }}"
+    state: directory
+    mode: '700'
+
+- name: Mount the data filesystem
+  become: true
+  ansible.builtin.mount:
+    path: "{{ opencode_data_dir }}"
+    src: "{{ opencode_data_image }}"
+    fstype: ext4
+    opts: loop,nosuid,nodev
+    state: mounted
+
+- name: Check the data migration marker
+  become: true
+  ansible.builtin.stat:
+    path: "{{ opencode_data_dir }}/.migrated"
+  register: _opencode_data_migration
+
+- name: Check the legacy home
+  become: true
+  ansible.builtin.stat:
+    path: "{{ opencode_legacy_home_dir }}"
+  register: _opencode_legacy_home
+
+- name: Check the legacy workspace
+  become: true
+  ansible.builtin.stat:
+    path: "{{ opencode_legacy_workspace_dir }}"
+  register: _opencode_legacy_workspace
+
+- name: Check the existing compose file
+  become: true
+  ansible.builtin.stat:
+    path: "{{ opencode_compose_dir }}/docker-compose.yml"
+  register: _opencode_compose_file
+
+- name: Stop OpenCode for the data migration
+  become: true
+  community.docker.docker_compose_v2:
+    project_src: "{{ opencode_compose_dir }}"
+    state: stopped
+  when:
+    - not _opencode_data_migration.stat.exists
+    - _opencode_compose_file.stat.exists
+
+- name: Create the data directories
+  become: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '700'
+    owner: "{{ docker_remap_user }}"
+    group: "{{ docker_remap_user }}"
+  loop:
+    - "{{ opencode_home_dir }}"
+    - "{{ opencode_workspace_dir }}"
+
+- name: Copy the existing home into the data filesystem
+  become: true
+  ansible.builtin.command:
+    cmd: "cp -a {{ opencode_legacy_home_dir }}/. {{ opencode_home_dir }}/"
+  when:
+    - not _opencode_data_migration.stat.exists
+    - _opencode_legacy_home.stat.exists
+
+- name: Copy the existing workspace into the data filesystem
+  become: true
+  ansible.builtin.command:
+    cmd: "cp -a {{ opencode_legacy_workspace_dir }}/. {{ opencode_workspace_dir }}/"
+  when:
+    - not _opencode_data_migration.stat.exists
+    - _opencode_legacy_workspace.stat.exists
+
+- name: Mark the data migration complete
+  become: true
+  ansible.builtin.file:
+    path: "{{ opencode_data_dir }}/.migrated"
+    state: touch
+    mode: '0600'
+  when: not _opencode_data_migration.stat.exists
+
 - name: Create directories
   become: true
   ansible.builtin.file:

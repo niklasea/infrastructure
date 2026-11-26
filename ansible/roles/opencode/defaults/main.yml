@@ -1,7 +1,16 @@
 ---
 opencode_compose_dir: "{{ docker_compose_dir }}/opencode"
-opencode_home_dir: "{{ opencode_compose_dir }}/home"
-opencode_workspace_dir: "{{ opencode_compose_dir }}/workspace"
+# Writable OpenCode data lives on a loopback ext4 image so the agent cannot
+# fill the host filesystem. The image is sparse; the filesystem size is the
+# quota. Increase opencode_data_size and resize the filesystem manually.
+opencode_data_dir: "{{ opencode_compose_dir }}/data"
+opencode_data_image: "{{ opencode_compose_dir }}/data.img"
+opencode_data_size: 10G
+opencode_home_dir: "{{ opencode_data_dir }}/home"
+opencode_workspace_dir: "{{ opencode_data_dir }}/workspace"
+# Pre-quota locations, used only for the one-time migration.
+opencode_legacy_home_dir: "{{ opencode_compose_dir }}/home"
+opencode_legacy_workspace_dir: "{{ opencode_compose_dir }}/workspace"
 opencode_managed_config_dir: "{{ opencode_compose_dir }}/etc-opencode"
 opencode_container_home: /home/opencode
 opencode_container_workspace: /workspace
