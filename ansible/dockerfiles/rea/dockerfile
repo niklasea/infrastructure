@@ -75,14 +75,19 @@ ENV GHIDRA_INSTALL_DIR=/opt/ghidra \
     PATH=/opt/java/openjdk/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # Java derives user.home from passwd rather than $HOME; Ghidra needs it writable.
+# usermod refuses to change a user with running processes, so edit passwd directly.
 RUN mkdir -p /home/rea \
-  && usermod --home /home/rea root \
+  && sed -i 's|^root:x:0:0:root:/root:|root:x:0:0:root:/home/rea:|' /etc/passwd \
+  && grep -q '^root:x:0:0:root:/home/rea:' /etc/passwd \
   && ps -p 1 -o pid=,ppid=,pgid=,uid=,stat=,command= >/dev/null \
   && java -version \
   && javac -version \
   && test -x "${GHIDRA_INSTALL_DIR}/support/analyzeHeadless" \
   && test -x "${GHIDRA_INSTALL_DIR}/Ghidra/Features/Decompiler/os/linux_x86_64/decompile" \
   && rea --version
+
+# The bind-mounted home is owned by the remap user that container root maps to.
+USER root
 
 EXPOSE 8765
 
