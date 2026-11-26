@@ -442,6 +442,31 @@
     },
     {
       "action": "shell",
+      "resource": "git push --delete *",
+      "effect": "deny"
+    },
+    {
+      "action": "shell",
+      "resource": "git push -d *",
+      "effect": "deny"
+    },
+    {
+      "action": "shell",
+      "resource": "git push * --delete *",
+      "effect": "deny"
+    },
+    {
+      "action": "shell",
+      "resource": "git push * -d *",
+      "effect": "deny"
+    },
+    {
+      "action": "shell",
+      "resource": "git push * :*",
+      "effect": "deny"
+    },
+    {
+      "action": "shell",
       "resource": "git reset --hard *",
       "effect": "deny"
     },
@@ -675,6 +700,31 @@
     {
       "action": "tool.use",
       "resource": "shell:git push * --prune *",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:git push --delete *",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:git push -d *",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:git push * --delete *",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:git push * -d *",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:git push * :*",
       "effect": "deny"
     },
     {
