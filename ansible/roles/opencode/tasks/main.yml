@@ -66,6 +66,19 @@
     - path: "{{ opencode_managed_config_dir }}"
       mode: '755'
 
+- name: Create REA directories
+  become: true
+  when: opencode_rea_enabled | bool
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '700'
+    owner: "{{ docker_remap_user }}"
+    group: "{{ docker_remap_user }}"
+  loop:
+    - "{{ opencode_rea_home_dir }}"
+    - "{{ opencode_rea_home_dir }}/tmp"
+
 - name: Add OpenCode configuration files
   become: true
   ansible.builtin.template:
@@ -114,6 +127,8 @@
   become: true
   community.docker.docker_compose_v2_pull:
     project_src: "{{ opencode_compose_dir }}"
+    services:
+      - opencode
     policy: always
   register: _opencode_image_pull
   changed_when: false
@@ -131,11 +146,27 @@
     (_opencode_image_before.images | map(attribute='Id') | list)
     != (_opencode_image_after.images | map(attribute='Id') | list)
 
+# The REA image is built in a separate workflow triggered by the same push.
+- name: Pull REA image
+  become: true
+  when: opencode_rea_enabled | bool
+  community.docker.docker_compose_v2_pull:
+    project_src: "{{ opencode_compose_dir }}"
+    services:
+      - "{{ opencode_rea_service_name }}"
+    policy: always
+  register: _opencode_rea_image_pull
+  changed_when: false
+  retries: 60
+  delay: 30
+  until: _opencode_rea_image_pull is success
+
 - name: Seed service configuration
   become: true
   community.docker.docker_compose_v2_run:
     project_src: "{{ opencode_compose_dir }}"
     service: opencode
+    no_deps: true
     argv:
       - service
       - set
@@ -166,4 +197,4 @@
     recreate: "{{ 'always' if _opencode_service_configuration_seed is changed else 'auto' }}"
     remove_orphans: true
     wait: true
-    wait_timeout: 120
+    wait_timeout: 300

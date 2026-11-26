@@ -1,16 +1,31 @@
 # Pin the upstream V2 base; upstream :latest still points at v1.
 ARG OPENCODE_BASE_VERSION=2.4.1
+ARG REA_AGENTS_VERSION=6.10.1
+
+# Extract only the REA skill; the runtime image does not need Node or REA itself.
+FROM node:24.22.3-bookworm-slim AS rea-skill
+USER root
+ARG REA_AGENTS_VERSION
+WORKDIR /src
+RUN npm pack --silent "rea-agents@${REA_AGENTS_VERSION}" \
+  && tar -xzf rea-agents-*.tgz \
+  && mkdir -p /out \
+  && cp -a package/skills/reverse-engineer-anything /out/ \
+  && printf '\n\n> The REA CLI is not installed in this environment. Use the REA MCP tools instead of running `rea` or `npx` in a shell.\n' >> /out/reverse-engineer-anything/SKILL.md
+
 FROM ghcr.io/anomalyco/opencode:${OPENCODE_BASE_VERSION}
 
-ARG APK_PACKAGES="git ca-certificates github-cli"
+ARG APK_PACKAGES="git ca-certificates github-cli python3"
 
 COPY --chmod=755 git-askpass.sh /usr/local/bin/git-askpass
+COPY --from=rea-skill /out/reverse-engineer-anything /usr/local/share/opencode/skills/reverse-engineer-anything
 
 # hadolint ignore=DL3018
 RUN apk add --no-cache ${APK_PACKAGES} \
   && git config --system user.name "OpenCode" \
   && git config --system user.email "opencode@localhost" \
-  && git config --system core.askpass /usr/local/bin/git-askpass
+  && git config --system core.askpass /usr/local/bin/git-askpass \
+  && python3 --version
 
 USER root
 
