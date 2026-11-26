@@ -101,6 +101,15 @@
   register: _opencode_service_configuration_content
   no_log: true
 
+- name: Read current OpenCode image
+  become: true
+  community.docker.docker_image_info:
+    name:
+      - "ghcr.io/niklasea/opencode:{{ opencode_version }}"
+  register: _opencode_image_before
+
+# docker_compose_v2_pull with policy=always cannot tell whether the image
+# changed, so compare the image ID before and after the pull.
 - name: Pull OpenCode image
   become: true
   community.docker.docker_compose_v2_pull:
@@ -111,6 +120,16 @@
   retries: 20
   delay: 30
   until: _opencode_image_pull is success
+
+- name: Detect OpenCode image update
+  become: true
+  community.docker.docker_image_info:
+    name:
+      - "ghcr.io/niklasea/opencode:{{ opencode_version }}"
+  register: _opencode_image_after
+  changed_when: >-
+    (_opencode_image_before.images | map(attribute='Id') | list)
+    != (_opencode_image_after.images | map(attribute='Id') | list)
 
 - name: Seed service configuration
   become: true
