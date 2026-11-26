@@ -287,6 +287,31 @@
     },
     {
       "action": "shell",
+      "resource": "gh --version",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "gh version",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "gh --help",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "opencode --help",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "opencode --version",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
       "resource": "cd *",
       "effect": "allow"
     },
@@ -453,6 +478,11 @@
     {
       "action": "shell",
       "resource": "type *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "command -v *",
       "effect": "allow"
     },
     {
