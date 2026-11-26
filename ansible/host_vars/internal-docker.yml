@@ -1,6 +1,8 @@
 ---
 # Only NetBird overlay clients may reach OpenCode.
 opencode_allowed_network: 100.64.0.0/10
+# Pin the exact image tag instead of the moving v2 tag. Bump deliberately.
+opencode_version: "2.4.2"
 
 wireguard_server_keys:
   private: "{{ vault_wireguard_home_keys.private }}"
