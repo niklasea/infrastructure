@@ -2,7 +2,10 @@
 opencode_compose_dir: "{{ docker_compose_dir }}/opencode"
 # Writable OpenCode data lives on a loopback ext4 image so the agent cannot
 # fill the host filesystem. The image is sparse; the filesystem size is the
-# quota. Increase opencode_data_size and resize the filesystem manually.
+# quota. The image is sized only on first creation: changing
+# opencode_data_size later does nothing. To grow it, truncate the image to the
+# new size, resize the ext4 filesystem, and redeploy. For example, while the
+# filesystem is unmounted: `truncate -s 30G data.img && resize2fs data.img`.
 opencode_data_dir: "{{ opencode_compose_dir }}/data"
 opencode_data_image: "{{ opencode_compose_dir }}/data.img"
 opencode_data_size: 20G

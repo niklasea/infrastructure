@@ -67,6 +67,7 @@
   register: _opencode_data_filesystem
   changed_when: false
   failed_when: false
+  check_mode: false
 
 - name: Check whether the data filesystem is mounted
   become: true
@@ -75,6 +76,7 @@
   register: _opencode_data_mounted
   changed_when: false
   failed_when: false
+  check_mode: false
 
 - name: Format the data filesystem
   become: true
@@ -214,6 +216,8 @@
     mode: '0644'
     owner: "{{ docker_remap_user }}"
     group: "{{ docker_remap_user }}"
+    modification_time: preserve
+    access_time: preserve
 
 - name: Add OpenCode configuration files
   become: true
