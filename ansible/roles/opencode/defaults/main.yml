@@ -11,12 +11,11 @@ opencode_container_workspace: /workspace
 # tags built from OpenCode >= 2.2.6 include the websearch.use policy.
 opencode_version: v2
 opencode_port: 49374
-opencode_allowed_network: 100.64.0.0/10
-opencode_bind_address: >-
-  {{ (ansible_facts['all_ipv4_addresses'] | default([]))
-     | ansible.utils.ipaddr(opencode_allowed_network)
-     | first
-     | default('', true) }}
+# Docker publish address. 0.0.0.0 keeps the role independent of any overlay;
+# restrict access with opencode_allowed_network.
+opencode_bind_address: 0.0.0.0
+# Source network allowed to reach OpenCode. The deployment supplies this.
+opencode_allowed_network: ""
 
 opencode_read_only: true
 opencode_memory_limit: "4G"

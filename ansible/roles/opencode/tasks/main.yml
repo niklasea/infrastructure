@@ -11,10 +11,10 @@
     fail_msg: opencode_api_keys must be a mapping of environment variable names to values.
     quiet: true
 
-- name: Require a bind address on the overlay network
+- name: Require an allowed network
   ansible.builtin.assert:
-    that: opencode_bind_address | length > 0
-    fail_msg: Set opencode_bind_address or ensure the overlay network is up before deploying.
+    that: opencode_allowed_network | length > 0
+    fail_msg: Set opencode_allowed_network to the source network allowed to reach OpenCode.
     quiet: true
 
 - name: Ensure Docker is running
@@ -33,12 +33,12 @@
         src: "{{ opencode_allowed_network }}"
         port: "{{ opencode_port }}"
         proto: tcp
-        comment: OpenCode from the overlay network
+        comment: OpenCode from the allowed network
       - chain: DOCKER-USER
         rule: DROP
         port: "{{ opencode_port }}"
         proto: tcp
-        comment: OpenCode from outside the overlay network
+        comment: OpenCode from outside the allowed network
 
 - name: Create directories
   become: true
