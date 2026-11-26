@@ -1,28 +1,40 @@
 ---
 services:
   opencode:
-    image: "{{ opencode_image }}"
+    image: "ghcr.io/niklasea/opencode:{{ opencode_version }}"
+    container_name: opencode
     restart: unless-stopped
     command:
       - serve
       - --service
     working_dir: "{{ opencode_container_workspace }}"
     init: true
+    read_only: {{ opencode_read_only | bool | lower }}
+    stop_grace_period: 30s
+    pids_limit: 1024
+    cpus: "{{ [ ((ansible_facts['processor_vcpus'] | default(2) | int) * 0.75), 1.0 ] | max | round(1) }}"
+    mem_limit: "{{ opencode_memory_limit }}"
+    memswap_limit: "{{ opencode_memory_limit }}"
     environment:
       HOME: "{{ opencode_container_home }}"
       GIT_TERMINAL_PROMPT: "0"
     env_file:
       - .env
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=1g
     volumes:
       - "{{ opencode_home_dir }}:{{ opencode_container_home }}"
       - "{{ opencode_workspace_dir }}:{{ opencode_container_workspace }}"
+      - "{{ opencode_managed_config_dir }}:/etc/opencode:ro"
     ports:
-      - "0.0.0.0:{{ opencode_port }}:{{ opencode_port }}"
+      - "{{ opencode_bind_address }}:{{ opencode_port }}:{{ opencode_port }}"
     cap_drop:
       - ALL
     security_opt:
       - no-new-privileges:true
-    deploy:
-      resources:
-        limits:
-          memory: "{{ opencode_memory_limit }}"
+    healthcheck:
+      test: ["CMD", "opencode", "api", "get", "/api/info"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s

@@ -2,16 +2,49 @@
 opencode_compose_dir: "{{ docker_compose_dir }}/opencode"
 opencode_home_dir: "{{ opencode_compose_dir }}/home"
 opencode_workspace_dir: "{{ opencode_compose_dir }}/workspace"
+opencode_managed_config_dir: "{{ opencode_compose_dir }}/etc-opencode"
 opencode_container_home: /home/opencode
 opencode_container_workspace: /workspace
-opencode_version: latest
-opencode_image: "ghcr.io/niklasea/opencode:{{ opencode_version }}"
+
+# Moving tag of the custom OpenCode image built from the latest V2 release.
+# Override with a version or SHA tag from the custom registry to pin, but only
+# tags built from OpenCode >= 2.2.6 include the websearch.use policy.
+opencode_version: v2
 opencode_port: 49374
-opencode_allowed_network: 100.64.0.0/10
-opencode_memory_limit: 4G
+# Docker publish address. 0.0.0.0 keeps the role independent of any overlay;
+# restrict access with opencode_allowed_network.
+opencode_bind_address: 0.0.0.0
+# Source network allowed to reach OpenCode. The deployment supplies this.
+opencode_allowed_network: ""
+
+opencode_read_only: true
+opencode_memory_limit: "4G"
 
 # Environment variables exposed to the container, such as provider API keys.
 # Empty values are omitted.
 opencode_api_keys: {}
 
 opencode_default_model: deepseek/deepseek-flash
+# Root `model` does not retain a #variant, so this alias encodes the effort in a
+# custom model entry. The alias metadata mirrors the DeepSeek V4.1 Flash
+# catalog entry; update it if you change the default model.
+opencode_default_model_name: "DeepSeek V4.1 Flash"
+opencode_default_provider: "{{ opencode_default_model.split('/')[0] }}"
+opencode_default_model_id: "{{ opencode_default_model.split('/', 1)[1] }}"
+opencode_default_effort: high
+opencode_default_model_alias: "{{ opencode_default_provider }}/{{ opencode_default_model_id }}-{{ opencode_default_effort }}"
+opencode_default_model_context: 1048576
+opencode_default_model_output: 393216
+opencode_default_agent: plan
+# OpenCode's Parallel provider uses keyless mode when no key is configured.
+opencode_websearch_provider: parallel
+
+opencode_snapshots: true
+opencode_tool_output_max_lines: 1500
+opencode_tool_output_max_bytes: 32768
+# Requires >= 2.3.1. Older images ignore the field and use their own default.
+opencode_compaction_background: false
+opencode_compaction_keep_tokens: 10000
+opencode_compaction_buffer: "15%"
+
+opencode_disable_claude_code: true

@@ -7,21 +7,96 @@ on:
       - main
     paths:
       - .github/workflows/build_opencode.yml
+      - .github/scripts/resolve-opencode-version.py
       - ansible/dockerfiles/opencode/**
   pull_request:
     paths:
       - .github/workflows/build_opencode.yml
+      - .github/scripts/resolve-opencode-version.py
       - ansible/dockerfiles/opencode/**
+  schedule:
+    # Weekly rebuild from the latest OpenCode V2 release.
+    - cron: "17 4 * * 1"
   workflow_dispatch:
+    inputs:
+      opencode_base_tag:
+        description: "OpenCode V2 base image tag (2.x.y; defaults to the latest 2.x)"
+        required: false
+        default: ""
+        type: string
+
+concurrency:
+  group: build-opencode-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
+  resolve:
+    name: Resolve OpenCode V2 base
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Resolve version
+        id: version
+        env:
+          OPENCODE_BASE_TAG: ${{ inputs.opencode_base_tag }}
+        run: |
+          version="${OPENCODE_BASE_TAG}"
+          if [ -z "$version" ]; then
+            version="$(python3 .github/scripts/resolve-opencode-version.py)"
+          fi
+          if [[ ! "$version" =~ ^2\.[0-9]+\.[0-9]+$ ]]; then
+            echo "invalid OpenCode base tag: $version" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
   build:
+    name: Build OpenCode image
+    needs: resolve
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
     permissions:
       contents: read
       packages: write
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
-    uses: ./.github/workflows/push_docker_image.yml
-    with:
-      image_name: ghcr.io/niklasea/opencode
-      context: ansible/dockerfiles/opencode
-      file: ansible/dockerfiles/opencode/dockerfile
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ghcr.io/niklasea/opencode
+          tags: |
+            type=raw,value=v2,enable=${{ github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || inputs.opencode_base_tag == '') }}
+            type=raw,value=${{ needs.resolve.outputs.version }},enable=${{ github.ref == 'refs/heads/main' }}
+            type=ref,event=pr
+            type=sha
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ansible/dockerfiles/opencode
+          file: ansible/dockerfiles/opencode/dockerfile
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          push: true
+          build-args: "OPENCODE_BASE_VERSION=${{ needs.resolve.outputs.version }}"
