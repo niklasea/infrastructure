@@ -97,7 +97,7 @@
     path: "{{ opencode_data_dir }}"
     src: "{{ opencode_data_image }}"
     fstype: ext4
-    opts: loop,nosuid,nodev
+    opts: loop,nosuid,nodev,x-systemd.before=docker.service
     state: mounted
 
 - name: Check the data migration marker
