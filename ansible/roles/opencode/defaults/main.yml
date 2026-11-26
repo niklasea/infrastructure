@@ -20,6 +20,27 @@ opencode_allowed_network: ""
 opencode_read_only: true
 opencode_memory_limit: "4G"
 
+# REA runs in a separate container so its tools cannot read OpenCode's
+# credentials or home. It can read the mounted workspace read-only, including
+# files that OpenCode's read rules hide; narrow opencode_workspace_dir if that
+# matters. The version must match REA_AGENTS_VERSION in both Dockerfiles.
+opencode_rea_enabled: true
+opencode_rea_version: "6.10.1"
+opencode_rea_image: "ghcr.io/niklasea/rea:{{ opencode_rea_version }}"
+opencode_rea_service_name: rea
+opencode_rea_network: opencode-rea
+opencode_rea_port: 8765
+# REA state and temporary Ghidra data live here and are not pruned automatically.
+opencode_rea_home_dir: "{{ opencode_compose_dir }}/rea-home"
+# Ghidra documents a 4 GB minimum; raise this when the host has headroom.
+opencode_rea_memory_limit: "4G"
+# Setting this false lets REA modify the workspace, bypassing OpenCode's edit rules.
+opencode_rea_workspace_read_only: true
+opencode_rea_schema_profile: compact
+# Advertise families relevant to the installed engines. Individual tools that
+# need optional external binaries report themselves unavailable at call time.
+opencode_rea_tool_families: "session,direct,enhanced,native,artifact,electron,javascript-runtime,application"
+
 # Environment variables exposed to the container, such as provider API keys.
 # Empty values are omitted.
 opencode_api_keys: {}

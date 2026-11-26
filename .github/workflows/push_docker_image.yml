@@ -10,6 +10,10 @@ on:
       custom_tag:
         required: false
         type: string
+      custom_tag_enable:
+        required: false
+        type: boolean
+        default: true
       context:
         required: true
         type: string
@@ -42,7 +46,7 @@ jobs:
             ${{ inputs.image_name }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,value=${{ inputs.custom_tag }},enable=${{ inputs.custom_tag != '' }}
+            type=raw,value=${{ inputs.custom_tag }},enable=${{ inputs.custom_tag != '' && inputs.custom_tag_enable }}
             type=ref,event=branch
             type=ref,event=pr
             type=semver,pattern={{version}}
@@ -65,5 +69,5 @@ jobs:
           file: ${{ inputs.file }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          push: true
+          push: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
           build-args: ${{ inputs.build-args }}

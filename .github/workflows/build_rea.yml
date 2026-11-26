@@ -1,0 +1,71 @@
+---
+name: Build REA image
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build_rea.yml
+      - .github/workflows/push_docker_image.yml
+      - ansible/dockerfiles/rea/**
+      - ansible/dockerfiles/opencode/dockerfile
+      - ansible/roles/opencode/defaults/main.yml
+  pull_request:
+    paths:
+      - .github/workflows/build_rea.yml
+      - .github/workflows/push_docker_image.yml
+      - ansible/dockerfiles/rea/**
+      - ansible/dockerfiles/opencode/dockerfile
+      - ansible/roles/opencode/defaults/main.yml
+  workflow_dispatch:
+
+concurrency:
+  group: build-rea-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check pinned REA version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Compare REA versions
+        id: version
+        run: |
+          rea="$(sed -n 's/^ARG REA_AGENTS_VERSION=//p' ansible/dockerfiles/rea/dockerfile | head -n 1)"
+          skill="$(sed -n 's/^ARG REA_AGENTS_VERSION=//p' ansible/dockerfiles/opencode/dockerfile | head -n 1)"
+          role="$(sed -n 's/^opencode_rea_version:[[:space:]]*//p' ansible/roles/opencode/defaults/main.yml | head -n 1 | sed 's/[[:space:]]*#.*$//' | tr -d "\"'")"
+          if ! printf '%s\n' "$rea" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "invalid REA version: $rea" >&2
+            exit 1
+          fi
+          if [ "$rea" != "$skill" ] || [ "$rea" != "$role" ]; then
+            echo "REA version mismatch: rea=$rea skill=$skill role=$role" >&2
+            exit 1
+          fi
+          echo "version=$rea" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build REA image
+    needs: check
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/push_docker_image.yml
+    with:
+      image_name: ghcr.io/niklasea/rea
+      custom_tag: ${{ needs.check.outputs.version }}
+      custom_tag_enable: ${{ github.ref == 'refs/heads/main' }}
+      context: ansible/dockerfiles/rea
+      file: ansible/dockerfiles/rea/dockerfile
+      build-args: |
+        REA_AGENTS_VERSION=${{ needs.check.outputs.version }}

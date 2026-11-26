@@ -32,9 +32,77 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
+{% if opencode_rea_enabled | bool %}
+    depends_on:
+      "{{ opencode_rea_service_name }}":
+        condition: service_healthy
+{% endif %}
+    networks:
+      - default
+{% if opencode_rea_enabled | bool %}
+      - "{{ opencode_rea_network }}"
+{% endif %}
     healthcheck:
       test: ["CMD", "opencode", "api", "get", "/api/info"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 30s
+{% if opencode_rea_enabled | bool %}
+
+  "{{ opencode_rea_service_name }}":
+    image: "{{ opencode_rea_image }}"
+    container_name: "{{ opencode_rea_service_name }}"
+    restart: unless-stopped
+    command:
+      - mcp
+      - --http
+      - --host
+      - 0.0.0.0
+      - --port
+      - "{{ opencode_rea_port }}"
+      - --allowed-hosts
+      - "{{ opencode_rea_service_name }},127.0.0.1,localhost"
+    working_dir: "{{ opencode_container_workspace }}"
+    init: true
+    read_only: true
+    stop_grace_period: 30s
+    pids_limit: 1024
+    cpus: "{{ [ ((ansible_facts['processor_vcpus'] | default(2) | int) * 0.75), 1.0 ] | max | round(1) }}"
+    mem_limit: "{{ opencode_rea_memory_limit }}"
+    memswap_limit: "{{ opencode_rea_memory_limit }}"
+    shm_size: "512m"
+    environment:
+      HOME: /home/rea
+      REA_LOG_LEVEL: INFO
+      REA_ANALYSIS_PROVIDER: ghidra
+      REA_MCP_OUTPUT_SCHEMA_PROFILE: "{{ opencode_rea_schema_profile }}"
+      TMPDIR: /home/rea/tmp
+{% if opencode_rea_tool_families | length > 0 %}
+      REA_MCP_TOOL_FAMILIES: "{{ opencode_rea_tool_families }}"
+{% endif %}
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=1g
+    volumes:
+      - "{{ opencode_workspace_dir }}:{{ opencode_container_workspace }}:{{ 'ro' if opencode_rea_workspace_read_only | bool else 'rw' }}"
+      - "{{ opencode_rea_home_dir }}:/home/rea"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - "{{ opencode_rea_network }}"
+    # Liveness only; OpenCode retries MCP initialization after startup.
+    healthcheck:
+      test: ["CMD", "node", "-e", "const socket = require('node:net').connect({{ opencode_rea_port }}, '127.0.0.1'); socket.setTimeout(2000); socket.on('connect', () => process.exit(0)); socket.on('timeout', () => process.exit(1)); socket.on('error', () => process.exit(1));"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+{% endif %}
+{% if opencode_rea_enabled | bool %}
+
+networks:
+  "{{ opencode_rea_network }}":
+    internal: true
+{% endif %}

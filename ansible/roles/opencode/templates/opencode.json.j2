@@ -96,6 +96,23 @@
       "model": "{{ opencode_default_model_alias }}",
       "steps": 20,
       "permissions": [
+{% if opencode_rea_enabled | bool %}
+        {
+          "action": "{{ opencode_rea_service_name }}_*",
+          "resource": "*",
+          "effect": "deny"
+        },
+        {
+          "action": "opencode_list_mcp_resources",
+          "resource": "{{ opencode_rea_service_name }}",
+          "effect": "deny"
+        },
+        {
+          "action": "opencode_read_mcp_resource",
+          "resource": "{{ opencode_rea_service_name }}:*",
+          "effect": "deny"
+        },
+{% endif %}
         {
           "action": "shell",
           "resource": "*",
@@ -109,6 +126,23 @@
       ]
     }
   },
+{% if opencode_rea_enabled | bool %}
+  "mcp": {
+    "servers": {
+      "{{ opencode_rea_service_name }}": {
+        "type": "remote",
+        "url": "http://{{ opencode_rea_service_name }}:{{ opencode_rea_port }}/mcp",
+        "oauth": false,
+        "pool": true,
+        "timeout": {
+          "startup": 60000,
+          "catalog": 120000
+        }
+      }
+    }
+  },
+  "skills": ["/usr/local/share/opencode/skills"],
+{% endif %}
   "permissions": [
     {
       "action": "external_directory",
@@ -472,6 +506,13 @@
       "resource": "*",
       "effect": "deny"
     },
+{% if opencode_rea_enabled | bool %}
+    {
+      "action": "mcp.use",
+      "resource": "{{ opencode_rea_service_name }}",
+      "effect": "allow"
+    },
+{% endif %}
     {
       "action": "plugin.use",
       "resource": "*",
