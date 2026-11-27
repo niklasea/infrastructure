@@ -7,13 +7,20 @@
   ansible.builtin.include_tasks: ip6tables.yml
   tags: firewall_reset_all
 
-- name: (Debian) Load iptables rules at boot
+- name: (Debian) Gather service facts
   become: true
-  ansible.builtin.copy:
-    src: iptables-preup
-    dest: /etc/network/if-pre-up.d/iptables
-    mode: '755'
-    backup: true
+  ansible.builtin.service_facts:
+  tags: firewall_reset_all
+
+# Docker recreates its own rules on startup, so persistence only ever needs to
+# restore the user rules saved above. netfilter-persistent is ordered before
+# docker.service, which keeps that restore off Docker's live filter table.
+- name: (Debian) Ensure iptables persistence is enabled
+  become: true
+  ansible.builtin.systemd_service:
+    name: netfilter-persistent
+    enabled: true
+  when: "'netfilter-persistent.service' in ansible_facts.services"
   tags: firewall_reset_all
 
 # - name: OS-specific configuration

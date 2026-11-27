@@ -28,12 +28,38 @@
 
 - tags: firewall_reset_all
   block:
-    # TODO: Might save service-managed rules (e.g. WireGuard). Write direct to config file and load that instead?
-    - name: (Debian) Get IPv4 iptables rules
+    # Docker owns the raw, mangle and nat tables and the DOCKER* chains in the
+    # filter table. Persisting them resurrects stale per-container rules after
+    # bridges are recreated (e.g. Docker 28's raw-table drop rules), which
+    # silently breaks container-to-container traffic. Keep only user rules.
+    # DOCKER-USER is the sanctioned extension point and Docker never writes to
+    # it, so it is retained together with the FORWARD jump into it.
+    - name: (Debian) Get user-managed IPv4 iptables rules
       become: true
-      ansible.builtin.command: iptables-save
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+          iptables-save -t filter | awk '
+            /^:DOCKER-USER /                { print; next }
+            /^:DOCKER/                      { next }
+            /^-A DOCKER-USER /              { print; next }
+            /-j DOCKER-USER([[:space:]]|$)/ { print; next }
+            /-j DOCKER/                     { next }
+            /^-A DOCKER/                    { next }
+            { print }
+          '
+        executable: /bin/bash
       register: firewall_iptables_save
       changed_when: false
+      check_mode: false
+
+    - name: (Debian) Validate IPv4 iptables rules
+      become: true
+      ansible.builtin.command:
+        cmd: iptables-restore --test
+        stdin: "{{ firewall_iptables_save.stdout }}"
+      changed_when: false
+      check_mode: false
 
     - name: (Debian) Create iptables conf dir
       become: true
@@ -45,7 +71,7 @@
     - name: (Debian) Save IPv4 iptables rules
       become: true
       ansible.builtin.copy:
-        content: "{{ firewall_iptables_save.stdout }}"
+        content: "{{ firewall_iptables_save.stdout }}\n"
         dest: /etc/iptables/rules.v4
         mode: '644'
       # iptables-save output includes a timestamp, not idempotent

@@ -28,12 +28,34 @@
 
 - tags: firewall_reset_all
   block:
-    # TODO: Might save service-managed rules (e.g. WireGuard). Write direct to config file and load that instead?
-    - name: (Debian) Get IPv6 iptables rules
+    # See iptables.yml: persist only user-managed rules, never Docker's raw,
+    # mangle or nat state.
+    - name: (Debian) Get user-managed IPv6 iptables rules
       become: true
-      ansible.builtin.command: ip6tables-save
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+          ip6tables-save -t filter | awk '
+            /^:DOCKER-USER /                { print; next }
+            /^:DOCKER/                      { next }
+            /^-A DOCKER-USER /              { print; next }
+            /-j DOCKER-USER([[:space:]]|$)/ { print; next }
+            /-j DOCKER/                     { next }
+            /^-A DOCKER/                    { next }
+            { print }
+          '
+        executable: /bin/bash
       register: firewall_ip6tables_save
       changed_when: false
+      check_mode: false
+
+    - name: (Debian) Validate IPv6 iptables rules
+      become: true
+      ansible.builtin.command:
+        cmd: ip6tables-restore --test
+        stdin: "{{ firewall_ip6tables_save.stdout }}"
+      changed_when: false
+      check_mode: false
 
     - name: (Debian) Create iptables conf dir
       become: true
@@ -45,7 +67,7 @@
     - name: (Debian) Save IPv6 iptables rules
       become: true
       ansible.builtin.copy:
-        content: "{{ firewall_ip6tables_save.stdout }}"
+        content: "{{ firewall_ip6tables_save.stdout }}\n"
         dest: /etc/iptables/rules.v6
         mode: '644'
       # ip6tables-save output includes a timestamp, not idempotent
