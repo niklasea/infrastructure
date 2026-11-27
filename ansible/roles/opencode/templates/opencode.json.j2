@@ -114,6 +114,16 @@
       "effect": "ask"
     },
     {
+      "action": "external_directory",
+      "resource": "/tmp/*",
+      "effect": "ask"
+    },
+    {
+      "action": "external_directory",
+      "resource": "{{ opencode_container_home }}/.cache/*",
+      "effect": "ask"
+    },
+    {
       "action": "read",
       "resource": "*.env",
       "effect": "deny"
@@ -285,6 +295,26 @@
     },
     {
       "action": "shell",
+      "resource": "gh run list *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "gh run view *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "gh run watch *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "gh cache list *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
       "resource": "gh search *",
       "effect": "allow"
     },
@@ -321,6 +351,11 @@
     {
       "action": "shell",
       "resource": "opencode --standalone debug config",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "sleep *",
       "effect": "allow"
     },
     {
@@ -580,6 +615,16 @@
     },
     {
       "action": "shell",
+      "resource": "chmod +x *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "tar *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
       "resource": "python3 *",
       "effect": "allow"
     },
@@ -798,6 +843,11 @@
     {
       "action": "plugin.use",
       "resource": "opencode.websearch.*",
+      "effect": "allow"
+    },
+    {
+      "action": "plugin.use",
+      "resource": "opencode.worktree_create.*",
       "effect": "allow"
     },
     {
