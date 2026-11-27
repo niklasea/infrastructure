@@ -40,12 +40,14 @@
         cmd: |
           set -o pipefail
           iptables-save -t filter | awk '
-            /^:DOCKER-USER /                { print; next }
+            /^#/                            { next }
+            /^:DOCKER-USER /                { sub(/\[[0-9]+:[0-9]+\]$/, "[0:0]"); print; next }
             /^:DOCKER/                      { next }
             /^-A DOCKER-USER /              { print; next }
             /-j DOCKER-USER([[:space:]]|$)/ { print; next }
             /-j DOCKER/                     { next }
             /^-A DOCKER/                    { next }
+            /^:/                            { sub(/\[[0-9]+:[0-9]+\]$/, "[0:0]") }
             { print }
           '
         executable: /bin/bash
@@ -56,7 +58,7 @@
     - name: (Debian) Validate IPv4 iptables rules
       become: true
       ansible.builtin.command:
-        cmd: iptables-restore --test
+        cmd: iptables-restore -w 5 --test
         stdin: "{{ firewall_iptables_save.stdout }}"
       changed_when: false
       check_mode: false
@@ -74,5 +76,3 @@
         content: "{{ firewall_iptables_save.stdout }}\n"
         dest: /etc/iptables/rules.v4
         mode: '644'
-      # iptables-save output includes a timestamp, not idempotent
-      changed_when: false

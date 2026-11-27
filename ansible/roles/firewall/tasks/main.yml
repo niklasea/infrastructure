@@ -1,4 +1,15 @@
 ---
+# Only the filter table is persisted, so a rule in another table would be
+# applied live and then silently lost on reboot.
+- name: Validate firewall rule tables
+  ansible.builtin.assert:
+    that:
+      - (item.table | default('filter')) == 'filter'
+    fail_msg: "Only filter-table rules are persisted; other tables would vanish on reboot."
+    quiet: true
+  loop: "{{ firewall_rules_all + firewall_rules_ipv6_all }}"
+  tags: firewall_reset_all
+
 - name: Configure chosen IPv4 firewall
   ansible.builtin.include_tasks: iptables.yml
   tags: firewall_reset_all
