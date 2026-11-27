@@ -40,6 +40,114 @@
         proto: tcp
         comment: OpenCode from outside the allowed network
 
+- name: Create the OpenCode compose directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ opencode_compose_dir }}"
+    state: directory
+    mode: '755'
+
+- name: Check the data filesystem image
+  become: true
+  ansible.builtin.stat:
+    path: "{{ opencode_data_image }}"
+  register: _opencode_data_image_stat
+
+- name: Create the data filesystem image
+  become: true
+  ansible.builtin.command:
+    cmd: "truncate -s {{ opencode_data_size }} {{ opencode_data_image }}"
+  when: not _opencode_data_image_stat.stat.exists or _opencode_data_image_stat.stat.size == 0
+  register: _opencode_data_image_create
+
+- name: Restrict the data image permissions
+  become: true
+  ansible.builtin.file:
+    path: "{{ opencode_data_image }}"
+    mode: '0600'
+  when: _opencode_data_image_stat.stat.exists or (_opencode_data_image_create is changed and not ansible_check_mode)
+
+- name: Inspect the data filesystem
+  become: true
+  ansible.builtin.command:
+    cmd: "blkid -o value -s TYPE {{ opencode_data_image }}"
+  register: _opencode_data_filesystem
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Check whether the data filesystem is mounted
+  become: true
+  ansible.builtin.command:
+    cmd: "mountpoint -q {{ opencode_data_dir }}"
+  register: _opencode_data_mounted
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+# A probe failure is not proof that the image is unformatted; only format a
+# freshly created image so an unreadable or damaged image is never overwritten.
+- name: Format the data filesystem
+  become: true
+  ansible.builtin.command:
+    cmd: "mkfs.ext4 -F -L opencode-data {{ opencode_data_image }}"
+  when:
+    - _opencode_data_mounted.rc != 0
+    - _opencode_data_image_create is changed
+
+- name: Verify the existing data filesystem
+  become: true
+  ansible.builtin.assert:
+    that:
+      - _opencode_data_filesystem.rc == 0
+      - _opencode_data_filesystem.stdout | trim == 'ext4'
+    fail_msg: "{{ opencode_data_image }} exists but is not an ext4 filesystem; remove it manually to recreate it."
+  when:
+    - _opencode_data_image_stat.stat.exists
+    - not (_opencode_data_image_create is changed)
+
+- name: Create the data mountpoint
+  become: true
+  ansible.builtin.file:
+    path: "{{ opencode_data_dir }}"
+    state: directory
+    mode: '700'
+
+- name: Mount the data filesystem
+  become: true
+  ansible.builtin.mount:
+    path: "{{ opencode_data_dir }}"
+    src: "{{ opencode_data_image }}"
+    fstype: ext4
+    opts: loop,nosuid,nodev
+    state: mounted
+
+# The marker and legacy paths are removed by a follow-up PR once the
+# one-time migration has run.
+- name: Check the data migration marker
+  become: true
+  ansible.builtin.stat:
+    path: "{{ opencode_data_dir }}/.migrated"
+  register: _opencode_data_migration
+
+- name: Check the legacy home
+  become: true
+  ansible.builtin.stat:
+    path: "{{ opencode_legacy_home_dir }}"
+  register: _opencode_legacy_home
+
+- name: Check the legacy workspace
+  become: true
+  ansible.builtin.stat:
+    path: "{{ opencode_legacy_workspace_dir }}"
+  register: _opencode_legacy_workspace
+
+- name: Check the existing compose file
+  become: true
+  ansible.builtin.stat:
+    path: "{{ opencode_compose_dir }}/docker-compose.yml"
+  register: _opencode_compose_file
+
 - name: Create directories
   become: true
   ansible.builtin.file:
@@ -65,105 +173,184 @@
       group: "{{ docker_remap_user }}"
     - path: "{{ opencode_managed_config_dir }}"
       mode: '755'
+    - path: "{{ opencode_skills_source_dir }}"
+      mode: '755'
 
-- name: Add OpenCode configuration files
+- name: Install skills source
   become: true
-  ansible.builtin.template:
-    src: "{{ item.src }}"
-    dest: "{{ item.dest }}"
-    mode: "{{ item.mode }}"
-  loop:
-    - src: opencode.json.j2
-      dest: "{{ opencode_managed_config_dir }}/opencode.json"
-      mode: '644'
-    - src: env.j2
-      dest: "{{ opencode_compose_dir }}/.env"
-      mode: '600'
+  ansible.builtin.git:
+    repo: "{{ opencode_skills_repo }}"
+    dest: "{{ opencode_skills_source_dir }}"
+    version: "{{ opencode_skills_version }}"
+    update: true
+  register: _opencode_skills_source
+
+- name: Ensure the global instructions mountpoint exists
+  become: true
+  ansible.builtin.file:
+    path: "{{ opencode_home_dir }}/.config/opencode/AGENTS.md"
+    state: touch
+    mode: '0644'
+    owner: "{{ docker_remap_user }}"
+    group: "{{ docker_remap_user }}"
+    modification_time: preserve
+    access_time: preserve
+
+- name: Migrate data and start OpenCode
+  block:
+    - name: Stop OpenCode for the data migration
+      become: true
+      community.docker.docker_compose_v2:
+        project_src: "{{ opencode_compose_dir }}"
+        state: stopped
+      when:
+        - not _opencode_data_migration.stat.exists
+        - _opencode_compose_file.stat.exists
+
+    - name: Copy the existing home into the data filesystem
+      become: true
+      ansible.builtin.command:
+        cmd: "cp -a {{ opencode_legacy_home_dir }}/. {{ opencode_home_dir }}/"
+      when:
+        - not _opencode_data_migration.stat.exists
+        - _opencode_legacy_home.stat.exists
+
+    - name: Copy the existing workspace into the data filesystem
+      become: true
+      ansible.builtin.command:
+        cmd: "cp -a {{ opencode_legacy_workspace_dir }}/. {{ opencode_workspace_dir }}/"
+      when:
+        - not _opencode_data_migration.stat.exists
+        - _opencode_legacy_workspace.stat.exists
+
+    - name: Add OpenCode configuration files
+      become: true
+      ansible.builtin.template:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        mode: "{{ item.mode }}"
+      loop:
+        - src: opencode.json.j2
+          dest: "{{ opencode_managed_config_dir }}/opencode.json"
+          mode: '644'
+        - src: env.j2
+          dest: "{{ opencode_compose_dir }}/.env"
+          mode: '600'
+          no_log: true
+        - src: docker-compose.yml.j2
+          dest: "{{ opencode_compose_dir }}/docker-compose.yml"
+          mode: '640'
+      loop_control:
+        label: "{{ item.dest }}"
+      no_log: "{{ item.no_log | default(false) }}"
+
+    - name: Mark the data migration complete
+      become: true
+      ansible.builtin.file:
+        path: "{{ opencode_data_dir }}/.migrated"
+        state: touch
+        mode: '0600'
+      when: not _opencode_data_migration.stat.exists
+
+    - name: Check service configuration
+      become: true
+      ansible.builtin.stat:
+        path: "{{ opencode_home_dir }}/.config/opencode/service.json"
+      register: _opencode_service_configuration
+
+    - name: Read service configuration
+      become: true
+      when: _opencode_service_configuration.stat.exists
+      ansible.builtin.slurp:
+        src: "{{ opencode_home_dir }}/.config/opencode/service.json"
+      register: _opencode_service_configuration_content
       no_log: true
-    - src: docker-compose.yml.j2
-      dest: "{{ opencode_compose_dir }}/docker-compose.yml"
-      mode: '640'
-  loop_control:
-    label: "{{ item.dest }}"
-  no_log: "{{ item.no_log | default(false) }}"
 
-- name: Check service configuration
-  become: true
-  ansible.builtin.stat:
-    path: "{{ opencode_home_dir }}/.config/opencode/service.json"
-  register: _opencode_service_configuration
+    - name: Read current OpenCode image
+      become: true
+      community.docker.docker_image_info:
+        name:
+          - "ghcr.io/niklasea/opencode:{{ opencode_version }}"
+      register: _opencode_image_before
 
-- name: Read service configuration
-  become: true
-  when: _opencode_service_configuration.stat.exists
-  ansible.builtin.slurp:
-    src: "{{ opencode_home_dir }}/.config/opencode/service.json"
-  register: _opencode_service_configuration_content
-  no_log: true
+    # docker_compose_v2_pull with policy=always cannot tell whether the image
+    # changed, so compare the image ID before and after the pull.
+    - name: Pull OpenCode image
+      become: true
+      community.docker.docker_compose_v2_pull:
+        project_src: "{{ opencode_compose_dir }}"
+        policy: always
+      register: _opencode_image_pull
+      changed_when: false
+      retries: 20
+      delay: 30
+      until: _opencode_image_pull is success
 
-- name: Read current OpenCode image
-  become: true
-  community.docker.docker_image_info:
-    name:
-      - "ghcr.io/niklasea/opencode:{{ opencode_version }}"
-  register: _opencode_image_before
+    - name: Detect OpenCode image update
+      become: true
+      community.docker.docker_image_info:
+        name:
+          - "ghcr.io/niklasea/opencode:{{ opencode_version }}"
+      register: _opencode_image_after
+      changed_when: >-
+        (_opencode_image_before.images | map(attribute='Id') | list)
+        != (_opencode_image_after.images | map(attribute='Id') | list)
 
-# docker_compose_v2_pull with policy=always cannot tell whether the image
-# changed, so compare the image ID before and after the pull.
-- name: Pull OpenCode image
-  become: true
-  community.docker.docker_compose_v2_pull:
-    project_src: "{{ opencode_compose_dir }}"
-    policy: always
-  register: _opencode_image_pull
-  changed_when: false
-  retries: 20
-  delay: 30
-  until: _opencode_image_pull is success
+    - name: Seed service configuration
+      become: true
+      community.docker.docker_compose_v2_run:
+        project_src: "{{ opencode_compose_dir }}"
+        service: opencode
+        argv:
+          - service
+          - set
+          - "{{ item.key }}"
+          - "{{ item.value }}"
+        cleanup: true
+        interactive: false
+      loop:
+        - key: hostname
+          value: 0.0.0.0
+        - key: port
+          value: "{{ opencode_port }}"
+      loop_control:
+        label: "{{ item.key }}"
+      when: >-
+        not _opencode_service_configuration.stat.exists
+        or ((_opencode_service_configuration_content.content | b64decode | from_json)[item.key] | default('')) | string
+        != item.value | string
+      register: _opencode_service_configuration_seed
+      changed_when: true
 
-- name: Detect OpenCode image update
-  become: true
-  community.docker.docker_image_info:
-    name:
-      - "ghcr.io/niklasea/opencode:{{ opencode_version }}"
-  register: _opencode_image_after
-  changed_when: >-
-    (_opencode_image_before.images | map(attribute='Id') | list)
-    != (_opencode_image_after.images | map(attribute='Id') | list)
+    - name: Start OpenCode
+      become: true
+      community.docker.docker_compose_v2:
+        project_src: "{{ opencode_compose_dir }}"
+        state: "present"
+        pull: "missing"
+        recreate: "{{ 'always' if (_opencode_service_configuration_seed is changed or _opencode_skills_source is changed) else 'auto' }}"
+        remove_orphans: true
+        wait: true
+        wait_timeout: 120
+  rescue:
+    - name: Check whether the compose file exists after the failure
+      become: true
+      ansible.builtin.stat:
+        path: "{{ opencode_compose_dir }}/docker-compose.yml"
+      register: _opencode_rescue_compose
 
-- name: Seed service configuration
-  become: true
-  community.docker.docker_compose_v2_run:
-    project_src: "{{ opencode_compose_dir }}"
-    service: opencode
-    argv:
-      - service
-      - set
-      - "{{ item.key }}"
-      - "{{ item.value }}"
-    cleanup: true
-    interactive: false
-  loop:
-    - key: hostname
-      value: 0.0.0.0
-    - key: port
-      value: "{{ opencode_port }}"
-  loop_control:
-    label: "{{ item.key }}"
-  when: >-
-    not _opencode_service_configuration.stat.exists
-    or ((_opencode_service_configuration_content.content | b64decode | from_json)[item.key] | default('')) | string
-    != item.value | string
-  register: _opencode_service_configuration_seed
-  changed_when: true
+    - name: Restart OpenCode after a failed deploy
+      become: true
+      community.docker.docker_compose_v2:
+        project_src: "{{ opencode_compose_dir }}"
+        state: "present"
+        pull: "missing"
+        wait: true
+        wait_timeout: 120
+      when: _opencode_rescue_compose.stat.exists
 
-- name: Start OpenCode
-  become: true
-  community.docker.docker_compose_v2:
-    project_src: "{{ opencode_compose_dir }}"
-    state: "present"
-    pull: "missing"
-    recreate: "{{ 'always' if _opencode_service_configuration_seed is changed else 'auto' }}"
-    remove_orphans: true
-    wait: true
-    wait_timeout: 120
+    - name: Report the failed deploy
+      ansible.builtin.fail:
+        msg: >-
+          The OpenCode deploy failed. OpenCode was restarted with the current
+          compose file where possible; re-run the play after fixing the error.
