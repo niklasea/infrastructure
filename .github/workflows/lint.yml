@@ -43,7 +43,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ~/.ansible/collections
-          key: ansible-collections-${{ runner.os }}-${{ hashFiles('ansible/requirements.yml') }}
+          key: ansible-collections-${{ runner.os }}-${{ hashFiles('ansible/requirements.yml', '.github/linters/requirements.txt') }}
 
       - name: Cache TFLint plugins
         id: tflint-plugins
