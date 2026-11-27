@@ -287,6 +287,11 @@
     },
     {
       "action": "shell",
+      "resource": "gh search *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
       "resource": "gh --version",
       "effect": "allow"
     },
@@ -308,6 +313,16 @@
     {
       "action": "shell",
       "resource": "opencode --version",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "opencode debug config",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "opencode --standalone debug config",
       "effect": "allow"
     },
     {
@@ -562,6 +577,11 @@
     },
     {
       "action": "shell",
+      "resource": "cp *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
       "resource": "python3 *",
       "effect": "allow"
     },
@@ -724,6 +744,11 @@
       "action": "shell",
       "resource": "gh auth *",
       "effect": "deny"
+    },
+    {
+      "action": "shell",
+      "resource": "gh auth status",
+      "effect": "allow"
     },
     {
       "action": "shell",
@@ -924,7 +949,32 @@
     },
     {
       "action": "tool.use",
-      "resource": "shell:gh auth *",
+      "resource": "shell:gh auth login *",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:gh auth logout *",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:gh auth refresh *",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:gh auth setup-git *",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:gh auth switch *",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:gh auth token *",
       "effect": "deny"
     },
     {
