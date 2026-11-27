@@ -63,11 +63,11 @@
     },
     "build": {
       "model": "{{ opencode_default_model_alias }}",
-      "steps": 50
+      "steps": 500
     },
     "plan": {
       "model": "{{ opencode_default_model_alias }}",
-      "steps": 40,
+      "steps": 400,
       "permissions": [
         {
           "action": "subagent",
@@ -83,19 +83,17 @@
     },
     "general": {
       "model": "{{ opencode_default_model_alias }}",
-      "steps": 40,
+      "steps": 250
+    },
+    "explore": {
+      "model": "{{ opencode_default_model_alias }}",
+      "steps": 200,
       "permissions": [
         {
           "action": "edit",
           "resource": "*",
           "effect": "deny"
-        }
-      ]
-    },
-    "explore": {
-      "model": "{{ opencode_default_model_alias }}",
-      "steps": 20,
-      "permissions": [
+        },
         {
           "action": "shell",
           "resource": "*",
@@ -114,6 +112,16 @@
       "action": "external_directory",
       "resource": "*",
       "effect": "ask"
+    },
+    {
+      "action": "external_directory",
+      "resource": "/tmp/*",
+      "effect": "allow"
+    },
+    {
+      "action": "external_directory",
+      "resource": "{{ opencode_container_home }}/.cache/*",
+      "effect": "allow"
     },
     {
       "action": "read",
@@ -287,6 +295,26 @@
     },
     {
       "action": "shell",
+      "resource": "gh run list *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "gh run view *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "gh run watch *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "gh cache list *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
       "resource": "gh search *",
       "effect": "allow"
     },
@@ -323,6 +351,11 @@
     {
       "action": "shell",
       "resource": "opencode --standalone debug config",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "sleep *",
       "effect": "allow"
     },
     {
@@ -582,8 +615,23 @@
     },
     {
       "action": "shell",
+      "resource": "chmod +x *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "tar *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
       "resource": "python3 *",
       "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "rm -rf *",
+      "effect": "ask"
     },
     {
       "action": "shell",
@@ -608,11 +656,6 @@
     {
       "action": "shell",
       "resource": "su *",
-      "effect": "deny"
-    },
-    {
-      "action": "shell",
-      "resource": "rm -rf *",
       "effect": "deny"
     },
     {
@@ -815,11 +858,6 @@
     {
       "action": "tool.use",
       "resource": "shell:su *",
-      "effect": "deny"
-    },
-    {
-      "action": "tool.use",
-      "resource": "shell:rm -rf *",
       "effect": "deny"
     },
     {
