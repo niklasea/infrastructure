@@ -2,7 +2,7 @@
 ARG OPENCODE_BASE_VERSION=2.4.1
 FROM ghcr.io/anomalyco/opencode:${OPENCODE_BASE_VERSION}
 
-ARG APK_PACKAGES="git ca-certificates github-cli"
+ARG APK_PACKAGES="git ca-certificates github-cli python3 py3-pip"
 
 COPY --chmod=755 git-askpass.sh /usr/local/bin/git-askpass
 
