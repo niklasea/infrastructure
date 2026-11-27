@@ -76,3 +76,6 @@
         content: "{{ firewall_iptables_save.stdout }}\n"
         dest: /etc/iptables/rules.v4
         mode: '644'
+      # The snapshot also captures rules other services add at runtime, so their
+      # churn would otherwise report as a role change.
+      changed_when: false
