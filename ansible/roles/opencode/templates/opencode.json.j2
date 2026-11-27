@@ -116,12 +116,12 @@
     {
       "action": "external_directory",
       "resource": "/tmp/*",
-      "effect": "ask"
+      "effect": "allow"
     },
     {
       "action": "external_directory",
       "resource": "{{ opencode_container_home }}/.cache/*",
-      "effect": "ask"
+      "effect": "allow"
     },
     {
       "action": "read",
@@ -630,6 +630,11 @@
     },
     {
       "action": "shell",
+      "resource": "rm -rf *",
+      "effect": "ask"
+    },
+    {
+      "action": "shell",
       "resource": "cat /proc/*/environ",
       "effect": "deny"
     },
@@ -843,21 +848,6 @@
     {
       "action": "plugin.use",
       "resource": "opencode.websearch.*",
-      "effect": "allow"
-    },
-    {
-      "action": "plugin.use",
-      "resource": "opencode.worktree_create.*",
-      "effect": "allow"
-    },
-    {
-      "action": "plugin.use",
-      "resource": "opencode.worktree_list.*",
-      "effect": "allow"
-    },
-    {
-      "action": "plugin.use",
-      "resource": "opencode.worktree_remove.*",
       "effect": "allow"
     },
     {
