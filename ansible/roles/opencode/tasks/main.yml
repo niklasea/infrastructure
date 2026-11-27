@@ -122,32 +122,6 @@
     opts: loop,nosuid,nodev
     state: mounted
 
-# The marker and legacy paths are removed by a follow-up PR once the
-# one-time migration has run.
-- name: Check the data migration marker
-  become: true
-  ansible.builtin.stat:
-    path: "{{ opencode_data_dir }}/.migrated"
-  register: _opencode_data_migration
-
-- name: Check the legacy home
-  become: true
-  ansible.builtin.stat:
-    path: "{{ opencode_legacy_home_dir }}"
-  register: _opencode_legacy_home
-
-- name: Check the legacy workspace
-  become: true
-  ansible.builtin.stat:
-    path: "{{ opencode_legacy_workspace_dir }}"
-  register: _opencode_legacy_workspace
-
-- name: Check the existing compose file
-  become: true
-  ansible.builtin.stat:
-    path: "{{ opencode_compose_dir }}/docker-compose.yml"
-  register: _opencode_compose_file
-
 - name: Create directories
   become: true
   ansible.builtin.file:
@@ -196,33 +170,8 @@
     modification_time: preserve
     access_time: preserve
 
-- name: Migrate data and start OpenCode
+- name: Deploy OpenCode
   block:
-    - name: Stop OpenCode for the data migration
-      become: true
-      community.docker.docker_compose_v2:
-        project_src: "{{ opencode_compose_dir }}"
-        state: stopped
-      when:
-        - not _opencode_data_migration.stat.exists
-        - _opencode_compose_file.stat.exists
-
-    - name: Copy the existing home into the data filesystem
-      become: true
-      ansible.builtin.command:
-        cmd: "cp -a {{ opencode_legacy_home_dir }}/. {{ opencode_home_dir }}/"
-      when:
-        - not _opencode_data_migration.stat.exists
-        - _opencode_legacy_home.stat.exists
-
-    - name: Copy the existing workspace into the data filesystem
-      become: true
-      ansible.builtin.command:
-        cmd: "cp -a {{ opencode_legacy_workspace_dir }}/. {{ opencode_workspace_dir }}/"
-      when:
-        - not _opencode_data_migration.stat.exists
-        - _opencode_legacy_workspace.stat.exists
-
     - name: Add OpenCode configuration files
       become: true
       ansible.builtin.template:
@@ -243,14 +192,6 @@
       loop_control:
         label: "{{ item.dest }}"
       no_log: "{{ item.no_log | default(false) }}"
-
-    - name: Mark the data migration complete
-      become: true
-      ansible.builtin.file:
-        path: "{{ opencode_data_dir }}/.migrated"
-        state: touch
-        mode: '0600'
-      when: not _opencode_data_migration.stat.exists
 
     - name: Check service configuration
       become: true
