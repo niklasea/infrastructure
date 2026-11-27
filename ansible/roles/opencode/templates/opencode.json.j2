@@ -63,11 +63,11 @@
     },
     "build": {
       "model": "{{ opencode_default_model_alias }}",
-      "steps": 50
+      "steps": 500
     },
     "plan": {
       "model": "{{ opencode_default_model_alias }}",
-      "steps": 40,
+      "steps": 400,
       "permissions": [
         {
           "action": "subagent",
@@ -83,19 +83,17 @@
     },
     "general": {
       "model": "{{ opencode_default_model_alias }}",
-      "steps": 40,
+      "steps": 250
+    },
+    "explore": {
+      "model": "{{ opencode_default_model_alias }}",
+      "steps": 200,
       "permissions": [
         {
           "action": "edit",
           "resource": "*",
           "effect": "deny"
-        }
-      ]
-    },
-    "explore": {
-      "model": "{{ opencode_default_model_alias }}",
-      "steps": 20,
-      "permissions": [
+        },
         {
           "action": "shell",
           "resource": "*",
@@ -612,11 +610,6 @@
     },
     {
       "action": "shell",
-      "resource": "rm -rf *",
-      "effect": "deny"
-    },
-    {
-      "action": "shell",
       "resource": "docker *",
       "effect": "deny"
     },
@@ -815,11 +808,6 @@
     {
       "action": "tool.use",
       "resource": "shell:su *",
-      "effect": "deny"
-    },
-    {
-      "action": "tool.use",
-      "resource": "shell:rm -rf *",
       "effect": "deny"
     },
     {
