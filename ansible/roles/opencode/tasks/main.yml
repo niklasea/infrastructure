@@ -115,7 +115,7 @@
 
 - name: Mount the data filesystem
   become: true
-  ansible.builtin.mount:
+  ansible.posix.mount:
     path: "{{ opencode_data_dir }}"
     src: "{{ opencode_data_image }}"
     fstype: ext4

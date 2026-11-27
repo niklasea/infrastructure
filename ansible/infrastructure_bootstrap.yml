@@ -65,6 +65,7 @@
       ansible.builtin.get_url:
         url: 'https://github.com/actions/runner/releases/download/v2.331.0/actions-runner-linux-x64-2.331.0.tar.gz'
         dest: /tmp/
+        mode: "0644"
       register: _github_actions_installer
 
     - name: Calculate the checksum
@@ -100,7 +101,8 @@
       register: _github_actions_runner_dependency_install
       changed_when: "'0 newly installed' not in _github_actions_runner_dependency_install.stdout"
 
-    - name: Get runner registration token
+    # A single registration token is shared by all hosts in this play.
+    - name: Get runner registration token  # noqa: run-once[task]
       ansible.builtin.uri:
         url: "https://api.github.com/repos/{{ vault_github_actions_runner.username }}/{{ vault_github_actions_runner.repository }}/actions/runners/registration-token"
         headers:
