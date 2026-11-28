@@ -14,6 +14,7 @@
     src: wg.conf.j2
     dest: "{{ wireguard_compose_dir }}/{{ wireguard_interface_name }}.conf"
     mode: '600'
+  no_log: true
   register: _wireguard_configuration_files
 
 - name: Add Docker compose file

@@ -45,13 +45,14 @@ resource "hcloud_firewall" "netbird-stun-firewall" {
 }
 
 # The Singapore WAN address is dynamic, so the source cannot be narrowed.
+# The tunnel is IPv4 only, so the router must use the server's IPv4 endpoint.
 resource "hcloud_firewall" "wireguard-sin-firewall" {
   name = "wireguard-sin"
   rule {
     description = "Allow the Singapore router DNS tunnel"
     direction   = "in"
     protocol    = "udp"
-    port        = "51820"
+    port        = "51821"
     source_ips  = ["0.0.0.0/0"]
   }
 }
