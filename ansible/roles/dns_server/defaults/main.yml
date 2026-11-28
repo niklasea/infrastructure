@@ -10,6 +10,9 @@ dns_server_listen_addresses: >-
     | ansible.utils.ipwrap
     | list
   }}
+# Interfaces that must exist before blocky starts, for listen addresses that
+# are provided by a tunnel rather than by the host's primary network.
+dns_server_wait_interfaces: []
 dns_server_upstream_servers:
   - domain: one.one.one.one
     ips:

@@ -47,6 +47,10 @@ vpn_network_ipv4:
   local_address: "{{ infrastructure_hosts['internal-docker']['ipv4_address'] }}"
   peer_networks:
     - '192.168.50.0/24'
+# Point-to-point tunnel for the Singapore router's DNS traffic. The /30 is
+# reserved for this link and must not overlap the VPN or home networks.
+dns_tunnel_sg_address: '172.22.0.1/32'
+dns_tunnel_router_address: '172.22.0.2/32'
 wireguard_client_dns_servers: "{{ dhcp_dns_addresses }}"
 
 wifi_pass: "{{ vault_wifi_pass }}"

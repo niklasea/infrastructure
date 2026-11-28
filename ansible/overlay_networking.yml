@@ -78,6 +78,33 @@
           61333230373035656336366239353763323739653033393431346464653965323435616436656135
           6332393338336132643563653637663731333339396162613830
 
+- name: Configure Singapore DNS tunnel
+  hosts: kubernetes-sin
+  tasks:
+    - ansible.builtin.import_role:
+        name: docker
+
+    - ansible.builtin.import_role:
+        name: firewall
+      vars:
+        firewall_rules:
+          - { chain: INPUT, rule: ACCEPT, port: 51821, proto: udp, comment: WireGuard DNS tunnel }
+          - { chain: DOCKER-USER, rule: ACCEPT, src: '169.254.0.0/16,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10', port: 53, proto: tcp, comment: Allow internal DNS requests }
+          - { chain: DOCKER-USER, rule: ACCEPT, src: '169.254.0.0/16,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10', port: 53, proto: udp, comment: Allow internal DNS requests }
+          - { chain: DOCKER-USER, rule: DROP, port: 53, proto: tcp, comment: Drop external DNS requests }
+          - { chain: DOCKER-USER, rule: DROP, port: 53, proto: udp, comment: Drop external DNS requests }
+
+    - ansible.builtin.import_role:
+        name: wireguard
+
+    # blocky publishes on the tunnel address, so wait for wg0 in this play
+    # rather than relying on netbird-dns.service, which installs later.
+    - name: Wait for the tunnel interfaces
+      ansible.builtin.wait_for:
+        path: "/sys/class/net/{{ item }}"
+        timeout: 60
+      loop: "{{ dns_server_wait_interfaces | default([]) }}"
+
 - name: Configure Hetzner DNS servers
   hosts: hcloud,!role_netbird
   tasks:
@@ -106,6 +133,9 @@
           Type=oneshot
           RemainAfterExit=yes
           ExecStartPre=/usr/bin/timeout 60 /bin/sh -c 'until /usr/bin/netbird status --check ready >/dev/null 2>&1; do sleep 2; done'
+          {% for interface in dns_server_wait_interfaces %}
+          ExecStartPre=/usr/bin/timeout 60 /bin/sh -c 'until /usr/sbin/ip link show {{ interface }} >/dev/null 2>&1; do sleep 2; done'
+          {% endfor %}
           ExecStart=/usr/bin/docker compose -f {{ dns_server_compose_dir }}/docker-compose.yml up -d --wait
           Restart=on-failure
           RestartSec=5
