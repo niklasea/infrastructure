@@ -44,6 +44,18 @@ resource "hcloud_firewall" "netbird-stun-firewall" {
   }
 }
 
+# The Singapore WAN address is dynamic, so the source cannot be narrowed.
+resource "hcloud_firewall" "wireguard-sin-firewall" {
+  name = "wireguard-sin"
+  rule {
+    description = "Allow the Singapore router DNS tunnel"
+    direction   = "in"
+    protocol    = "udp"
+    port        = "51820"
+    source_ips  = ["0.0.0.0/0"]
+  }
+}
+
 # A single resource block provisions every server in the map
 resource "hcloud_server" "nodes" {
   for_each = var.hcloud_servers
@@ -54,11 +66,15 @@ resource "hcloud_server" "nodes" {
   location    = each.value.location
   labels      = each.value.labels
 
-  firewall_ids = [
-    hcloud_firewall.ssh-only-firewall.id,
-    hcloud_firewall.webserver-firewall.id,
-    hcloud_firewall.netbird-stun-firewall.id
-  ]
+  firewall_ids = concat(
+    [
+      hcloud_firewall.ssh-only-firewall.id,
+      hcloud_firewall.webserver-firewall.id,
+      hcloud_firewall.netbird-stun-firewall.id
+    ],
+    # The Singapore router terminates its DNS tunnel on this host.
+    each.key == "kubernetes-sin" ? [hcloud_firewall.wireguard-sin-firewall.id] : []
+  )
   user_data = templatefile("${path.module}/cloud-init.tftpl",
     {
       hostname       = each.key
